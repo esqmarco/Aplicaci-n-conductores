@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Cables Eléctricos - INPACO + NBR + Mamede Filho</title>
+    <style>
+/**
+ * STYLES.CSS - ESTILOS DE LA CALCULADORA DE CABLES
+ * ================================================
+ * 
+ * Estilos completos para la calculadora modular
+ * Diseño responsivo y profesional - Versión R2 Corregida
+ */
+
+/* ===================================================================
+   RESET Y CONFIGURACIÓN BASE
+   =================================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* ===================================================================
+   HEADER
+   =================================================================== */
+
+.header {
+    background: linear-gradient(135deg, #34495e, #2c3e50);
+    color: white;
+    padding: 20px 40px;
+    border-bottom: 3px solid #3498db;
+}
+
+.header h1 {
+    font-size: 1.8em;
+    font-weight: 300;
+    margin-bottom: 5px;
+    letter-spacing: 1px;
+}
+
+.header p {
+    font-size: 0.9em;
+    opacity: 0.8;
+    font-weight: 300;
+}
+
+.version-info {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+/* ===================================================================
+   SISTEMA DE PESTAÑAS
+   =================================================================== */
+
+.tabs-container {
+    background: #ecf0f1;
+    border-bottom: 1px solid #bdc3c7;
+}
+
+.tabs {
+    display: flex;
+    overflow-x: auto;
+    background: white;
+}
+
+.tab {
+    padding: 15px 20px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    font-weight: 500;
+    color: #7f8c8d;
+    border-right: 1px solid #ecf0f1;
+    position: relative;
+    background: none;
+    border-top: none;
+    border-left: none;
+    font-size: 13px;
+}
+
+.tab:hover {
+    background: #f8f9fa;
+    color: #2c3e50;
+}
+
+.tab.active {
+    color: #3498db;
+    border-bottom-color: #3498db;
+    background: white;
+}
+
+.tab-content {
+    display: none;
+    padding: 30px 40px;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===================================================================
+   FORMULARIOS Y CAMPOS - ESTILO ORIGINAL
+   =================================================================== */
+
+.section-title {
+    font-size: 1.4em;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #3498db;
+    font-weight: 400;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.form-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.form-section h3 {
+    color: #34495e;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #34495e;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+.form-group input.error,
+.form-group select.error {
+    border-color: #e74c3c;
+    background-color: #fdf2f2;
+}
+
+.form-group input.campo-error,
+.form-group select.campo-error {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.error-campo {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+}
+
+/* ===================================================================
+   BOTONES - ESTILO ORIGINAL
+   =================================================================== */
+
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #229954;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #e67e22;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.btn:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* ===================================================================
+   SECCIÓN DE CÁLCULO - ESTILO ORIGINAL
+   =================================================================== */
+
+.calculate-section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+    margin-top: 30px;
+}
+
+/* ===================================================================
+   RESULTADOS - ESTILO ORIGINAL CON CARDS
+   =================================================================== */
+
+.results-section {
+    margin-top: 30px;
+    padding: 25px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e1e8ed;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.results-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    font-weight: 600;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.result-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.result-card:hover {
+    transform: translateY(-2px);
+}
+
+.result-value {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #3498db;
+    margin-bottom: 5px;
+}
+
+.result-label {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.resultado-ok {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.resultado-error {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+/* ===================================================================
+   MENSAJES Y NOTIFICACIONES
+   =================================================================== */
+
+.contenedor-mensajes {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 400px;
+}
+
+.mensaje {
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideIn 0.3s ease-out;
+}
+
+.mensaje-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+.mensaje-exito {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.mensaje-advertencia {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.mensaje-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ===================================================================
+   REPORTE FINAL
+   =================================================================== */
+
+.reporte-final {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 30px;
+    border-left: 4px solid #28a745;
+}
+
+.reporte-final h3 {
+    color: #155724;
+    margin-bottom: 20px;
+    font-size: 1.3em;
+}
+
+.reporte-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.reporte-seccion {
+    background: white;
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.reporte-seccion h4 {
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+}
+
+.reporte-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.reporte-item:last-child {
+    border-bottom: none;
+}
+
+.reporte-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.reporte-valor {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* ===================================================================
+   DISEÑO RESPONSIVO
+   =================================================================== */
+
+@media (max-width: 768px) {
+    .container {
+        margin: 0;
+        min-height: 100vh;
+    }
+    
+    .header {
+        padding: 15px 20px;
+    }
+    
+    .header h1 {
+        font-size: 1.5em;
+    }
+    
+    .tab-content {
+        padding: 20px;
+    }
+    
+    .tabs {
+        overflow-x: auto;
+    }
+    
+    .tab {
+        padding: 12px 15px;
+        font-size: 12px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .contenedor-mensajes {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}
+
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🔧 Calculadora de Cables Eléctricos</h1>
+            <p>Sistema profesional de dimensionamiento según INPACO + NBR 5410 + Mamede Filho</p>
+            <div class="version-info">
+                Versión R2 Corregida - 7 Pestañas Especializadas | Fórmulas Corregidas | Tensión Personalizable
+            </div>
+        </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="material-cc-dc">Material del Conductor:</label>
+                            <select id="material-cc-dc">
+                                <option value="cobre">Cobre</option>
+                                <option value="aluminio">Aluminio</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aislamiento-cc-dc">Tipo de Aislamiento:</label>
+                            <select id="aislamiento-cc-dc">
+                                <option value="PVC">PVC</option>
+                                <option value="EPR">EPR</option>
+                            </select>
+                        </div>
+                    </div>
+
+        <!-- SISTEMA DE PESTAÑAS - 7 PESTAÑAS -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" data-tab="proyecto">
+                    📋 Proyecto AC
+                </button>
+                <button class="tab" data-tab="caida-tension">
+                    📉 Caída de Tensión AC
+                </button>
+                <button class="tab" data-tab="cortocircuito">
+                    ⚡ Cortocircuito AC
+                </button>
+                <button class="tab" data-tab="ampacidad-dc">
+                    🔋 Ampacidad DC
+                </button>
+                <button class="tab" data-tab="caida-tension-dc">
+                    📉 Caída Tensión DC
+                </button>
+                <button class="tab" data-tab="cortocircuito-dc">
+                    ⚡ Cortocircuito DC
+                </button>
+                <button class="tab" data-tab="resultados-dc">
+                    📊 Resultados DC
+                </button>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 1: PROYECTO AC -->
+        <div id="proyecto" class="tab-content active">
+            <h2 class="section-title">Dimensionamiento AC por Ampacidad</h2>
+            
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>Datos Básicos de la Carga</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="potencia">Potencia (W, kW, CV, HP):</label>
+                            <input type="number" id="potencia" step="0.01" placeholder="Ej: 7500">
+                        </div>
+                        <div class="form-group">
+                            <label for="unidad-potencia">Unidad:</label>
+                            <select id="unidad-potencia">
+                                <option value="W">Watts (W)</option>
+                                <option value="kW">Kilowatts (kW)</option>
+                                <option value="CV">Caballos de Vapor (CV)</option>
+                                <option value="HP">Horse Power (HP)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tension">Tensión Nominal (V):</label>
+                            <select id="tension">
+                                <option value="">Seleccionar...</option>
+                                <option value="127">127 V</option>
+                                <option value="220">220 V</option>
+                                <option value="380">380 V</option>
+                                <option value="440">440 V</option>
+                                <option value="460">460 V</option>
+                                <option value="480">480 V</option>
+                                <option value="6600">6.6 kV</option>
+                                <option value="13800">13.8 kV</option>
+                                <option value="23000">23 kV</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="factor-potencia">Factor de Potencia:</label>
+                            <input type="number" id="factor-potencia" step="0.01" min="0.3" max="1.0" value="0.8">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tipo-sistema">Tipo de Sistema:</label>
+                            <select id="tipo-sistema">
+                                <option value="monofasico">Monofásico</option>
+                                <option value="bifasico">Bifásico</option>
+                                <option value="trifasico" selected>Trifásico</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="rendimiento">Rendimiento (η):</label>
+                            <input type="number" id="rendimiento" step="0.01" min="0.5" max="1.0" value="1.0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Condiciones de Instalación</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="material-isolamento">Material del Aislamiento:</label>
+                            <select id="material-isolamento">
+                                <option value="PVC">PVC - Policloruro de Vinilo (70°C)</option>
+                                <option value="EPR_90">EPR 90°C - Etileno Propileno</option>
+                                <option value="EPR_105">EPR 105°C - Alta Temperatura</option>
+                                <option value="HEPR">HEPR - Etileno Propileno Reticulado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="material-condutor">Material del Conductor:</label>
+                            <select id="material-condutor">
+                                <option value="cobre">Cobre</option>
+                                <option value="aluminio">Aluminio</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="temperatura-ambiente">Temperatura Ambiente (°C):</label>
+                            <input type="number" id="temperatura-ambiente" value="30" min="-20" max="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="metodo-instalacao">Método de Instalación:</label>
+                            <select id="metodo-instalacao">
+                                <option value="A1">A1 - Condutores isolados em eletroduto de seção circular embutido em parede termicamente isolante</option>
+                                <option value="A2">A2 - Cabo multipolar em eletroduto de seção circular embutido em parede termicamente isolante</option>
+                                <option value="B1">B1 - Condutores isolados em eletroduto de seção circular sobre parede de madeira</option>
+                                <option value="B2">B2 - Cabo multipolar em eletroduto de seção circular sobre parede de madeira</option>
+                                <option value="C">C - Condutores isolados em eletroduto de seção circular em espaço de construção fechado</option>
+                                <option value="D">D - Cabo multipolar em eletroduto de seção circular em espaço de construção fechado</option>
+                                <option value="E">E - Condutores isolados ou cabo multipolar ao ar livre</option>
+                                <option value="F">F - Condutores isolados em eletroduto de seção não-circular embutido em alvenaria</option>
+                                <option value="G">G - Cabo multipolar em eletroduto de seção não-circular embutido em alvenaria</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="agrupamento">Número de Circuitos Agrupados:</label>
+                            <input type="number" id="agrupamento" value="1" min="1" max="20">
+                        </div>
+                        <!-- Eliminado selector de aislamiento aquí porque solo aplica a DC -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="calculate-section">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="calcularProyecto()">
+                        🔧 Calcular Dimensionamiento
+                    </button>
+                    <button class="btn btn-warning" onclick="resetearFormulario('proyecto')">
+                        🔄 Limpiar Formulario
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultados-proyecto" class="results-section" style="display: none;">
+                <h3>📊 Resultados del Dimensionamiento AC</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-value" id="corriente-proyecto">--</div>
+                        <div class="result-label">Corriente de Proyecto (A)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="corriente-corregida">--</div>
+                        <div class="result-label">Corriente Corregida (A)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="seccion-minima">--</div>
+                        <div class="result-label">Sección Mínima (mm²)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="seccion-comercial">--</div>
+                        <div class="result-label">Sección Comercial (mm²)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 2: CAÍDA DE TENSIÓN AC -->
+        <div id="caida-tension" class="tab-content">
+            <h2 class="section-title">Verificación de Caída de Tensión AC</h2>
+            
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>Parámetros del Circuito</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="potencia-ct">Potencia (W):</label>
+                            <input type="number" id="potencia-ct" step="0.01" placeholder="Ej: 7500">
+                        </div>
+                        <div class="form-group">
+                            <label for="tension-ct">Tensión (V):</label>
+                            <select id="tension-ct">
+                                <option value="">Seleccionar...</option>
+                                <option value="127">127 V</option>
+                                <option value="220">220 V</option>
+                                <option value="380">380 V</option>
+                                <option value="440">440 V</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="longitud-ct">Longitud del Circuito (m):</label>
+                            <input type="number" id="longitud-ct" step="0.1" placeholder="Ej: 50">
+                        </div>
+                        <div class="form-group">
+                            <label for="seccion-ct">Sección del Conductor (mm²):</label>
+                            <select id="seccion-ct">
+                                <option value="">Seleccionar...</option>
+                                <option value="1.5">1.5 mm²</option>
+                                <option value="2.5">2.5 mm²</option>
+                                <option value="4">4 mm²</option>
+                                <option value="6">6 mm²</option>
+                                <option value="10">10 mm²</option>
+                                <option value="16">16 mm²</option>
+                                <option value="25">25 mm²</option>
+                                <option value="35">35 mm²</option>
+                                <option value="50">50 mm²</option>
+                                <option value="70">70 mm²</option>
+                                <option value="95">95 mm²</option>
+                                <option value="120">120 mm²</option>
+                                <option value="150">150 mm²</option>
+                                <option value="185">185 mm²</option>
+                                <option value="240">240 mm²</option>
+                                <option value="300">300 mm²</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calculate-section">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="calcularCaidaTension()">
+                        📉 Verificar Caída de Tensión
+                    </button>
+                    <button class="btn btn-warning" onclick="resetearFormulario('caida-tension')">
+                        🔄 Limpiar Formulario
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultados-caida-tension" class="results-section" style="display: none;">
+                <h3>📊 Resultados de Caída de Tensión AC</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-value" id="caida-tension-valor">--</div>
+                        <div class="result-label">Caída de Tensión (%)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="caida-tension-status">--</div>
+                        <div class="result-label">Estado</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: CORTOCIRCUITO AC -->
+        <div id="cortocircuito" class="tab-content">
+            <h2 class="section-title">Análisis de Cortocircuito AC</h2>
+            
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>Parámetros del Sistema</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="potencia-cc">Potencia de Cortocircuito (MVA):</label>
+                            <input type="number" id="potencia-cc" step="0.1" placeholder="Ej: 100">
+                        </div>
+                        <div class="form-group">
+                            <label for="tension-cc">Tensión del Sistema (kV):</label>
+                            <select id="tension-cc">
+                                <option value="">Seleccionar...</option>
+                                <option value="0.38">380 V</option>
+                                <option value="6.6">6.6 kV</option>
+                                <option value="13.8">13.8 kV</option>
+                                <option value="23">23 kV</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tiempo-despeje">Tiempo de Despeje (s):</label>
+                            <input type="number" id="tiempo-despeje" step="0.01" value="0.1" min="0.01" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="seccion-cc">Sección del Conductor (mm²):</label>
+                            <select id="seccion-cc">
+                                <option value="">Seleccionar...</option>
+                                <option value="1.5">1.5 mm²</option>
+                                <option value="2.5">2.5 mm²</option>
+                                <option value="4">4 mm²</option>
+                                <option value="6">6 mm²</option>
+                                <option value="10">10 mm²</option>
+                                <option value="16">16 mm²</option>
+                                <option value="25">25 mm²</option>
+                                <option value="35">35 mm²</option>
+                                <option value="50">50 mm²</option>
+                                <option value="70">70 mm²</option>
+                                <option value="95">95 mm²</option>
+                                <option value="120">120 mm²</option>
+                                <option value="150">150 mm²</option>
+                                <option value="185">185 mm²</option>
+                                <option value="240">240 mm²</option>
+                                <option value="300">300 mm²</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calculate-section">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="calcularCortocircuito()">
+                        ⚡ Verificar Cortocircuito
+                    </button>
+                    <button class="btn btn-warning" onclick="resetearFormulario('cortocircuito')">
+                        🔄 Limpiar Formulario
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultados-cortocircuito" class="results-section" style="display: none;">
+                <h3>📊 Resultados de Cortocircuito AC</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-value" id="corriente-cortocircuito">--</div>
+                        <div class="result-label">Corriente de Cortocircuito (kA)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="cortocircuito-status">--</div>
+                        <div class="result-label">Estado</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 4: AMPACIDAD DC -->
+        <div id="ampacidad-dc" class="tab-content">
+            <h2 class="section-title">Dimensionamiento DC por Ampacidad</h2>
+            
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>Datos Básicos de la Carga DC</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="potencia-dc">Potencia DC (W):</label>
+                            <input type="number" id="potencia-dc" step="0.01" placeholder="Ej: 1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="tension-dc">Tensión DC (V):</label>
+                            <select id="tension-dc">
+                                <option value="">Seleccionar...</option>
+                                <option value="12">12 V</option>
+                                <option value="24">24 V</option>
+                                <option value="48">48 V</option>
+                                <option value="110">110 V</option>
+                                <option value="125">125 V</option>
+                                <option value="220">220 V</option>
+                                <option value="250">250 V</option>
+                                <option value="380">380 V</option>
+                                <option value="500">500 V</option>
+                                <option value="personalizado">Personalizado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo de tensión personalizada -->
+                    <div class="form-row" id="tension-personalizada-row" style="display: none;">
+                        <div class="form-group">
+                            <label for="tension-personalizada">Tensión Personalizada (V):</label>
+                            <input type="number" id="tension-personalizada" min="1" max="1000" step="0.1" placeholder="Ej: 125.5">
+                        </div>
+                        <!-- El selector de aislamiento para DC se ubicará en su propia fila más adelante -->
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="material-condutor-dc">Material del Conductor:</label>
+                            <select id="material-condutor-dc">
+                                <option value="cobre">Cobre</option>
+                                <option value="aluminio">Aluminio</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="temperatura-ambiente-dc">Temperatura Ambiente (°C):</label>
+                            <input type="number" id="temperatura-ambiente-dc" value="30" min="-20" max="80">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="metodo-instalacao-dc">Método de Instalación:</label>
+                            <select id="metodo-instalacao-dc">
+                                <option value="A1">A1 - Condutores isolados em eletroduto embutido</option>
+                                <option value="B1">B1 - Condutores isolados em eletroduto sobre parede</option>
+                                <option value="C">C - Condutores isolados em eletroduto em espaço fechado</option>
+                                <option value="E">E - Condutores isolados ao ar livre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aislamiento-dc">Tipo de Aislamiento:</label>
+                            <select id="aislamiento-dc">
+                                <option value="PVC">PVC</option>
+                                <option value="EPR">EPR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calculate-section">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="calcularAmpacidadDC()">
+                        🔋 Calcular Ampacidad DC
+                    </button>
+                    <button class="btn btn-warning" onclick="resetearFormulario('ampacidad-dc')">
+                        🔄 Limpiar Formulario
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultados-ampacidad-dc" class="results-section" style="display: none;">
+                <h3>📊 Resultados de Ampacidad DC</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-value" id="corriente-dc">--</div>
+                        <div class="result-label">Corriente DC (A)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="seccion-ampacidad-dc">--</div>
+                        <div class="result-label">Sección por Ampacidad (mm²)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="resistencia-mostrada-dc">--</div>
+                        <div class="result-label">Resistencia Real Usada (Ω/km)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 5: CAÍDA TENSIÓN DC -->
+        <div id="caida-tension-dc" class="tab-content">
+            <h2 class="section-title">Verificación de Caída de Tensión DC</h2>
+            
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>Parámetros del Circuito DC</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="potencia-ct-dc">Potencia DC (W):</label>
+                            <input type="number" id="potencia-ct-dc" step="0.01" placeholder="Ej: 1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="tension-ct-dc">Tensión DC (V):</label>
+                            <select id="tension-ct-dc">
+                                <option value="">Seleccionar...</option>
+                                <option value="12">12 V</option>
+                                <option value="24">24 V</option>
+                                <option value="48">48 V</option>
+                                <option value="110">110 V</option>
+                                <option value="125">125 V</option>
+                                <option value="220">220 V</option>
+                                <option value="250">250 V</option>
+                                <option value="380">380 V</option>
+                                <option value="500">500 V</option>
+                                <option value="personalizado">Personalizado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo de tensión personalizada para caída DC -->
+                    <div class="form-row" id="tension-personalizada-ct-dc-row" style="display: none;">
+                        <div class="form-group">
+                            <label for="tension-personalizada-ct-dc">Tensión Personalizada (V):</label>
+                            <input type="number" id="tension-personalizada-ct-dc" min="1" max="1000" step="0.1" placeholder="Ej: 125.5">
+                        </div>
+                        <!-- El selector de aislamiento para caída DC se ubicará en la fila de temperatura -->
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="longitud-ct-dc">Longitud del Circuito (m):</label>
+                            <input type="number" id="longitud-ct-dc" step="0.1" placeholder="Ej: 50">
+                        </div>
+                        <div class="form-group">
+                            <label for="conductores-paralelo">Conductores por Polo (Np):</label>
+                            <select id="conductores-paralelo">
+                                <option value="1">1 conductor por polo</option>
+                                <option value="2">2 conductores por polo</option>
+                                <option value="3">3 conductores por polo</option>
+                                <option value="4">4 conductores por polo</option>
+                                <option value="5">5 conductores por polo</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="seccion-ct-dc">Sección del Conductor (mm²):</label>
+                            <select id="seccion-ct-dc">
+                                <option value="">Seleccionar...</option>
+                                <option value="1.5">1.5 mm²</option>
+                                <option value="2.5">2.5 mm²</option>
+                                <option value="4">4 mm²</option>
+                                <option value="6">6 mm²</option>
+                                <option value="10">10 mm²</option>
+                                <option value="16">16 mm²</option>
+                                <option value="25">25 mm²</option>
+                                <option value="35">35 mm²</option>
+                                <option value="50">50 mm²</option>
+                                <option value="70">70 mm²</option>
+                                <option value="95">95 mm²</option>
+                                <option value="120">120 mm²</option>
+                                <option value="150">150 mm²</option>
+                                <option value="185">185 mm²</option>
+                                <option value="240">240 mm²</option>
+                                <option value="300">300 mm²</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="material-conductor-ct-dc">Material del Conductor:</label>
+                            <select id="material-conductor-ct-dc">
+                                <option value="cobre">Cobre</option>
+                                <option value="aluminio">Aluminio</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="temperatura-ct-dc">Temperatura Ambiente (°C):</label>
+                            <input type="number" id="temperatura-ct-dc" value="30" min="-20" max="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="aislamiento-ct-dc">Tipo de Aislamiento:</label>
+                            <select id="aislamiento-ct-dc">
+                                <option value="PVC">PVC</option>
+                                <option value="EPR">EPR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calculate-section">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="calcularCaidaTensionDC_UI()">
+                        📉 Verificar Caída de Tensión DC
+                    </button>
+                    <button class="btn btn-warning" onclick="resetearFormulario('caida-tension-dc')">
+                        🔄 Limpiar Formulario
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultados-caida-tension-dc" class="results-section" style="display: none;">
+                <h3>📊 Resultados de Caída de Tensión DC</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-value" id="caida-tension-dc-valor">--</div>
+                        <div class="result-label">Caída de Tensión (%)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="caida-tension-dc-status">--</div>
+                        <div class="result-label">Estado</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="resistencia-real-dc">--</div>
+                        <div class="result-label">Resistencia Real (Ω/km)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="corriente-calculada-dc">--</div>
+                        <div class="result-label">Corriente DC (A)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 6: CORTOCIRCUITO DC -->
+        <div id="cortocircuito-dc" class="tab-content">
+            <h2 class="section-title">Análisis de Cortocircuito DC</h2>
+            
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>Configuración del Banco de Baterías</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tipo-bateria">Tipo de Batería:</label>
+                            <select id="tipo-bateria">
+                                <option value="plomo-acido">Plomo Ácido</option>
+                                <option value="litio">Litio (LiFePO4)</option>
+                                <option value="niquel-cadmio">Níquel Cadmio</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="elementos-serie">Elementos en Serie:</label>
+                            <input type="number" id="elementos-serie" value="12" min="1" max="200">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="capacidad-bateria">Capacidad (Ah):</label>
+                            <input type="number" id="capacidad-bateria" step="0.1" placeholder="Ej: 100">
+                        </div>
+                        <div class="form-group">
+                            <label for="resistencia-interna">Resistencia Interna (mΩ):</label>
+                            <input type="number" id="resistencia-interna" step="0.1" placeholder="Ej: 5.0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tiempo-despeje-dc">Tiempo de Despeje (s):</label>
+                            <input type="number" id="tiempo-despeje-dc" step="0.01" value="0.1" min="0.01" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="seccion-cc-dc">Sección del Conductor (mm²):</label>
+                            <select id="seccion-cc-dc">
+                                <option value="">Seleccionar...</option>
+                                <option value="1.5">1.5 mm²</option>
+                                <option value="2.5">2.5 mm²</option>
+                                <option value="4">4 mm²</option>
+                                <option value="6">6 mm²</option>
+                                <option value="10">10 mm²</option>
+                                <option value="16">16 mm²</option>
+                                <option value="25">25 mm²</option>
+                                <option value="35">35 mm²</option>
+                                <option value="50">50 mm²</option>
+                                <option value="70">70 mm²</option>
+                                <option value="95">95 mm²</option>
+                                <option value="120">120 mm²</option>
+                                <option value="150">150 mm²</option>
+                                <option value="185">185 mm²</option>
+                                <option value="240">240 mm²</option>
+                                <option value="300">300 mm²</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Fila adicional para seleccionar material y aislamiento del conductor en cortocircuito DC -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="material-cc-dc">Material del Conductor:</label>
+                            <select id="material-cc-dc">
+                                <option value="cobre">Cobre</option>
+                                <option value="aluminio">Aluminio</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aislamiento-cc-dc">Tipo de Aislamiento:</label>
+                            <select id="aislamiento-cc-dc">
+                                <option value="PVC">PVC</option>
+                                <option value="EPR">EPR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calculate-section">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="calcularCortocircuitoDC()">
+                        ⚡ Verificar Cortocircuito DC
+                    </button>
+                    <button class="btn btn-warning" onclick="resetearFormulario('cortocircuito-dc')">
+                        🔄 Limpiar Formulario
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultados-cortocircuito-dc" class="results-section" style="display: none;">
+                <h3>📊 Resultados de Cortocircuito DC</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <div class="result-value" id="corriente-cortocircuito-dc">--</div>
+                        <div class="result-label">Corriente de Cortocircuito DC (A)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="cortocircuito-dc-status">--</div>
+                        <div class="result-label">Estado</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 7: RESULTADOS DC -->
+        <div id="resultados-dc" class="tab-content">
+            <h2 class="section-title">Resumen Final del Dimensionamiento DC</h2>
+            
+            <div class="reporte-final">
+                <h3>📊 Resumen Consolidado de Análisis DC</h3>
+                
+                <div class="reporte-grid">
+                    <div class="reporte-seccion">
+                        <h4>🔋 Criterio de Ampacidad</h4>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Corriente DC:</span>
+                            <span class="reporte-valor" id="resumen-corriente-dc">-- A</span>
+                        </div>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Sección por Ampacidad:</span>
+                            <span class="reporte-valor" id="resumen-seccion-ampacidad">-- mm²</span>
+                        </div>
+                    </div>
+                    
+                    <div class="reporte-seccion">
+                        <h4>📉 Criterio de Caída de Tensión</h4>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Caída de Tensión:</span>
+                            <span class="reporte-valor" id="resumen-caida-tension">-- %</span>
+                        </div>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Estado:</span>
+                            <span class="reporte-valor" id="resumen-estado-caida">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="reporte-seccion">
+                        <h4>⚡ Criterio de Cortocircuito</h4>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Corriente de CC:</span>
+                            <span class="reporte-valor" id="resumen-corriente-cc">-- A</span>
+                        </div>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Estado:</span>
+                            <span class="reporte-valor" id="resumen-estado-cc">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="reporte-seccion">
+                        <h4>🎯 Sección Final Recomendada</h4>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Criterio Más Restrictivo:</span>
+                            <span class="reporte-valor" id="criterio-restrictivo">--</span>
+                        </div>
+                        <div class="reporte-item">
+                            <span class="reporte-label">Sección Final:</span>
+                            <span class="reporte-valor" id="seccion-final-dc">-- mm²</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="generarReporteDC()">
+                        📄 Generar Reporte Completo
+                    </button>
+                    <button class="btn btn-primary" onclick="actualizarResumenDC()">
+                        🔄 Actualizar Resumen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE MENSAJES -->
+        <div id="contenedor-mensajes" class="contenedor-mensajes"></div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <!-- Cargar versiones de trabajo de los scripts para pruebas -->
+    <!-- Cargar scripts originales sin el sufijo _working -->
+    <script src="data-tables.js"></script>
+    <script src="validations.js"></script>
+    <script src="calculations.js"></script>
+    <script src="app.js"></script>
+    
+
+</body>
+</html>
