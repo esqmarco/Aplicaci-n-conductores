@@ -685,14 +685,91 @@ function validarParametrosCaidaTensionAC(params) {
     const errores = [];
     const advertencias = [];
 
-    // Implementar validaciones AC existentes
-    // (mantener código existente)
+    try {
+        // Validar potencia
+        if (!params.potencia || isNaN(params.potencia)) {
+            errores.push('Potencia es requerida y debe ser numérica');
+        } else {
+            const potencia = parseFloat(params.potencia);
+            if (potencia <= 0) {
+                errores.push('Potencia debe ser mayor que 0');
+            }
+        }
 
-    return {
-        valido: errores.length === 0,
-        errores: errores,
-        advertencias: advertencias
-    };
+        // Validar tensión
+        if (!params.tension || isNaN(params.tension)) {
+            errores.push('Tensión es requerida y debe ser numérica');
+        } else {
+            const tension = parseFloat(params.tension);
+            const tensionesValidas = [127, 220, 380, 440];
+            if (!tensionesValidas.includes(tension)) {
+                errores.push(`Tensión debe ser una de: ${tensionesValidas.join(', ')} V`);
+            }
+        }
+
+        // Validar longitud
+        if (!params.longitud || isNaN(params.longitud)) {
+            errores.push('Longitud es requerida y debe ser numérica');
+        } else {
+            const longitud = parseFloat(params.longitud);
+            if (longitud <= 0) {
+                errores.push('Longitud debe ser mayor que 0');
+            } else if (longitud >= 10000) {
+                errores.push('Longitud debe ser menor que 10,000 m');
+            } else if (longitud > 1000) {
+                advertencias.push('Longitud muy grande, verificar viabilidad técnica');
+            }
+        }
+
+        // Validar sección del conductor
+        if (!params.seccion || isNaN(params.seccion)) {
+            errores.push('Sección del conductor es requerida');
+        } else {
+            const seccion = parseFloat(params.seccion);
+            const seccionesValidas = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300];
+            if (!seccionesValidas.includes(seccion)) {
+                errores.push('Sección del conductor no es estándar');
+            }
+        }
+
+        // Validar tipo de sistema
+        if (!params.tipoSistema) {
+            errores.push('Tipo de sistema es requerido');
+        } else if (!['monofasico', 'bifasico', 'trifasico'].includes(params.tipoSistema)) {
+            errores.push('Tipo de sistema debe ser monofásico, bifásico o trifásico');
+        }
+
+        // Validar factor de potencia
+        if (!params.factorPotencia || isNaN(params.factorPotencia)) {
+            errores.push('Factor de potencia es requerido y debe ser numérico');
+        } else {
+            const fp = parseFloat(params.factorPotencia);
+            if (fp < 0.1 || fp > 1.0) {
+                errores.push('Factor de potencia debe estar entre 0.1 y 1.0');
+            } else if (fp < 0.7) {
+                advertencias.push('Factor de potencia bajo, considerar corrección');
+            }
+        }
+
+        // Validar material del conductor
+        if (!params.material) {
+            errores.push('Material del conductor es requerido');
+        } else if (!['cobre', 'aluminio'].includes(params.material.toLowerCase())) {
+            errores.push('Material debe ser cobre o aluminio');
+        }
+
+        return {
+            valido: errores.length === 0,
+            errores: errores,
+            advertencias: advertencias
+        };
+    } catch (error) {
+        return {
+            valido: false,
+            errores: [`Error en validación de caída de tensión AC: ${error.message}`],
+            advertencias: []
+        };
+    }
 }
 
 /**
@@ -702,14 +779,80 @@ function validarParametrosCortocircuitoAC(params) {
     const errores = [];
     const advertencias = [];
 
-    // Implementar validaciones AC existentes
-    // (mantener código existente)
+    try {
+        // Validar potencia de cortocircuito
+        if (!params.potenciaCortocircuito || isNaN(params.potenciaCortocircuito)) {
+            errores.push('Potencia de cortocircuito es requerida y debe ser numérica');
+        } else {
+            const potencia = parseFloat(params.potenciaCortocircuito);
+            if (potencia <= 0) {
+                errores.push('Potencia de cortocircuito debe ser mayor que 0');
+            } else if (potencia >= 10000) {
+                errores.push('Potencia de cortocircuito debe ser menor que 10,000 MVA');
+            } else if (potencia > 5000) {
+                advertencias.push('Potencia de cortocircuito muy alta, verificar datos del sistema');
+            }
+        }
 
-    return {
-        valido: errores.length === 0,
-        errores: errores,
-        advertencias: advertencias
-    };
+        // Validar tensión del sistema
+        if (!params.tensionSistema || isNaN(params.tensionSistema)) {
+            errores.push('Tensión del sistema es requerida y debe ser numérica');
+        } else {
+            const tension = parseFloat(params.tensionSistema);
+            if (tension <= 0) {
+                errores.push('Tensión del sistema debe ser mayor que 0');
+            }
+        }
+
+        // Validar tiempo de despeje
+        if (!params.tiempoDespeje || isNaN(params.tiempoDespeje)) {
+            errores.push('Tiempo de despeje es requerido y debe ser numérico');
+        } else {
+            const tiempo = parseFloat(params.tiempoDespeje);
+            if (tiempo < 0.01 || tiempo > 10) {
+                errores.push('Tiempo de despeje debe estar entre 0.01s y 10s');
+            } else if (tiempo > 5) {
+                advertencias.push('Tiempo de despeje muy alto, verificar protección');
+            }
+        }
+
+        // Validar sección del conductor
+        if (!params.seccion || isNaN(params.seccion)) {
+            errores.push('Sección del conductor es requerida');
+        } else {
+            const seccion = parseFloat(params.seccion);
+            const seccionesValidas = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300];
+            if (!seccionesValidas.includes(seccion)) {
+                errores.push('Sección del conductor no es estándar');
+            }
+        }
+
+        // Validar material del conductor
+        if (!params.material) {
+            errores.push('Material del conductor es requerido');
+        } else if (!['cobre', 'aluminio'].includes(params.material.toLowerCase())) {
+            errores.push('Material debe ser cobre o aluminio');
+        }
+
+        // Validar aislamiento
+        if (!params.aislamiento) {
+            errores.push('Material de aislamiento es requerido');
+        } else if (!['PVC', 'EPR'].includes(params.aislamiento)) {
+            errores.push('Material de aislamiento debe ser PVC o EPR');
+        }
+
+        return {
+            valido: errores.length === 0,
+            errores: errores,
+            advertencias: advertencias
+        };
+    } catch (error) {
+        return {
+            valido: false,
+            errores: [`Error en validación de cortocircuito AC: ${error.message}`],
+            advertencias: []
+        };
+    }
 }
 
 console.log('✅ Validations.js R2 Corregido cargado - Validaciones específicas por pestaña y tensión personalizable');
