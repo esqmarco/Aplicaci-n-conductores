@@ -100,12 +100,23 @@ function calcularCorrienteTransformador(parametros) {
 // DIMENSIONAMIENTO AC COMPLETO POR AMPACIDAD
 // ===================================================================
 
+function obtenerSeccionMinimaNBR(tipoCircuito) {
+    const minimos = {
+        'iluminacion': 1.5,
+        'tomadas': 2.5,
+        'fuerza': 2.5,
+        'alimentador': 6,
+        'general': 1.5
+    };
+    return minimos[tipoCircuito] || 1.5;
+}
+
 function dimensionarPorAmpacidadAC(parametros) {
     const {
         modoEntrada, potencia, unidadPotencia, corrienteDirecta, potenciaTransformadorKVA,
         tension, factorPotencia, tipoSistema, rendimiento,
         materialAislamento, materialCondutor, temperaturaAmbiente,
-        metodoInstalacao, agrupamento
+        metodoInstalacao, agrupamento, tipoCircuito
     } = parametros;
 
     // 1. Determinar corriente de proyecto según modo de entrada
@@ -161,7 +172,10 @@ function dimensionarPorAmpacidadAC(parametros) {
     const secciones = window.tabelasNBR.seccionesNominales;
     const material = materialCondutor.toLowerCase();
     // Para aluminio, sección mínima es 16mm²
-    const seccionMinima = material === 'aluminio' ? 16 : 1.5;
+    const seccionMinimaMaterial = material === 'aluminio' ? 16 : 1.5;
+    // Enforce NBR 5410 minimum section per circuit type
+    const seccionMinimaNBR = tipoCircuito ? obtenerSeccionMinimaNBR(tipoCircuito) : 1.5;
+    const seccionMinima = Math.max(seccionMinimaMaterial, seccionMinimaNBR);
 
     let seccionSeleccionada = null;
     let ampacidadSeleccionada = null;
@@ -210,24 +224,52 @@ function calcularCaidaTensionAC(parametros) {
     if (!longitud || longitud <= 0) throw new Error('Longitud debe ser mayor que 0');
     if (!seccion || seccion <= 0) throw new Error('Sección debe ser mayor que 0');
 
+    // Reactance table (typical values in ohm/km for cables in conduit)
+    const reactancias = {
+        1.5: 0.115, 2.5: 0.110, 4: 0.107, 6: 0.100, 10: 0.094, 16: 0.090,
+        25: 0.086, 35: 0.083, 50: 0.081, 70: 0.078, 95: 0.076, 120: 0.075,
+        150: 0.073, 185: 0.072, 240: 0.071, 300: 0.070
+    };
+
     // Obtener resistencia del conductor en Ω/km
     const material = materialCondutor.toLowerCase();
     const resistencia = window.obtenerResistencia(material, parseFloat(seccion));
     const L_km = parseFloat(longitud) / 1000;
     const I = parseFloat(corriente);
     const fp = parseFloat(factorPotencia) || 1.0;
+    const seccionNum = parseFloat(seccion);
 
     let caidaV;
-    switch (tipoSistema) {
-        case 'trifasico':
-            caidaV = Math.sqrt(3) * resistencia * I * L_km * fp;
-            break;
-        case 'bifasico':
-            caidaV = 2 * resistencia * I * L_km * fp;
-            break;
-        case 'monofasico': default:
-            caidaV = 2 * resistencia * I * L_km * fp;
-            break;
+
+    if (seccionNum >= 50) {
+        // For sections >= 50mm², include inductive reactance
+        const X = reactancias[seccionNum] || 0.08; // fallback reactance
+        const sinFi = Math.sqrt(1 - fp * fp);
+        const impedanciaPorKm = resistencia * fp + X * sinFi;
+        let k;
+        switch (tipoSistema) {
+            case 'trifasico':
+                k = Math.sqrt(3);
+                break;
+            case 'bifasico':
+            case 'monofasico': default:
+                k = 2;
+                break;
+        }
+        caidaV = k * I * L_km * impedanciaPorKm;
+    } else {
+        // For sections < 50mm², reactance is negligible - simpler formula
+        switch (tipoSistema) {
+            case 'trifasico':
+                caidaV = Math.sqrt(3) * resistencia * I * L_km * fp;
+                break;
+            case 'bifasico':
+                caidaV = 2 * resistencia * I * L_km * fp;
+                break;
+            case 'monofasico': default:
+                caidaV = 2 * resistencia * I * L_km * fp;
+                break;
+        }
     }
 
     const caidaPct = (caidaV / parseFloat(tension)) * 100;
@@ -354,7 +396,7 @@ function dimensionarPorAmpacidadDC(parametros) {
     const { potencia, tensionSelector, tensionPersonalizada, material, temperatura, metodo, aislamiento } = parametros;
     const tension = obtenerTensionEfectiva(tensionSelector, tensionPersonalizada);
     const corriente = calcularCorrenteDC({ potencia, tension });
-    const factorTemperatura = calcularFactorTemperaturaDC({ material, temperatura });
+    const factorTemperatura = calcularFactorTemperaturaDC({ material, temperatura, aislamiento });
     const corrienteCorregida = corriente / factorTemperatura;
     const seccionInfo = seleccionarSeccionMinimaDC({ corrienteCorregida, material, metodo });
     const resistenciaInfo = calcularResistenciaCorregida({ material, seccion: seccionInfo.seccion, temperatura, aislamiento });
@@ -423,13 +465,41 @@ function analizarCortocircuitoDC(parametros) {
 // ===================================================================
 
 function calcularFactorTemperaturaDC(parametros) {
-    const { material, temperatura } = parametros;
-    const factores = {
-        'cobre': { 20: 1.00, 25: 0.96, 30: 0.91, 35: 0.87, 40: 0.82, 45: 0.76, 50: 0.71, 55: 0.65, 60: 0.58, 65: 0.50, 70: 0.41 },
-        'aluminio': { 20: 1.00, 25: 0.96, 30: 0.91, 35: 0.87, 40: 0.82, 45: 0.76, 50: 0.71, 55: 0.65, 60: 0.58, 65: 0.50, 70: 0.41 }
+    const { material, temperatura, aislamiento } = parametros;
+    const aislamientoKey = (aislamiento || 'PVC').toUpperCase();
+    const usarEPR = aislamientoKey.includes('EPR') || aislamientoKey === 'XLPE' || aislamientoKey === 'HEPR';
+
+    // Try to use tables from data-tables.js first
+    if (window.tabelasDC && window.tabelasDC.factoresTemperaturaDC) {
+        const tablaKey = usarEPR ? 'EPR_XLPE' : 'PVC';
+        const tablaFactores = window.tabelasDC.factoresTemperaturaDC[tablaKey];
+        if (tablaFactores) {
+            const temperaturas = Object.keys(tablaFactores).map(Number).sort((a, b) => a - b);
+            if (temperatura <= temperaturas[0]) return tablaFactores[temperaturas[0]];
+            if (temperatura >= temperaturas[temperaturas.length - 1]) return tablaFactores[temperaturas[temperaturas.length - 1]];
+
+            for (let i = 0; i < temperaturas.length - 1; i++) {
+                if (temperatura >= temperaturas[i] && temperatura <= temperaturas[i + 1]) {
+                    const t1 = temperaturas[i], t2 = temperaturas[i + 1];
+                    const f1 = tablaFactores[t1], f2 = tablaFactores[t2];
+                    return Math.round((f1 + (f2 - f1) * (temperatura - t1) / (t2 - t1)) * 1000) / 1000;
+                }
+            }
+            return 1.0;
+        }
+    }
+
+    // Fallback: built-in tables differentiated by insulation type
+    const factoresPVC = {
+        10: 1.22, 15: 1.17, 20: 1.12, 25: 1.06, 30: 1.00,
+        35: 0.94, 40: 0.87, 45: 0.79, 50: 0.71, 55: 0.61, 60: 0.50
     };
-    const tablaFactores = factores[material.toLowerCase()];
-    if (!tablaFactores) throw new Error(`Material ${material} no soportado`);
+    const factoresEPR = {
+        10: 1.15, 15: 1.12, 20: 1.08, 25: 1.04, 30: 1.00,
+        35: 0.96, 40: 0.91, 45: 0.87, 50: 0.82, 55: 0.76,
+        60: 0.71, 65: 0.65, 70: 0.58, 75: 0.50, 80: 0.41
+    };
+    const tablaFactores = usarEPR ? factoresEPR : factoresPVC;
 
     const temperaturas = Object.keys(tablaFactores).map(Number).sort((a, b) => a - b);
     if (temperatura <= temperaturas[0]) return tablaFactores[temperaturas[0]];
@@ -551,10 +621,30 @@ function dimensionarCompletoDC(parametros) {
 }
 
 // ===================================================================
+// FACTOR DE DEMANDA
+// ===================================================================
+
+function aplicarFactorDemanda(potenciaTotal, factorDemanda) {
+    if (!factorDemanda || factorDemanda <= 0 || factorDemanda > 1) factorDemanda = 1.0;
+    return potenciaTotal * factorDemanda;
+}
+
+// ===================================================================
+// CONDUCTOR DE PROTECCIÓN (TIERRA) - NBR 5410 Tabla 58
+// ===================================================================
+
+function calcularConductorProteccion(seccionFase) {
+    // NBR 5410 Table 58
+    if (seccionFase <= 16) return seccionFase;           // Same as phase
+    if (seccionFase <= 35) return 16;                     // 16mm²
+    return seccionFase / 2;                               // Half of phase
+}
+
+// ===================================================================
 // EXPORTACIONES
 // ===================================================================
 
-console.log('✅ Calculations.js R3 cargado - AC completo + DC + conversión de unidades');
+console.log('✅ Calculations.js R4 cargado - AC completo + DC + Phase 1 improvements');
 
 window.convertirAWatts = convertirAWatts;
 window.calcularCorrenteProyecto = calcularCorrenteProyecto;
@@ -579,3 +669,6 @@ window.obtenerTensionElementoBateria = obtenerTensionElementoBateria;
 window.obtenerConstanteKDC = obtenerConstanteKDC;
 window.dimensionarCompletoDC = dimensionarCompletoDC;
 window.calcularSeccionParaCaidaDC = calcularSeccionParaCaidaDC;
+window.obtenerSeccionMinimaNBR = obtenerSeccionMinimaNBR;
+window.aplicarFactorDemanda = aplicarFactorDemanda;
+window.calcularConductorProteccion = calcularConductorProteccion;

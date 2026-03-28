@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Sincronizacion silenciosa de pestanas DC
     configurarSincronizacionDC();
+
+    // Validacion en tiempo real
+    configurarValidacionEnTiempoReal();
 });
 
 // ===================================================================
@@ -243,7 +246,10 @@ function obtenerParametrosProyecto() {
         materialCondutor: document.getElementById('material-condutor').value,
         temperaturaAmbiente: parseFloat(document.getElementById('temperatura-ambiente').value),
         metodoInstalacao: document.getElementById('metodo-instalacao').value,
-        agrupamento: parseInt(document.getElementById('agrupamento').value)
+        agrupamento: parseInt(document.getElementById('agrupamento').value),
+        factorDemanda: parseFloat(document.getElementById('factor-demanda')?.value) || 1.0,
+        tipoCircuito: document.getElementById('tipo-circuito')?.value || 'general',
+        resistividadSuelo: document.getElementById('resistividad-suelo')?.value || 'normal',
     };
 
     switch (modo) {
@@ -300,7 +306,8 @@ function obtenerParametrosAmpacidadDC() {
         material: document.getElementById('material-condutor-dc').value,
         temperatura: parseFloat(document.getElementById('temperatura-ambiente-dc').value),
         metodo: document.getElementById('metodo-instalacao-dc').value,
-        aislamiento: document.getElementById('aislamiento-dc') ? document.getElementById('aislamiento-dc').value : 'PVC'
+        aislamiento: document.getElementById('aislamiento-dc') ? document.getElementById('aislamiento-dc').value : 'PVC',
+        agrupamiento: parseInt(document.getElementById('agrupamiento-dc')?.value) || 1,
     };
 }
 
@@ -317,7 +324,8 @@ function obtenerParametrosCaidaTensionDC() {
         seccion: parseFloat(document.getElementById('seccion-ct-dc').value),
         material: document.getElementById('material-conductor-ct-dc') ? document.getElementById('material-conductor-ct-dc').value : 'cobre',
         temperatura: parseFloat(document.getElementById('temperatura-ct-dc').value),
-        aislamiento: document.getElementById('aislamiento-ct-dc') ? document.getElementById('aislamiento-ct-dc').value : 'PVC'
+        aislamiento: document.getElementById('aislamiento-ct-dc') ? document.getElementById('aislamiento-ct-dc').value : 'PVC',
+        aplicacionDC: document.getElementById('aplicacion-dc')?.value || 'general',
     };
 }
 
@@ -385,7 +393,9 @@ function calcularProyecto() {
             materialAislamento: parametros.materialAislamento,
             temperaturaAmbiente: parametros.temperaturaAmbiente,
             metodoInstalacao: parametros.metodoInstalacao,
-            agrupamento: parametros.agrupamento
+            agrupamento: parametros.agrupamento,
+            tipoCircuito: parametros.tipoCircuito,
+            factorDemanda: parametros.factorDemanda
         });
 
         // Mostrar resultados
@@ -398,6 +408,14 @@ function calcularProyecto() {
         };
 
         mostrarMensaje('Dimensionamiento AC calculado correctamente', 'exito');
+
+        // Mark tab as completed
+        var tab = document.querySelector('[data-tab="proyecto"]');
+        if (tab && !tab.textContent.includes('\u2713')) {
+            tab.textContent = tab.textContent.trim() + ' \u2713';
+        }
+
+        guardarEnHistorial('proyecto', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de proyecto:', error);
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
@@ -426,6 +444,12 @@ function mostrarResultadosProyecto(resultado) {
         var el = document.getElementById(id);
         if (el) el.textContent = campos[id];
     });
+
+    // Show ground conductor
+    if (window.calcularConductorProteccion && resultado.seccion) {
+        var seccionTierra = window.calcularConductorProteccion(resultado.seccion);
+        setTexto('conductor-proteccion', seccionTierra + ' mm\u00B2');
+    }
 }
 
 // ===================================================================
@@ -464,6 +488,14 @@ function calcularCaidaTension() {
         };
 
         mostrarMensaje('Caida de tension AC calculada correctamente', 'exito');
+
+        // Mark tab as completed
+        var tab = document.querySelector('[data-tab="caida-tension"]');
+        if (tab && !tab.textContent.includes('\u2713')) {
+            tab.textContent = tab.textContent.trim() + ' \u2713';
+        }
+
+        guardarEnHistorial('caida-tension', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de caida de tension AC:', error);
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
@@ -523,6 +555,14 @@ function calcularCortocircuito() {
         };
 
         mostrarMensaje('Cortocircuito AC calculado correctamente', 'exito');
+
+        // Mark tab as completed
+        var tab = document.querySelector('[data-tab="cortocircuito"]');
+        if (tab && !tab.textContent.includes('\u2713')) {
+            tab.textContent = tab.textContent.trim() + ' \u2713';
+        }
+
+        guardarEnHistorial('cortocircuito', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de cortocircuito AC:', error);
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
@@ -649,6 +689,14 @@ function calcularAmpacidadDC() {
         appState.calculos.ampacidadDC = { parametros: parametros, resultado: resultado };
 
         mostrarMensaje('Ampacidad DC calculada correctamente', 'exito');
+
+        // Mark tab as completed
+        var tab = document.querySelector('[data-tab="ampacidad-dc"]');
+        if (tab && !tab.textContent.includes('\u2713')) {
+            tab.textContent = tab.textContent.trim() + ' \u2713';
+        }
+
+        guardarEnHistorial('ampacidad-dc', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de ampacidad DC:', error);
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
@@ -698,6 +746,14 @@ function calcularCaidaTensionDC_UI() {
         appState.calculos.caidaTensionDC = { parametros: parametros, resultado: resultado };
 
         mostrarMensaje('Caida de tension DC calculada correctamente', 'exito');
+
+        // Mark tab as completed
+        var tab = document.querySelector('[data-tab="caida-tension-dc"]');
+        if (tab && !tab.textContent.includes('\u2713')) {
+            tab.textContent = tab.textContent.trim() + ' \u2713';
+        }
+
+        guardarEnHistorial('caida-tension-dc', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de caida de tension DC:', error);
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
@@ -751,6 +807,14 @@ function calcularCortocircuitoDC() {
         appState.calculos.cortocircuitoDC = { parametros: parametros, resultado: resultado };
 
         mostrarMensaje('Cortocircuito DC calculado correctamente', 'exito');
+
+        // Mark tab as completed
+        var tab = document.querySelector('[data-tab="cortocircuito-dc"]');
+        if (tab && !tab.textContent.includes('\u2713')) {
+            tab.textContent = tab.textContent.trim() + ' \u2713';
+        }
+
+        guardarEnHistorial('cortocircuito-dc', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de cortocircuito DC:', error);
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
@@ -900,16 +964,23 @@ function resetearFormulario(pestana) {
 }
 
 function generarReporteDC() {
-    var amp = appState.calculos.ampacidadDC;
-    var caida = appState.calculos.caidaTensionDC;
-    var cc = appState.calculos.cortocircuitoDC;
-
-    if (!amp && !caida && !cc) {
-        mostrarMensaje('No hay resultados DC para generar reporte', 'advertencia');
-        return;
+    actualizarResumenDC();
+    const contenido = document.getElementById('resultados-dc');
+    if (contenido) {
+        contenido.classList.add('print-active');
+        window.print();
+        setTimeout(() => contenido.classList.remove('print-active'), 1000);
     }
+}
 
-    mostrarMensaje('Reporte DC generado', 'exito');
+function generarReporteAC() {
+    actualizarResumenAC();
+    const contenido = document.getElementById('resultados-ac');
+    if (contenido) {
+        contenido.classList.add('print-active');
+        window.print();
+        setTimeout(() => contenido.classList.remove('print-active'), 1000);
+    }
 }
 
 // ===================================================================
@@ -957,4 +1028,44 @@ function mostrarErroresValidacion(errores) {
     errores.forEach(function (error) {
         mostrarMensaje(error, 'error');
     });
+}
+
+// ===================================================================
+// VALIDACION EN TIEMPO REAL
+// ===================================================================
+
+function configurarValidacionEnTiempoReal() {
+    document.querySelectorAll('input[type="number"]').forEach(function (input) {
+        input.addEventListener('input', function () {
+            this.classList.remove('campo-error');
+            var errorEl = this.parentElement.querySelector('.error-campo');
+            if (errorEl) errorEl.remove();
+
+            var val = parseFloat(this.value);
+            if (this.value && isNaN(val)) {
+                this.classList.add('campo-error');
+            } else if (this.min && val < parseFloat(this.min)) {
+                this.classList.add('campo-error');
+            } else if (this.max && val > parseFloat(this.max)) {
+                this.classList.add('campo-error');
+            }
+        });
+    });
+}
+
+// ===================================================================
+// HISTORIAL DE CALCULOS (localStorage)
+// ===================================================================
+
+function guardarEnHistorial(tipo, parametros, resultado) {
+    var historial = JSON.parse(localStorage.getItem('historialCalculos') || '[]');
+    historial.unshift({
+        tipo: tipo,
+        parametros: parametros,
+        resultado: resultado,
+        fecha: new Date().toISOString()
+    });
+    // Keep last 50
+    if (historial.length > 50) historial.length = 50;
+    localStorage.setItem('historialCalculos', JSON.stringify(historial));
 }

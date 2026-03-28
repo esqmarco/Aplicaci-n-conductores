@@ -450,15 +450,138 @@ test('determinarLimiteCaidaDC returns correct limits', function() {
     assertEqual(determinarLimiteCaidaDC(250), 2.0, '250V limit');
 });
 
-test('calcularFactorTemperaturaDC returns 1.0 at 20C', function() {
-    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 20 });
-    assertEqual(result, 1.0, 'Factor at 20C');
+test('calcularFactorTemperaturaDC PVC returns 1.0 at 30C (reference)', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 30, aislamiento: 'PVC' });
+    assertEqual(result, 1.0, 'PVC factor at 30C');
 });
 
-test('calcularFactorTemperaturaDC interpolates between table values', function() {
-    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 22 });
-    // Between 20 (1.00) and 25 (0.96): 1.00 + (0.96-1.00)*(22-20)/(25-20) = 1.00 - 0.016 = 0.984
-    assertClose(result, 0.984, 0.001, 'Interpolated factor at 22C');
+test('calcularFactorTemperaturaDC PVC interpolates between table values', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 32, aislamiento: 'PVC' });
+    // Between 30 (1.00) and 35 (0.94): 1.00 + (0.94-1.00)*(32-30)/(35-30) = 1.00 - 0.024 = 0.976
+    assertClose(result, 0.976, 0.002, 'Interpolated PVC factor at 32C');
+});
+
+// ===================================================================
+// TEST GROUP 12: DC Temperature Factor by Insulation (Phase 1)
+// ===================================================================
+
+console.log('\n--- Group 12: DC Temperature Factor by Insulation ---');
+
+test('PVC factor at 30C = 1.00 (reference temp)', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 30, aislamiento: 'PVC' });
+    assertEqual(result, 1.0, 'PVC at 30C');
+});
+
+test('EPR factor at 30C = 1.00 (reference temp)', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 30, aislamiento: 'EPR' });
+    assertEqual(result, 1.0, 'EPR at 30C');
+});
+
+test('PVC has lower factor than EPR at high temperature', function() {
+    const pvc = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 50, aislamiento: 'PVC' });
+    const epr = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 50, aislamiento: 'EPR' });
+    assertTrue(pvc < epr, `PVC (${pvc}) should be < EPR (${epr}) at 50C`);
+});
+
+test('PVC max usable temp is ~60C (factor near 0.50)', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 60, aislamiento: 'PVC' });
+    assertClose(result, 0.50, 0.05, 'PVC at 60C');
+});
+
+test('EPR allows higher temps (factor at 70C still > 0.5)', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 70, aislamiento: 'EPR' });
+    assertTrue(result >= 0.50, `EPR at 70C should be >= 0.50, got ${result}`);
+});
+
+// ===================================================================
+// TEST GROUP 13: Reactance in AC Voltage Drop (Phase 1)
+// ===================================================================
+
+console.log('\n--- Group 13: Reactance for Large Sections ---');
+
+test('Small section (<50mm2) uses simple formula', function() {
+    const result = calcularCaidaTensionAC({
+        corriente: 30, tension: 220, longitud: 50, seccion: 4,
+        materialCondutor: 'cobre', tipoSistema: 'monofasico', factorPotencia: 1.0
+    });
+    // R=4.61, L=0.05km, k=2: dV = 2 * 4.61 * 30 * 0.05 * 1.0 = 13.83V
+    assertClose(result.caidaTensionV, 13.83, 0.1, 'Simple formula for 4mm2');
+});
+
+test('Large section (>=50mm2) includes reactance component', function() {
+    const result = calcularCaidaTensionAC({
+        corriente: 200, tension: 380, longitud: 100, seccion: 95,
+        materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85
+    });
+    // R=0.193, X=0.076, fp=0.85, sinφ=0.5268
+    // dV = √3 * 200 * 0.1 * (0.193*0.85 + 0.076*0.5268) = √3 * 200 * 0.1 * (0.16405 + 0.04004)
+    // dV = √3 * 200 * 0.1 * 0.20409 = 7.07V
+    assertTrue(result.caidaTensionV > 0, 'Should calculate positive voltage drop');
+    assertTrue(result.caidaTensionPct > 0, 'Should have positive percentage');
+});
+
+// ===================================================================
+// TEST GROUP 14: Minimum Section per NBR 5410 (Phase 1)
+// ===================================================================
+
+console.log('\n--- Group 14: Minimum Section per NBR 5410 ---');
+
+test('obtenerSeccionMinimaNBR returns 1.5 for iluminacion', function() {
+    assertEqual(obtenerSeccionMinimaNBR('iluminacion'), 1.5, 'Iluminacion min');
+});
+
+test('obtenerSeccionMinimaNBR returns 2.5 for tomadas', function() {
+    assertEqual(obtenerSeccionMinimaNBR('tomadas'), 2.5, 'Tomadas min');
+});
+
+test('obtenerSeccionMinimaNBR returns 6 for alimentador', function() {
+    assertEqual(obtenerSeccionMinimaNBR('alimentador'), 6, 'Alimentador min');
+});
+
+test('obtenerSeccionMinimaNBR returns 1.5 for unknown type', function() {
+    assertEqual(obtenerSeccionMinimaNBR('desconocido'), 1.5, 'Unknown defaults to 1.5');
+});
+
+// ===================================================================
+// TEST GROUP 15: Demand Factor (Phase 1)
+// ===================================================================
+
+console.log('\n--- Group 15: Demand Factor ---');
+
+test('aplicarFactorDemanda reduces power', function() {
+    assertEqual(aplicarFactorDemanda(10000, 0.7), 7000, '10kW with fd=0.7');
+});
+
+test('aplicarFactorDemanda with 1.0 keeps same power', function() {
+    assertEqual(aplicarFactorDemanda(5000, 1.0), 5000, 'fd=1.0');
+});
+
+test('aplicarFactorDemanda defaults invalid to 1.0', function() {
+    assertEqual(aplicarFactorDemanda(5000, 0), 5000, 'fd=0 defaults to 1.0');
+    assertEqual(aplicarFactorDemanda(5000, -1), 5000, 'fd=-1 defaults to 1.0');
+    assertEqual(aplicarFactorDemanda(5000, 1.5), 5000, 'fd=1.5 defaults to 1.0');
+});
+
+// ===================================================================
+// TEST GROUP 16: Ground Conductor Sizing (Phase 1)
+// ===================================================================
+
+console.log('\n--- Group 16: Ground Conductor (NBR 5410 Table 58) ---');
+
+test('Phase <= 16mm2: ground = same as phase', function() {
+    assertEqual(calcularConductorProteccion(10), 10, '10mm2 phase -> 10mm2 ground');
+    assertEqual(calcularConductorProteccion(16), 16, '16mm2 phase -> 16mm2 ground');
+});
+
+test('Phase 16-35mm2: ground = 16mm2', function() {
+    assertEqual(calcularConductorProteccion(25), 16, '25mm2 phase -> 16mm2 ground');
+    assertEqual(calcularConductorProteccion(35), 16, '35mm2 phase -> 16mm2 ground');
+});
+
+test('Phase > 35mm2: ground = half of phase', function() {
+    assertEqual(calcularConductorProteccion(50), 25, '50mm2 phase -> 25mm2 ground');
+    assertEqual(calcularConductorProteccion(120), 60, '120mm2 phase -> 60mm2 ground');
+    assertEqual(calcularConductorProteccion(240), 120, '240mm2 phase -> 120mm2 ground');
 });
 
 // ===================================================================
