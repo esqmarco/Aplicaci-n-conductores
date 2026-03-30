@@ -4,6 +4,19 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.4.0] - 2026-03-30
+
+### Added
+- Propagacion automatica de datos entre pestanas AC Y DC despues de calcular ampacidad
+  AC: seccion, tension, tipo sistema, factor potencia, material, potencia -> Caida Tension y Cortocircuito
+  DC: seccion, tension, potencia, material, temperatura, aislamiento -> Caida Tension DC y Cortocircuito DC
+- El usuario puede modificar manualmente los valores propagados antes de calcular
+- Criterio unificado AC y DC: ambos propagan datos de ampacidad a las demas pestanas
+
+### Changed
+- Flujo de dimensionamiento AC y DC ahora es secuencial: Ampacidad -> Caida Tension -> Cortocircuito
+  Los datos fluyen automaticamente entre pestanas pero son editables
+
 ## [4.3.0] - 2026-03-30
 
 ### Added
