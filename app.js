@@ -397,6 +397,7 @@ function calcularProyecto() {
 function mostrarResultadosProyecto(resultado) {
     var seccion = document.getElementById('resultados-proyecto');
     if (seccion) {
+        seccion.classList.remove('hidden');
         seccion.style.display = 'block';
     }
 
@@ -404,10 +405,9 @@ function mostrarResultadosProyecto(resultado) {
         'corriente-proyecto': resultado.corriente !== undefined ? resultado.corriente.toFixed(2) + ' A' : '--',
         'corriente-corregida': resultado.corrienteCorregida !== undefined ? resultado.corrienteCorregida.toFixed(2) + ' A' : '--',
         'factor-temp-ac': resultado.factorTemperatura !== undefined ? resultado.factorTemperatura.toFixed(2) : '--',
-        'factor-agrup-ac': resultado.factorAgrupamento !== undefined ? resultado.factorAgrupamento.toFixed(2) : '--',
-        'seccion-comercial': resultado.seccion !== undefined ? resultado.seccion + ' mm2' : '--',
-        'ampacidad-seleccionada': resultado.ampacidad !== undefined ? resultado.ampacidad + ' A' : '--',
-        'seccion-minima': resultado.seccion !== undefined ? resultado.seccion + ' mm2' : '--'
+        'factor-agrup-ac': resultado.factorAgrupamiento !== undefined ? resultado.factorAgrupamiento.toFixed(2) : '--',
+        'seccion-minima': resultado.seccion !== undefined ? resultado.seccion + ' mm\u00B2' : '--',
+        'ampacidad-seleccionada': resultado.ampacidad !== undefined ? resultado.ampacidad + ' A' : '--'
     };
 
     Object.keys(campos).forEach(function (id) {
@@ -438,8 +438,17 @@ function calcularCaidaTension() {
             return;
         }
 
+        // Calcular corriente considerando tipo de sistema
+        var corrienteVD = calcularCorrenteProyecto({
+            potencia: parametros.potencia,
+            tension: parametros.tension,
+            factorPotencia: parametros.factorPotencia,
+            tipoSistema: parametros.tipoSistema,
+            rendimiento: 1.0
+        });
+
         var resultado = calcularCaidaTensionAC({
-            corriente: parametros.potencia / (parametros.tension * parametros.factorPotencia),
+            corriente: corrienteVD,
             tension: parametros.tension,
             longitud: parametros.longitud,
             seccion: parametros.seccion,
@@ -480,10 +489,10 @@ function mostrarResultadosCaidaTensionAC(resultado) {
         seccion.style.display = 'block';
     }
 
-    var elPct = document.getElementById('caida-tension-ac-valor');
+    var elPct = document.getElementById('caida-tension-valor');
     if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '%';
 
-    var elStatus = document.getElementById('caida-tension-ac-status');
+    var elStatus = document.getElementById('caida-tension-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
         elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
@@ -547,13 +556,13 @@ function mostrarResultadosCortocircuitoAC(resultado) {
         seccion.style.display = 'block';
     }
 
-    var elCorriente = document.getElementById('corriente-cortocircuito-ac');
-    if (elCorriente) elCorriente.textContent = resultado.corrienteCortocircuito.toFixed(0) + ' A';
+    var elCorriente = document.getElementById('corriente-cortocircuito');
+    if (elCorriente) elCorriente.textContent = resultado.corrienteCortocircuito.toFixed(2) + ' kA';
 
-    var elSeccion = document.getElementById('seccion-minima-cc-ac');
-    if (elSeccion) elSeccion.textContent = resultado.seccionMinima + ' mm2';
+    var elSeccion = document.getElementById('seccion-minima-cc');
+    if (elSeccion) elSeccion.textContent = resultado.seccionMinima + ' mm\u00B2';
 
-    var elStatus = document.getElementById('cortocircuito-ac-status');
+    var elStatus = document.getElementById('cortocircuito-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
         elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
@@ -594,7 +603,7 @@ function actualizarResumenAC() {
 
     // Cortocircuito
     if (cc && cc.resultado) {
-        setTexto('resumen-cc-ac', cc.resultado.corrienteCortocircuito.toFixed(0) + ' A');
+        setTexto('resumen-cc-ac', cc.resultado.corrienteCortocircuito.toFixed(2) + ' kA');
         var elEstadoCC = document.getElementById('resumen-estado-cc-ac');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
@@ -905,7 +914,9 @@ function actualizarResistenciaInterna() {
 
 function resetearFormulario(pestana) {
     var formularios = {
-        'proyecto': ['potencia', 'tension', 'factor-potencia'],
+        'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
+        'caida-tension': ['potencia-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
+        'cortocircuito': ['potencia-cc', 'tension-cc', 'tiempo-despeje', 'seccion-cc'],
         'ampacidad-dc': ['potencia-dc', 'tension-dc', 'tension-personalizada'],
         'caida-tension-dc': ['potencia-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
         'cortocircuito-dc': ['elementos-serie', 'capacidad-bateria', 'resistencia-interna']

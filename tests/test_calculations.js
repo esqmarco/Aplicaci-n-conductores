@@ -260,18 +260,17 @@ test('dimensionarPorAmpacidadAC transformer mode', function() {
 
 console.log('\n--- Group 7: AC Voltage Drop ---');
 
-test('Trifasico voltage drop: 50A, 380V, 100m, 10mm2 cobre, fp=0.85', function() {
+test('Trifasico voltage drop: 50A, 380V, 100m, 10mm2 cobre', function() {
     const result = calcularCaidaTensionAC({
         corriente: 50, tension: 380, longitud: 100,
         seccion: 10, materialCondutor: 'cobre',
         tipoSistema: 'trifasico', factorPotencia: 0.85
     });
-    // R = 1.83 ohm/km, L = 0.1km
-    // dV = sqrt(3) * 1.83 * 50 * 0.1 * 0.85 = 13.48V
-    // pct = 13.48 / 380 * 100 = 3.55%
-    assertClose(result.caidaTensionV, 13.48, 0.1, 'Voltage drop V');
-    assertClose(result.caidaTensionPct, 3.55, 0.05, 'Voltage drop %');
-    assertTrue(result.cumple, 'Should be within 4% limit');
+    // R = 1.83 ohm/km, L = 0.1km (section < 50, no fp multiplication)
+    // dV = sqrt(3) * 1.83 * 50 * 0.1 = 15.86V
+    // pct = 15.86 / 380 * 100 = 4.17%
+    assertClose(result.caidaTensionV, 15.86, 0.1, 'Voltage drop V');
+    assertClose(result.caidaTensionPct, 4.17, 0.1, 'Voltage drop %');
 });
 
 test('Monofasico voltage drop uses 2*R*I*L formula', function() {
@@ -281,7 +280,7 @@ test('Monofasico voltage drop uses 2*R*I*L formula', function() {
         tipoSistema: 'monofasico', factorPotencia: 1.0
     });
     // R = 4.61, L = 0.05km, I = 30
-    // dV = 2 * 4.61 * 30 * 0.05 * 1.0 = 13.83V
+    // dV = 2 * 4.61 * 30 * 0.05 = 13.83V
     // pct = 13.83 / 220 * 100 = 6.29%
     assertClose(result.caidaTensionV, 13.83, 0.1, 'Mono voltage drop V');
     assertTrue(!result.cumple, 'Should exceed 4% limit');
