@@ -179,9 +179,11 @@ function dimensionarPorAmpacidadAC(parametros) {
 
     let seccionSeleccionada = null;
     let ampacidadSeleccionada = null;
+    let metodoUsado = metodo;
 
     // Determinar método efectivo para la tabla de ampacidad
     // Algunos aislamientos (EPR_105) solo tienen métodos genéricos (A, B, H, I)
+    // HEPR no tiene métodos H, I
     const metodosFallback = resolverMetodoAmpacidad(materialAislamento, metodo);
 
     for (const seccion of secciones) {
@@ -190,9 +192,10 @@ function dimensionarPorAmpacidadAC(parametros) {
         for (const met of metodosFallback) {
             try {
                 ampacidad = window.obtenerAmpacidadBase(materialAislamento, met, seccion);
-                break; // Encontró ampacidad, salir del loop de métodos
+                metodoUsado = met;
+                break;
             } catch (e) {
-                continue; // Probar siguiente método
+                continue;
             }
         }
         if (ampacidad !== null && ampacidad >= corrienteCorregida) {
@@ -207,6 +210,10 @@ function dimensionarPorAmpacidadAC(parametros) {
     }
 
     const margenSeguridad = ((ampacidadSeleccionada - corrienteCorregida) / corrienteCorregida * 100).toFixed(1);
+    const usaFallback = metodoUsado !== metodo;
+    const advertenciaFallback = usaFallback
+        ? `Nota: No hay tabla para ${materialAislamento} método ${metodo}. Se usó método ${metodoUsado} como referencia conservadora.`
+        : null;
 
     return {
         corriente: Math.round(corriente * 100) / 100,
@@ -215,7 +222,9 @@ function dimensionarPorAmpacidadAC(parametros) {
         corrienteCorregida: Math.round(corrienteCorregida * 100) / 100,
         seccion: seccionSeleccionada,
         ampacidad: ampacidadSeleccionada,
-        margenSeguridad
+        margenSeguridad,
+        metodoUsado,
+        advertenciaFallback
     };
 }
 
@@ -232,7 +241,7 @@ function resolverMetodoAmpacidad(aislamiento, metodo) {
     // Primero intentar el método exacto
     const intentos = [metodo];
 
-    // Mapeo de fallback para aislamientos con métodos genéricos
+    // Mapeo de fallback para métodos genéricos (EPR_105 usa A, B en vez de A1, A2, etc.)
     const mapeoGenerico = {
         'A1': ['A'], 'A2': ['A'],
         'B1': ['B'], 'B2': ['B'],
@@ -241,6 +250,8 @@ function resolverMetodoAmpacidad(aislamiento, metodo) {
         'C': ['B', 'A'],  // Sobre pared → B como aproximación conservadora
         'E': ['B'],  // Aire libre → B
         'G': ['B'],  // Sobre aisladores → B
+        'H': ['D'],  // H no existe en HEPR → usar D (enterrado INPACO)
+        'I': ['H', 'D'],  // I no existe en HEPR → H o D
     };
 
     if (mapeoGenerico[metodo]) {
@@ -669,14 +680,46 @@ function aplicarFactorDemanda(potenciaTotal, factorDemanda) {
 }
 
 // ===================================================================
-// CONDUCTOR DE PROTECCIÓN (TIERRA) - NBR 5410 Tabla 58
+// CONDUCTOR DE PROTECCIÓN (TIERRA) - NBR 5410 Tabla 3.25 Mamede
 // ===================================================================
 
-function calcularConductorProteccion(seccionFase) {
-    // NBR 5410 Table 58
-    if (seccionFase <= 16) return seccionFase;           // Same as phase
-    if (seccionFase <= 35) return 16;                     // 16mm²
-    return seccionFase / 2;                               // Half of phase
+/**
+ * Calcula la sección del conductor de protección (PE/tierra)
+ * Método 1: Por tabla (NBR 5410 Tabla 3.25 / Mamede)
+ * Método 2: Por corriente de cortocircuito (Ecuación 3.24 Mamede)
+ * Retorna el mayor de ambos métodos.
+ */
+function calcularConductorProteccion(seccionFase, parametrosCC) {
+    // Método 1: Por tabla NBR 5410
+    let seccionTabla;
+    if (seccionFase <= 16) seccionTabla = seccionFase;
+    else if (seccionFase <= 35) seccionTabla = 16;
+    else seccionTabla = seccionFase / 2;
+
+    // Método 2: Por corriente de cortocircuito (si se proporcionan datos)
+    // Spe = Ift × √t / K
+    // K para conductor de protección (cobre, aislación en cable multipolar):
+    //   PVC: K=115 (≤300mm²), EPR/XLPE: K=143
+    // K para conductor de protección (cobre, no en cable, aislado):
+    //   PVC: K=143 (≤300mm²), EPR/XLPE: K=176
+    let seccionCC = 0;
+    if (parametrosCC && parametrosCC.corrienteCC && parametrosCC.tiempoDespeje) {
+        const K_pe = {
+            'PVC': 115,
+            'EPR': 143, 'EPR_90': 143, 'XLPE': 143,
+            'EPR_105': 176, 'HEPR': 176
+        };
+        const K = K_pe[parametrosCC.aislamiento] || 115;
+        seccionCC = (parametrosCC.corrienteCC * Math.sqrt(parametrosCC.tiempoDespeje)) / K;
+    }
+
+    // Retornar la mayor sección, redondeada a sección comercial
+    const seccionNecesaria = Math.max(seccionTabla, seccionCC);
+    const seccionesComerciales = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300];
+    for (const s of seccionesComerciales) {
+        if (s >= seccionNecesaria) return s;
+    }
+    return seccionNecesaria; // Si excede 300, retornar el valor calculado
 }
 
 // ===================================================================

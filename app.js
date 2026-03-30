@@ -379,6 +379,11 @@ function calcularProyecto() {
 
         mostrarMensaje('Dimensionamiento AC calculado correctamente', 'exito');
 
+        // Mostrar advertencia si se usó método fallback
+        if (resultado.advertenciaFallback) {
+            mostrarMensaje(resultado.advertenciaFallback, 'advertencia');
+        }
+
         // Mark tab as completed
         var tab = document.querySelector('[data-tab="proyecto"]');
         if (tab && !tab.textContent.includes('\u2713')) {

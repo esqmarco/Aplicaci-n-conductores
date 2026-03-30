@@ -577,9 +577,9 @@ test('Phase 16-35mm2: ground = 16mm2', function() {
     assertEqual(calcularConductorProteccion(35), 16, '35mm2 phase -> 16mm2 ground');
 });
 
-test('Phase > 35mm2: ground = half of phase', function() {
+test('Phase > 35mm2: ground = half of phase (rounded to commercial section)', function() {
     assertEqual(calcularConductorProteccion(50), 25, '50mm2 phase -> 25mm2 ground');
-    assertEqual(calcularConductorProteccion(120), 60, '120mm2 phase -> 60mm2 ground');
+    assertEqual(calcularConductorProteccion(120), 70, '120mm2 phase -> 60 -> 70mm2 commercial');
     assertEqual(calcularConductorProteccion(240), 120, '240mm2 phase -> 120mm2 ground');
 });
 

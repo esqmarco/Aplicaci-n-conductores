@@ -70,7 +70,22 @@
 - Sin un changelog, es imposible saber que cambio, cuando y por que.
 - Leccion: Mantener CHANGELOG.md actualizado con cada version.
 
-## 6. Recomendaciones para el Futuro
+## 6. Sobre Cobertura de Tablas de Datos (v4.2)
+
+### Tablas incompletas causan errores silenciosos
+- EPR_105 solo tiene metodos A, B, H, I en las tablas de ampacidad. Si el usuario elegia metodo D (enterrado), la app no encontraba datos y decia "corriente excede capacidad maxima" aunque 200A es perfectamente viable.
+- HEPR no tiene metodos H ni I. Elegia enterrado y crasheaba.
+- Leccion: **Toda combinacion que el usuario pueda seleccionar en la interfaz debe tener datos en las tablas, o un fallback explicito con advertencia visible.**
+
+### IDs de HTML vs JavaScript deben ser identicos
+- Los IDs de resultados AC tenian sufijo "-ac" en JS pero no en HTML. Los resultados se calculaban correctamente pero nunca se mostraban.
+- Leccion: **Buscar cada getElementById en el JS y verificar que el ID existe exactamente igual en el HTML. Un caracter de diferencia = resultado invisible.**
+
+### Modo de entrada necesita consistencia end-to-end
+- El selector de modo (potencia/corriente/transformador) cambiaba visualmente pero la validacion siempre pedia potencia, y el calculo duplicaba logica.
+- Leccion: **Cuando hay multiples modos de entrada, la validacion, la UI y el calculo deben manejar TODOS los modos. Probar cada modo antes de commitear.**
+
+## 7. Recomendaciones para el Futuro
 
 1. **Siempre correr tests antes de hacer commit**
 2. **Toda formula nueva debe incluir su referencia bibliografica en el codigo**
@@ -78,3 +93,6 @@
 4. **No dejar funciones placeholder - implementar o marcar visiblemente como pendiente**
 5. **Actualizar CHANGELOG.md con cada cambio significativo**
 6. **Revisar PLAN_DE_MEJORAS.md periodicamente para priorizar siguiente fase**
+7. **Verificar cobertura de tablas: toda combinacion seleccionable debe tener datos o fallback**
+8. **Verificar IDs: cada getElementById en JS debe coincidir exactamente con el HTML**
+9. **Probar cada modo de entrada end-to-end (UI + validacion + calculo + resultados)**
