@@ -140,36 +140,26 @@ function configurarModoEntrada() {
 }
 
 function aplicarModoEntrada(modo) {
-    // Campos de potencia
-    var campoPotencia = document.getElementById('potencia');
-    var campoUnidad = document.getElementById('unidad-potencia');
-    var filaPotencia = campoPotencia ? campoPotencia.closest('.form-group') : null;
-    var filaUnidad = campoUnidad ? campoUnidad.closest('.form-group') : null;
-
-    // Campo corriente directa
-    var campoCorriente = document.getElementById('corriente-directa');
-    var filaCorriente = campoCorriente ? campoCorriente.closest('.form-group') : null;
-
-    // Campo transformador
-    var campoTransformador = document.getElementById('potencia-transformador-kva');
-    var filaTransformador = campoTransformador ? campoTransformador.closest('.form-group') : null;
+    // Usar los divs contenedores directamente
+    var divPotencia = document.getElementById('campos-potencia');
+    var divCorriente = document.getElementById('campos-corriente');
+    var divTransformador = document.getElementById('campos-transformador');
 
     // Ocultar todos
-    if (filaPotencia) filaPotencia.style.display = 'none';
-    if (filaUnidad) filaUnidad.style.display = 'none';
-    if (filaCorriente) filaCorriente.style.display = 'none';
-    if (filaTransformador) filaTransformador.style.display = 'none';
+    if (divPotencia) divPotencia.style.display = 'none';
+    if (divCorriente) divCorriente.style.display = 'none';
+    if (divTransformador) divTransformador.style.display = 'none';
 
+    // Mostrar el seleccionado
     switch (modo) {
         case 'potencia':
-            if (filaPotencia) filaPotencia.style.display = '';
-            if (filaUnidad) filaUnidad.style.display = '';
+            if (divPotencia) divPotencia.style.display = '';
             break;
         case 'corriente':
-            if (filaCorriente) filaCorriente.style.display = '';
+            if (divCorriente) divCorriente.style.display = '';
             break;
         case 'transformador':
-            if (filaTransformador) filaTransformador.style.display = '';
+            if (divTransformador) divTransformador.style.display = '';
             break;
     }
 }
@@ -352,51 +342,31 @@ function calcularProyecto() {
 
         var parametros = obtenerParametrosProyecto();
 
-        var validacion = validarParametrosBasicos(parametros);
-        if (!validacion.valido) {
-            mostrarErroresValidacion(validacion.errores);
+        // Validar segun modo de entrada
+        var errores = [];
+        if (parametros.modoEntrada === 'potencia') {
+            if (!parametros.potencia || isNaN(parametros.potencia) || parametros.potencia <= 0) {
+                errores.push('Potencia es requerida y debe ser mayor que 0');
+            }
+        } else if (parametros.modoEntrada === 'corriente') {
+            if (!parametros.corrienteDirecta || isNaN(parametros.corrienteDirecta) || parametros.corrienteDirecta <= 0) {
+                errores.push('Corriente es requerida y debe ser mayor que 0');
+            }
+        } else if (parametros.modoEntrada === 'transformador') {
+            if (!parametros.potenciaTransformadorKVA || isNaN(parametros.potenciaTransformadorKVA) || parametros.potenciaTransformadorKVA <= 0) {
+                errores.push('Potencia del transformador (kVA) es requerida y debe ser mayor que 0');
+            }
+        }
+        if (!parametros.tension || isNaN(parametros.tension)) {
+            errores.push('Tensión es requerida');
+        }
+        if (errores.length > 0) {
+            mostrarErroresValidacion(errores);
             return;
         }
 
-        // Determinar corriente segun modo de entrada
-        var corrienteProyecto;
-        var potenciaW;
-
-        switch (parametros.modoEntrada) {
-            case 'corriente':
-                corrienteProyecto = parametros.corrienteDirecta;
-                break;
-            case 'transformador':
-                corrienteProyecto = calcularCorrienteTransformador({
-                    potenciaKVA: parametros.potenciaTransformadorKVA,
-                    tension: parametros.tension,
-                    tipoSistema: parametros.tipoSistema
-                });
-                break;
-            case 'potencia':
-            default:
-                potenciaW = convertirAWatts(parametros.potencia, parametros.unidadPotencia);
-                corrienteProyecto = calcularCorrenteProyecto({
-                    potencia: potenciaW,
-                    tension: parametros.tension,
-                    factorPotencia: parametros.factorPotencia,
-                    tipoSistema: parametros.tipoSistema,
-                    rendimiento: parametros.rendimiento
-                });
-                break;
-        }
-
-        // Dimensionar por ampacidad completa
-        var resultado = dimensionarPorAmpacidadAC({
-            corriente: corrienteProyecto,
-            materialCondutor: parametros.materialCondutor,
-            materialAislamento: parametros.materialAislamento,
-            temperaturaAmbiente: parametros.temperaturaAmbiente,
-            metodoInstalacao: parametros.metodoInstalacao,
-            agrupamento: parametros.agrupamento,
-            tipoCircuito: parametros.tipoCircuito,
-            factorDemanda: parametros.factorDemanda
-        });
+        // Pasar todos los parametros a dimensionarPorAmpacidadAC (maneja los 3 modos internamente)
+        var resultado = dimensionarPorAmpacidadAC(parametros);
 
         // Mostrar resultados
         mostrarResultadosProyecto(resultado);
