@@ -180,18 +180,25 @@ function dimensionarPorAmpacidadAC(parametros) {
     let seccionSeleccionada = null;
     let ampacidadSeleccionada = null;
 
+    // Determinar método efectivo para la tabla de ampacidad
+    // Algunos aislamientos (EPR_105) solo tienen métodos genéricos (A, B, H, I)
+    const metodosFallback = resolverMetodoAmpacidad(materialAislamento, metodo);
+
     for (const seccion of secciones) {
         if (seccion < seccionMinima) continue;
-        try {
-            const ampacidad = window.obtenerAmpacidadBase(materialAislamento, metodo, seccion);
-            if (ampacidad >= corrienteCorregida) {
-                seccionSeleccionada = seccion;
-                ampacidadSeleccionada = ampacidad;
-                break;
+        let ampacidad = null;
+        for (const met of metodosFallback) {
+            try {
+                ampacidad = window.obtenerAmpacidadBase(materialAislamento, met, seccion);
+                break; // Encontró ampacidad, salir del loop de métodos
+            } catch (e) {
+                continue; // Probar siguiente método
             }
-        } catch (e) {
-            // Sección no disponible para este método, continuar
-            continue;
+        }
+        if (ampacidad !== null && ampacidad >= corrienteCorregida) {
+            seccionSeleccionada = seccion;
+            ampacidadSeleccionada = ampacidad;
+            break;
         }
     }
 
@@ -210,6 +217,37 @@ function dimensionarPorAmpacidadAC(parametros) {
         ampacidad: ampacidadSeleccionada,
         margenSeguridad
     };
+}
+
+// ===================================================================
+// RESOLUCIÓN DE MÉTODO DE AMPACIDAD
+// ===================================================================
+
+/**
+ * Resuelve qué método(s) buscar en las tablas de ampacidad.
+ * EPR_105 solo tiene A, B, H, I - necesita mapeo desde métodos específicos.
+ * Devuelve array ordenado de métodos a intentar (primero el exacto, luego fallbacks).
+ */
+function resolverMetodoAmpacidad(aislamiento, metodo) {
+    // Primero intentar el método exacto
+    const intentos = [metodo];
+
+    // Mapeo de fallback para aislamientos con métodos genéricos
+    const mapeoGenerico = {
+        'A1': ['A'], 'A2': ['A'],
+        'B1': ['B'], 'B2': ['B'],
+        'D': ['H'],  // Enterrado directo → H (NBR enterrado directo)
+        'F': ['H'],  // Enterrado en ducto → H
+        'C': ['B', 'A'],  // Sobre pared → B como aproximación conservadora
+        'E': ['B'],  // Aire libre → B
+        'G': ['B'],  // Sobre aisladores → B
+    };
+
+    if (mapeoGenerico[metodo]) {
+        intentos.push(...mapeoGenerico[metodo]);
+    }
+
+    return intentos;
 }
 
 // ===================================================================
