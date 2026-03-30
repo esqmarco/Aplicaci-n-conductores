@@ -179,9 +179,11 @@ function dimensionarPorAmpacidadAC(parametros) {
 
     let seccionSeleccionada = null;
     let ampacidadSeleccionada = null;
+    let metodoUsado = metodo;
 
     // Determinar método efectivo para la tabla de ampacidad
     // Algunos aislamientos (EPR_105) solo tienen métodos genéricos (A, B, H, I)
+    // HEPR no tiene métodos H, I
     const metodosFallback = resolverMetodoAmpacidad(materialAislamento, metodo);
 
     for (const seccion of secciones) {
@@ -190,9 +192,10 @@ function dimensionarPorAmpacidadAC(parametros) {
         for (const met of metodosFallback) {
             try {
                 ampacidad = window.obtenerAmpacidadBase(materialAislamento, met, seccion);
-                break; // Encontró ampacidad, salir del loop de métodos
+                metodoUsado = met;
+                break;
             } catch (e) {
-                continue; // Probar siguiente método
+                continue;
             }
         }
         if (ampacidad !== null && ampacidad >= corrienteCorregida) {
@@ -207,6 +210,10 @@ function dimensionarPorAmpacidadAC(parametros) {
     }
 
     const margenSeguridad = ((ampacidadSeleccionada - corrienteCorregida) / corrienteCorregida * 100).toFixed(1);
+    const usaFallback = metodoUsado !== metodo;
+    const advertenciaFallback = usaFallback
+        ? `Nota: No hay tabla para ${materialAislamento} método ${metodo}. Se usó método ${metodoUsado} como referencia conservadora.`
+        : null;
 
     return {
         corriente: Math.round(corriente * 100) / 100,
@@ -215,7 +222,9 @@ function dimensionarPorAmpacidadAC(parametros) {
         corrienteCorregida: Math.round(corrienteCorregida * 100) / 100,
         seccion: seccionSeleccionada,
         ampacidad: ampacidadSeleccionada,
-        margenSeguridad
+        margenSeguridad,
+        metodoUsado,
+        advertenciaFallback
     };
 }
 
@@ -232,7 +241,7 @@ function resolverMetodoAmpacidad(aislamiento, metodo) {
     // Primero intentar el método exacto
     const intentos = [metodo];
 
-    // Mapeo de fallback para aislamientos con métodos genéricos
+    // Mapeo de fallback para métodos genéricos (EPR_105 usa A, B en vez de A1, A2, etc.)
     const mapeoGenerico = {
         'A1': ['A'], 'A2': ['A'],
         'B1': ['B'], 'B2': ['B'],
@@ -241,6 +250,8 @@ function resolverMetodoAmpacidad(aislamiento, metodo) {
         'C': ['B', 'A'],  // Sobre pared → B como aproximación conservadora
         'E': ['B'],  // Aire libre → B
         'G': ['B'],  // Sobre aisladores → B
+        'H': ['D'],  // H no existe en HEPR → usar D (enterrado INPACO)
+        'I': ['H', 'D'],  // I no existe en HEPR → H o D
     };
 
     if (mapeoGenerico[metodo]) {

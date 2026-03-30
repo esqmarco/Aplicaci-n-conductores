@@ -4,6 +4,31 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.2.0] - 2026-03-30
+
+### Fixed
+- Modo de entrada AC: campos de corriente/transformador no aparecian al cambiar selector
+- Validacion AC: ya no exige potencia en modo corriente o transformador
+- HEPR + metodos H/I: crasheaba por falta de datos, ahora usa fallback a metodo D
+- IDs de resultados AC caida tension (caida-tension-ac-valor -> caida-tension-valor)
+- IDs de resultados AC cortocircuito (3 IDs con sufijo -ac que no existian)
+- Propiedad factorAgrupamento -> factorAgrupamiento (typo portugues/espanol)
+- Elemento seccion-comercial inexistente eliminado de resultados
+- Clase hidden con !important impedia mostrar resultados proyecto AC
+- Reset formulario no funcionaba en pestanas Caida Tension AC y Cortocircuito AC
+- Calculo corriente en caida tension AC ignoraba tipo de sistema (siempre monofasico)
+- Doble conteo de factor de potencia en caida tension para secciones < 50mm2
+- Unidad cortocircuito AC: mostraba kA con etiqueta "A"
+
+### Added
+- Fallback de metodos de ampacidad: EPR_105 (A1->A, D->H, etc.), HEPR (H->D, I->D)
+- Advertencia visible cuando se usa metodo de fallback en dimensionamiento
+- Funcion resolverMetodoAmpacidad() con mapeo completo de 11 metodos
+
+### Changed
+- calcularProyecto() delega calculo completo a dimensionarPorAmpacidadAC (eliminada duplicacion)
+- dimensionarPorAmpacidadAC retorna metodoUsado y advertenciaFallback
+
 ## [4.0.0] - 2026-03-28
 
 ### Added - Phase 1: Precision Tecnica
