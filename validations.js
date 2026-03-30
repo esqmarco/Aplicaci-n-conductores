@@ -686,13 +686,13 @@ function validarParametrosCaidaTensionAC(params) {
     const advertencias = [];
 
     try {
-        // Validar potencia
-        if (!params.potencia || isNaN(params.potencia)) {
-            errores.push('Potencia es requerida y debe ser numérica');
+        // Validar corriente
+        if (!params.corriente || isNaN(params.corriente)) {
+            errores.push('Corriente es requerida y debe ser numérica');
         } else {
-            const potencia = parseFloat(params.potencia);
-            if (potencia <= 0) {
-                errores.push('Potencia debe ser mayor que 0');
+            const corriente = parseFloat(params.corriente);
+            if (corriente <= 0) {
+                errores.push('Corriente debe ser mayor que 0');
             }
         }
 
