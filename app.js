@@ -275,6 +275,7 @@ function obtenerParametrosProyecto() {
 }
 
 function obtenerParametrosCaidaTensionAC() {
+    var mat = document.getElementById('material-ct').value;
     return {
         corriente: parseFloat(document.getElementById('corriente-ct').value),
         tension: parseFloat(document.getElementById('tension-ct').value),
@@ -282,18 +283,23 @@ function obtenerParametrosCaidaTensionAC() {
         seccion: parseFloat(document.getElementById('seccion-ct').value),
         tipoSistema: document.getElementById('tipo-sistema-ct').value,
         factorPotencia: parseFloat(document.getElementById('fp-ct').value),
-        materialCondutor: document.getElementById('material-ct').value
+        material: mat,
+        materialCondutor: mat
     };
 }
 
 function obtenerParametrosCortocircuitoAC() {
+    var mat = document.getElementById('material-cc').value;
+    var ais = document.getElementById('aislamiento-cc').value;
     return {
         potenciaCortocircuito: parseFloat(document.getElementById('potencia-cc').value),
         tensionSistema: parseFloat(document.getElementById('tension-cc').value),
         tiempoDespeje: parseFloat(document.getElementById('tiempo-despeje').value),
         seccion: parseFloat(document.getElementById('seccion-cc').value),
-        materialCondutor: document.getElementById('material-cc').value,
-        materialAislamiento: document.getElementById('aislamiento-cc').value
+        material: mat,
+        materialCondutor: mat,
+        aislamiento: ais,
+        materialAislamiento: ais
     };
 }
 
