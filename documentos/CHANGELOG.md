@@ -4,6 +4,21 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.5.0] - 2026-03-30
+
+### Changed
+- Pestana Caida de Tension AC: reemplazar campo Potencia por Corriente de Proyecto
+  La corriente ya fue calculada en Ampacidad (por potencia, corriente directa, o transformador)
+  No tiene sentido recalcularla - se propaga directamente
+- Propagacion AC ahora envia corriente calculada en vez de potencia
+- Validacion caida tension AC pide corriente en vez de potencia
+- Tooltip en campo corriente explica que se precarga desde ampacidad
+
+### Fixed
+- Incoherencia: modo corriente directa en ampacidad no podia propagar a caida de tension
+  (porque caida de tension pedia potencia, que no existia en modo corriente)
+- Incoherencia: modo transformador tampoco propagaba datos correctamente
+
 ## [4.4.0] - 2026-03-30
 
 ### Added

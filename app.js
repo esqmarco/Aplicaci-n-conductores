@@ -260,7 +260,7 @@ function obtenerParametrosProyecto() {
 
 function obtenerParametrosCaidaTensionAC() {
     return {
-        potencia: parseFloat(document.getElementById('potencia-ct').value),
+        corriente: parseFloat(document.getElementById('corriente-ct').value),
         tension: parseFloat(document.getElementById('tension-ct').value),
         longitud: parseFloat(document.getElementById('longitud-ct').value),
         seccion: parseFloat(document.getElementById('seccion-ct').value),
@@ -547,13 +547,10 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
         matCT.value = parametros.materialCondutor;
     }
 
-    // Potencia (si se usó modo potencia, propagar el valor en watts)
-    if (parametros.modoEntrada === 'potencia' && parametros.potencia) {
-        var potCT = document.getElementById('potencia-ct');
-        if (potCT) {
-            var potW = window.convertirAWatts(parametros.potencia, parametros.unidadPotencia);
-            potCT.value = potW;
-        }
+    // Corriente de proyecto (siempre propagar, independiente del modo de entrada)
+    var corrienteCT = document.getElementById('corriente-ct');
+    if (corrienteCT && resultado.corriente) {
+        corrienteCT.value = resultado.corriente;
     }
 
     // --- Pestaña Cortocircuito AC ---
@@ -602,17 +599,9 @@ function calcularCaidaTension() {
             return;
         }
 
-        // Calcular corriente considerando tipo de sistema
-        var corrienteVD = calcularCorrenteProyecto({
-            potencia: parametros.potencia,
-            tension: parametros.tension,
-            factorPotencia: parametros.factorPotencia,
-            tipoSistema: parametros.tipoSistema,
-            rendimiento: 1.0
-        });
-
+        // Usar corriente directamente (ya viene del cálculo de ampacidad o ingresada manualmente)
         var resultado = calcularCaidaTensionAC({
-            corriente: corrienteVD,
+            corriente: parametros.corriente,
             tension: parametros.tension,
             longitud: parametros.longitud,
             seccion: parametros.seccion,
@@ -1082,7 +1071,7 @@ function actualizarResistenciaInterna() {
 function resetearFormulario(pestana) {
     var formularios = {
         'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
-        'caida-tension': ['potencia-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
+        'caida-tension': ['corriente-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
         'cortocircuito': ['potencia-cc', 'tension-cc', 'tiempo-despeje', 'seccion-cc'],
         'ampacidad-dc': ['potencia-dc', 'tension-dc', 'tension-personalizada'],
         'caida-tension-dc': ['potencia-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
