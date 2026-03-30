@@ -1078,26 +1078,43 @@ body {
             <div class="form-grid">
                 <div class="form-section">
                     <h3>Datos Básicos de la Carga DC</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="potencia-dc">Potencia DC (W):</label>
-                            <input type="number" id="potencia-dc" step="0.01" placeholder="Ej: 1000">
+                    <div class="form-group">
+                        <label for="modo-entrada-dc">Modo de Entrada:</label>
+                        <select id="modo-entrada-dc">
+                            <option value="potencia">Por Potencia</option>
+                            <option value="corriente">Por Corriente Conocida</option>
+                        </select>
+                    </div>
+
+                    <div id="campos-potencia-dc">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="potencia-dc">Potencia DC (W):</label>
+                                <input type="number" id="potencia-dc" step="0.01" placeholder="Ej: 1000">
+                            </div>
+                            <div class="form-group">
+                                <label for="tension-dc">Tensión DC (V):</label>
+                                <select id="tension-dc">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="12">12 V</option>
+                                    <option value="24">24 V</option>
+                                    <option value="48">48 V</option>
+                                    <option value="110">110 V</option>
+                                    <option value="125">125 V</option>
+                                    <option value="220">220 V</option>
+                                    <option value="250">250 V</option>
+                                    <option value="380">380 V</option>
+                                    <option value="500">500 V</option>
+                                    <option value="personalizado">Personalizado</option>
+                                </select>
+                            </div>
                         </div>
+                    </div>
+
+                    <div id="campos-corriente-dc" style="display:none">
                         <div class="form-group">
-                            <label for="tension-dc">Tensión DC (V):</label>
-                            <select id="tension-dc">
-                                <option value="">Seleccionar...</option>
-                                <option value="12">12 V</option>
-                                <option value="24">24 V</option>
-                                <option value="48">48 V</option>
-                                <option value="110">110 V</option>
-                                <option value="125">125 V</option>
-                                <option value="220">220 V</option>
-                                <option value="250">250 V</option>
-                                <option value="380">380 V</option>
-                                <option value="500">500 V</option>
-                                <option value="personalizado">Personalizado</option>
-                            </select>
+                            <label for="corriente-directa-dc">Corriente Conocida (A):</label>
+                            <input type="number" id="corriente-directa-dc" step="0.01" placeholder="Ej: 25">
                         </div>
                     </div>
 
@@ -1191,8 +1208,8 @@ body {
                     <h3>Parámetros del Circuito DC</h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="potencia-ct-dc">Potencia DC (W):</label>
-                            <input type="number" id="potencia-ct-dc" step="0.01" placeholder="Ej: 1000">
+                            <label for="corriente-ct-dc">Corriente de Proyecto (A):<span class="tooltip-icon" data-tooltip="Se precarga desde Ampacidad DC. Puede modificar manualmente.">?</span></label>
+                            <input type="number" id="corriente-ct-dc" step="0.01" placeholder="Ej: 25">
                         </div>
                         <div class="form-group">
                             <label for="tension-ct-dc">Tensión DC (V):</label>
