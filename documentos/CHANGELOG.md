@@ -4,6 +4,23 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.3.0] - 2026-03-30
+
+### Added
+- EPR_105 ampacity data COMPLETE: all 9 methods A-I from Mamede Tabela 3.29 (NBR 14039)
+  Previously only had A, B, H, I (4 methods), now has C, D, E, F, G too
+- Conductor de proteccion (PE/tierra) mejorado con metodo por cortocircuito
+  Ecuacion 3.24 Mamede: Spe = Ift x sqrt(t) / K, con constantes K por aislamiento
+- Redondeo a seccion comercial en calcularConductorProteccion
+- PDF Mamede Filho como referencia tecnica
+
+### Changed
+- EPR_105 ya no depende de fallbacks para metodos C, D, E, F, G
+- Cobertura de tablas: PVC 11/11, EPR_90 11/11, EPR_105 11/11 (era 4/11), HEPR 9/11+2 fallback
+
+### Fixed
+- EPR_105 con metodo D daba error "no se encontro seccion adecuada" por falta de datos
+
 ## [4.2.0] - 2026-03-30
 
 ### Fixed
