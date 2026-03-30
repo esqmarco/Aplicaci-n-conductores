@@ -140,36 +140,26 @@ function configurarModoEntrada() {
 }
 
 function aplicarModoEntrada(modo) {
-    // Campos de potencia
-    var campoPotencia = document.getElementById('potencia');
-    var campoUnidad = document.getElementById('unidad-potencia');
-    var filaPotencia = campoPotencia ? campoPotencia.closest('.form-group') : null;
-    var filaUnidad = campoUnidad ? campoUnidad.closest('.form-group') : null;
-
-    // Campo corriente directa
-    var campoCorriente = document.getElementById('corriente-directa');
-    var filaCorriente = campoCorriente ? campoCorriente.closest('.form-group') : null;
-
-    // Campo transformador
-    var campoTransformador = document.getElementById('potencia-transformador-kva');
-    var filaTransformador = campoTransformador ? campoTransformador.closest('.form-group') : null;
+    // Usar los divs contenedores directamente
+    var divPotencia = document.getElementById('campos-potencia');
+    var divCorriente = document.getElementById('campos-corriente');
+    var divTransformador = document.getElementById('campos-transformador');
 
     // Ocultar todos
-    if (filaPotencia) filaPotencia.style.display = 'none';
-    if (filaUnidad) filaUnidad.style.display = 'none';
-    if (filaCorriente) filaCorriente.style.display = 'none';
-    if (filaTransformador) filaTransformador.style.display = 'none';
+    if (divPotencia) divPotencia.style.display = 'none';
+    if (divCorriente) divCorriente.style.display = 'none';
+    if (divTransformador) divTransformador.style.display = 'none';
 
+    // Mostrar el seleccionado
     switch (modo) {
         case 'potencia':
-            if (filaPotencia) filaPotencia.style.display = '';
-            if (filaUnidad) filaUnidad.style.display = '';
+            if (divPotencia) divPotencia.style.display = '';
             break;
         case 'corriente':
-            if (filaCorriente) filaCorriente.style.display = '';
+            if (divCorriente) divCorriente.style.display = '';
             break;
         case 'transformador':
-            if (filaTransformador) filaTransformador.style.display = '';
+            if (divTransformador) divTransformador.style.display = '';
             break;
     }
 }
@@ -352,51 +342,31 @@ function calcularProyecto() {
 
         var parametros = obtenerParametrosProyecto();
 
-        var validacion = validarParametrosBasicos(parametros);
-        if (!validacion.valido) {
-            mostrarErroresValidacion(validacion.errores);
+        // Validar segun modo de entrada
+        var errores = [];
+        if (parametros.modoEntrada === 'potencia') {
+            if (!parametros.potencia || isNaN(parametros.potencia) || parametros.potencia <= 0) {
+                errores.push('Potencia es requerida y debe ser mayor que 0');
+            }
+        } else if (parametros.modoEntrada === 'corriente') {
+            if (!parametros.corrienteDirecta || isNaN(parametros.corrienteDirecta) || parametros.corrienteDirecta <= 0) {
+                errores.push('Corriente es requerida y debe ser mayor que 0');
+            }
+        } else if (parametros.modoEntrada === 'transformador') {
+            if (!parametros.potenciaTransformadorKVA || isNaN(parametros.potenciaTransformadorKVA) || parametros.potenciaTransformadorKVA <= 0) {
+                errores.push('Potencia del transformador (kVA) es requerida y debe ser mayor que 0');
+            }
+        }
+        if (!parametros.tension || isNaN(parametros.tension)) {
+            errores.push('Tensión es requerida');
+        }
+        if (errores.length > 0) {
+            mostrarErroresValidacion(errores);
             return;
         }
 
-        // Determinar corriente segun modo de entrada
-        var corrienteProyecto;
-        var potenciaW;
-
-        switch (parametros.modoEntrada) {
-            case 'corriente':
-                corrienteProyecto = parametros.corrienteDirecta;
-                break;
-            case 'transformador':
-                corrienteProyecto = calcularCorrienteTransformador({
-                    potenciaKVA: parametros.potenciaTransformadorKVA,
-                    tension: parametros.tension,
-                    tipoSistema: parametros.tipoSistema
-                });
-                break;
-            case 'potencia':
-            default:
-                potenciaW = convertirAWatts(parametros.potencia, parametros.unidadPotencia);
-                corrienteProyecto = calcularCorrenteProyecto({
-                    potencia: potenciaW,
-                    tension: parametros.tension,
-                    factorPotencia: parametros.factorPotencia,
-                    tipoSistema: parametros.tipoSistema,
-                    rendimiento: parametros.rendimiento
-                });
-                break;
-        }
-
-        // Dimensionar por ampacidad completa
-        var resultado = dimensionarPorAmpacidadAC({
-            corriente: corrienteProyecto,
-            materialCondutor: parametros.materialCondutor,
-            materialAislamento: parametros.materialAislamento,
-            temperaturaAmbiente: parametros.temperaturaAmbiente,
-            metodoInstalacao: parametros.metodoInstalacao,
-            agrupamento: parametros.agrupamento,
-            tipoCircuito: parametros.tipoCircuito,
-            factorDemanda: parametros.factorDemanda
-        });
+        // Pasar todos los parametros a dimensionarPorAmpacidadAC (maneja los 3 modos internamente)
+        var resultado = dimensionarPorAmpacidadAC(parametros);
 
         // Mostrar resultados
         mostrarResultadosProyecto(resultado);
@@ -427,6 +397,7 @@ function calcularProyecto() {
 function mostrarResultadosProyecto(resultado) {
     var seccion = document.getElementById('resultados-proyecto');
     if (seccion) {
+        seccion.classList.remove('hidden');
         seccion.style.display = 'block';
     }
 
@@ -434,10 +405,9 @@ function mostrarResultadosProyecto(resultado) {
         'corriente-proyecto': resultado.corriente !== undefined ? resultado.corriente.toFixed(2) + ' A' : '--',
         'corriente-corregida': resultado.corrienteCorregida !== undefined ? resultado.corrienteCorregida.toFixed(2) + ' A' : '--',
         'factor-temp-ac': resultado.factorTemperatura !== undefined ? resultado.factorTemperatura.toFixed(2) : '--',
-        'factor-agrup-ac': resultado.factorAgrupamento !== undefined ? resultado.factorAgrupamento.toFixed(2) : '--',
-        'seccion-comercial': resultado.seccion !== undefined ? resultado.seccion + ' mm2' : '--',
-        'ampacidad-seleccionada': resultado.ampacidad !== undefined ? resultado.ampacidad + ' A' : '--',
-        'seccion-minima': resultado.seccion !== undefined ? resultado.seccion + ' mm2' : '--'
+        'factor-agrup-ac': resultado.factorAgrupamiento !== undefined ? resultado.factorAgrupamiento.toFixed(2) : '--',
+        'seccion-minima': resultado.seccion !== undefined ? resultado.seccion + ' mm\u00B2' : '--',
+        'ampacidad-seleccionada': resultado.ampacidad !== undefined ? resultado.ampacidad + ' A' : '--'
     };
 
     Object.keys(campos).forEach(function (id) {
@@ -468,8 +438,17 @@ function calcularCaidaTension() {
             return;
         }
 
+        // Calcular corriente considerando tipo de sistema
+        var corrienteVD = calcularCorrenteProyecto({
+            potencia: parametros.potencia,
+            tension: parametros.tension,
+            factorPotencia: parametros.factorPotencia,
+            tipoSistema: parametros.tipoSistema,
+            rendimiento: 1.0
+        });
+
         var resultado = calcularCaidaTensionAC({
-            corriente: parametros.potencia / (parametros.tension * parametros.factorPotencia),
+            corriente: corrienteVD,
             tension: parametros.tension,
             longitud: parametros.longitud,
             seccion: parametros.seccion,
@@ -510,10 +489,10 @@ function mostrarResultadosCaidaTensionAC(resultado) {
         seccion.style.display = 'block';
     }
 
-    var elPct = document.getElementById('caida-tension-ac-valor');
+    var elPct = document.getElementById('caida-tension-valor');
     if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '%';
 
-    var elStatus = document.getElementById('caida-tension-ac-status');
+    var elStatus = document.getElementById('caida-tension-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
         elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
@@ -577,13 +556,13 @@ function mostrarResultadosCortocircuitoAC(resultado) {
         seccion.style.display = 'block';
     }
 
-    var elCorriente = document.getElementById('corriente-cortocircuito-ac');
-    if (elCorriente) elCorriente.textContent = resultado.corrienteCortocircuito.toFixed(0) + ' A';
+    var elCorriente = document.getElementById('corriente-cortocircuito');
+    if (elCorriente) elCorriente.textContent = resultado.corrienteCortocircuito.toFixed(2) + ' kA';
 
-    var elSeccion = document.getElementById('seccion-minima-cc-ac');
-    if (elSeccion) elSeccion.textContent = resultado.seccionMinima + ' mm2';
+    var elSeccion = document.getElementById('seccion-minima-cc');
+    if (elSeccion) elSeccion.textContent = resultado.seccionMinima + ' mm\u00B2';
 
-    var elStatus = document.getElementById('cortocircuito-ac-status');
+    var elStatus = document.getElementById('cortocircuito-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
         elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
@@ -624,7 +603,7 @@ function actualizarResumenAC() {
 
     // Cortocircuito
     if (cc && cc.resultado) {
-        setTexto('resumen-cc-ac', cc.resultado.corrienteCortocircuito.toFixed(0) + ' A');
+        setTexto('resumen-cc-ac', cc.resultado.corrienteCortocircuito.toFixed(2) + ' kA');
         var elEstadoCC = document.getElementById('resumen-estado-cc-ac');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
@@ -935,7 +914,9 @@ function actualizarResistenciaInterna() {
 
 function resetearFormulario(pestana) {
     var formularios = {
-        'proyecto': ['potencia', 'tension', 'factor-potencia'],
+        'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
+        'caida-tension': ['potencia-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
+        'cortocircuito': ['potencia-cc', 'tension-cc', 'tiempo-despeje', 'seccion-cc'],
         'ampacidad-dc': ['potencia-dc', 'tension-dc', 'tension-personalizada'],
         'caida-tension-dc': ['potencia-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
         'cortocircuito-dc': ['elementos-serie', 'capacidad-bateria', 'resistencia-interna']

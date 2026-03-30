@@ -258,16 +258,17 @@ function calcularCaidaTensionAC(parametros) {
         }
         caidaV = k * I * L_km * impedanciaPorKm;
     } else {
-        // For sections < 50mm², reactance is negligible - simpler formula
+        // For sections < 50mm², reactance is negligible
+        // No multiplicar por fp aquí - ya está incluido en el cálculo de corriente
         switch (tipoSistema) {
             case 'trifasico':
-                caidaV = Math.sqrt(3) * resistencia * I * L_km * fp;
+                caidaV = Math.sqrt(3) * resistencia * I * L_km;
                 break;
             case 'bifasico':
-                caidaV = 2 * resistencia * I * L_km * fp;
+                caidaV = 2 * resistencia * I * L_km;
                 break;
             case 'monofasico': default:
-                caidaV = 2 * resistencia * I * L_km * fp;
+                caidaV = 2 * resistencia * I * L_km;
                 break;
         }
     }
