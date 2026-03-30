@@ -333,6 +333,70 @@ function obtenerParametrosCortocircuitoDC() {
 }
 
 // ===================================================================
+// PROPAGACION DE DATOS ENTRE PESTAÑAS DC
+// ===================================================================
+
+function propagarDatosAmpacidadDC(parametros, resultado) {
+    // --- Pestaña Caída de Tensión DC ---
+    // Potencia
+    var potCTDC = document.getElementById('potencia-ct-dc');
+    if (potCTDC && parametros.potencia) potCTDC.value = parametros.potencia;
+
+    // Tensión (selector)
+    var selTensionCTDC = document.getElementById('tension-ct-dc');
+    if (selTensionCTDC && parametros.tensionSelector) {
+        selTensionCTDC.value = parametros.tensionSelector;
+    }
+
+    // Sección (seleccionar la que se calculó por ampacidad)
+    var selSeccionCTDC = document.getElementById('seccion-ct-dc');
+    if (selSeccionCTDC && resultado.seccion) {
+        var secStr = String(resultado.seccion);
+        for (var i = 0; i < selSeccionCTDC.options.length; i++) {
+            if (selSeccionCTDC.options[i].value === secStr) {
+                selSeccionCTDC.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    // Material
+    var matCTDC = document.getElementById('material-conductor-ct-dc');
+    if (matCTDC && parametros.material) matCTDC.value = parametros.material;
+
+    // Temperatura
+    var tempCTDC = document.getElementById('temperatura-ct-dc');
+    if (tempCTDC && parametros.temperatura) tempCTDC.value = parametros.temperatura;
+
+    // Aislamiento
+    var aisCTDC = document.getElementById('aislamiento-ct-dc');
+    if (aisCTDC && parametros.aislamiento) aisCTDC.value = parametros.aislamiento;
+
+    // --- Pestaña Cortocircuito DC ---
+    // Sección
+    var selSeccionCCDC = document.getElementById('seccion-cc-dc');
+    if (selSeccionCCDC && resultado.seccion) {
+        var secStr = String(resultado.seccion);
+        for (var i = 0; i < selSeccionCCDC.options.length; i++) {
+            if (selSeccionCCDC.options[i].value === secStr) {
+                selSeccionCCDC.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    // Material
+    var matCCDC = document.getElementById('material-cc-dc');
+    if (matCCDC && parametros.material) matCCDC.value = parametros.material;
+
+    // Aislamiento
+    var aisCCDC = document.getElementById('aislamiento-cc-dc');
+    if (aisCCDC && parametros.aislamiento) aisCCDC.value = parametros.aislamiento;
+
+    mostrarMensaje('Datos propagados a Caída de Tensión DC y Cortocircuito DC', 'info');
+}
+
+// ===================================================================
 // CALCULO AC - PROYECTO (Dimensionamiento por Ampacidad)
 // ===================================================================
 
@@ -768,6 +832,9 @@ function calcularAmpacidadDC() {
         appState.calculos.ampacidadDC = { parametros: parametros, resultado: resultado };
 
         mostrarMensaje('Ampacidad DC calculada correctamente', 'exito');
+
+        // Propagar datos a pestañas de Caída de Tensión DC y Cortocircuito DC
+        propagarDatosAmpacidadDC(parametros, resultado);
 
         // Mark tab as completed
         var tab = document.querySelector('[data-tab="ampacidad-dc"]');

@@ -7,14 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [4.4.0] - 2026-03-30
 
 ### Added
-- Propagacion automatica de datos entre pestanas AC despues de calcular ampacidad
-  Al calcular ampacidad, se pre-llenan automaticamente en Caida de Tension AC:
-  seccion, tension, tipo sistema, factor potencia, material, potencia
-  Y en Cortocircuito AC: seccion, material, aislamiento
+- Propagacion automatica de datos entre pestanas AC Y DC despues de calcular ampacidad
+  AC: seccion, tension, tipo sistema, factor potencia, material, potencia -> Caida Tension y Cortocircuito
+  DC: seccion, tension, potencia, material, temperatura, aislamiento -> Caida Tension DC y Cortocircuito DC
 - El usuario puede modificar manualmente los valores propagados antes de calcular
+- Criterio unificado AC y DC: ambos propagan datos de ampacidad a las demas pestanas
 
 ### Changed
-- Flujo de dimensionamiento AC ahora es secuencial: Ampacidad -> Caida Tension -> Cortocircuito
+- Flujo de dimensionamiento AC y DC ahora es secuencial: Ampacidad -> Caida Tension -> Cortocircuito
   Los datos fluyen automaticamente entre pestanas pero son editables
 
 ## [4.3.0] - 2026-03-30
