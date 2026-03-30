@@ -137,6 +137,22 @@ function configurarModoEntrada() {
 
     // Aplicar modo inicial
     aplicarModoEntrada(selector.value || 'potencia');
+
+    // DC mode selector
+    var selectorDC = document.getElementById('modo-entrada-dc');
+    if (selectorDC) {
+        selectorDC.addEventListener('change', function () {
+            aplicarModoEntradaDC(this.value);
+        });
+        aplicarModoEntradaDC(selectorDC.value || 'potencia');
+    }
+}
+
+function aplicarModoEntradaDC(modo) {
+    var divPotencia = document.getElementById('campos-potencia-dc');
+    var divCorriente = document.getElementById('campos-corriente-dc');
+    if (divPotencia) divPotencia.style.display = modo === 'potencia' ? '' : 'none';
+    if (divCorriente) divCorriente.style.display = modo === 'corriente' ? '' : 'none';
 }
 
 function aplicarModoEntrada(modo) {
@@ -260,7 +276,7 @@ function obtenerParametrosProyecto() {
 
 function obtenerParametrosCaidaTensionAC() {
     return {
-        potencia: parseFloat(document.getElementById('potencia-ct').value),
+        corriente: parseFloat(document.getElementById('corriente-ct').value),
         tension: parseFloat(document.getElementById('tension-ct').value),
         longitud: parseFloat(document.getElementById('longitud-ct').value),
         seccion: parseFloat(document.getElementById('seccion-ct').value),
@@ -286,11 +302,12 @@ function obtenerParametrosCortocircuitoAC() {
 // ===================================================================
 
 function obtenerParametrosAmpacidadDC() {
+    var modo = document.getElementById('modo-entrada-dc') ? document.getElementById('modo-entrada-dc').value : 'potencia';
     var tensionSelector = document.getElementById('tension-dc').value;
     var tensionPersonalizada = document.getElementById('tension-personalizada') ? document.getElementById('tension-personalizada').value : '';
 
-    return {
-        potencia: parseFloat(document.getElementById('potencia-dc').value),
+    var params = {
+        modoEntrada: modo,
         tensionSelector: tensionSelector,
         tensionPersonalizada: tensionPersonalizada,
         material: document.getElementById('material-condutor-dc').value,
@@ -299,6 +316,14 @@ function obtenerParametrosAmpacidadDC() {
         aislamiento: document.getElementById('aislamiento-dc') ? document.getElementById('aislamiento-dc').value : 'PVC',
         agrupamiento: parseInt(document.getElementById('agrupamiento-dc')?.value) || 1,
     };
+
+    if (modo === 'potencia') {
+        params.potencia = parseFloat(document.getElementById('potencia-dc').value);
+    } else {
+        params.corrienteDirecta = parseFloat(document.getElementById('corriente-directa-dc').value);
+    }
+
+    return params;
 }
 
 function obtenerParametrosCaidaTensionDC() {
@@ -306,7 +331,7 @@ function obtenerParametrosCaidaTensionDC() {
     var tensionPersonalizada = document.getElementById('tension-personalizada-ct-dc') ? document.getElementById('tension-personalizada-ct-dc').value : '';
 
     return {
-        potencia: parseFloat(document.getElementById('potencia-ct-dc').value),
+        corriente: parseFloat(document.getElementById('corriente-ct-dc').value),
         tensionSelector: tensionSelector,
         tensionPersonalizada: tensionPersonalizada,
         longitud: parseFloat(document.getElementById('longitud-ct-dc').value),
@@ -338,9 +363,9 @@ function obtenerParametrosCortocircuitoDC() {
 
 function propagarDatosAmpacidadDC(parametros, resultado) {
     // --- Pestaña Caída de Tensión DC ---
-    // Potencia
-    var potCTDC = document.getElementById('potencia-ct-dc');
-    if (potCTDC && parametros.potencia) potCTDC.value = parametros.potencia;
+    // Corriente (propagada desde ampacidad)
+    var corrCTDC = document.getElementById('corriente-ct-dc');
+    if (corrCTDC && resultado.corriente) corrCTDC.value = resultado.corriente;
 
     // Tensión (selector)
     var selTensionCTDC = document.getElementById('tension-ct-dc');
@@ -547,13 +572,10 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
         matCT.value = parametros.materialCondutor;
     }
 
-    // Potencia (si se usó modo potencia, propagar el valor en watts)
-    if (parametros.modoEntrada === 'potencia' && parametros.potencia) {
-        var potCT = document.getElementById('potencia-ct');
-        if (potCT) {
-            var potW = window.convertirAWatts(parametros.potencia, parametros.unidadPotencia);
-            potCT.value = potW;
-        }
+    // Corriente de proyecto (siempre propagar, independiente del modo de entrada)
+    var corrienteCT = document.getElementById('corriente-ct');
+    if (corrienteCT && resultado.corriente) {
+        corrienteCT.value = resultado.corriente;
     }
 
     // --- Pestaña Cortocircuito AC ---
@@ -602,17 +624,9 @@ function calcularCaidaTension() {
             return;
         }
 
-        // Calcular corriente considerando tipo de sistema
-        var corrienteVD = calcularCorrenteProyecto({
-            potencia: parametros.potencia,
-            tension: parametros.tension,
-            factorPotencia: parametros.factorPotencia,
-            tipoSistema: parametros.tipoSistema,
-            rendimiento: 1.0
-        });
-
+        // Usar corriente directamente (ya viene del cálculo de ampacidad o ingresada manualmente)
         var resultado = calcularCaidaTensionAC({
-            corriente: corrienteVD,
+            corriente: parametros.corriente,
             tension: parametros.tension,
             longitud: parametros.longitud,
             seccion: parametros.seccion,
@@ -825,7 +839,46 @@ function calcularAmpacidadDC() {
             return;
         }
 
-        var resultado = dimensionarPorAmpacidadDC(parametros);
+        var resultado;
+        if (parametros.modoEntrada === 'corriente') {
+            // Direct current mode - validate and calculate
+            if (!parametros.corrienteDirecta || isNaN(parametros.corrienteDirecta) || parametros.corrienteDirecta <= 0) {
+                mostrarMensaje('Corriente debe ser mayor que 0', 'error');
+                return;
+            }
+            var tension = window.obtenerTensionEfectiva(parametros.tensionSelector, parametros.tensionPersonalizada);
+            var factorTemp = window.calcularFactorTemperaturaDC({
+                material: parametros.material,
+                temperatura: parametros.temperatura,
+                aislamiento: parametros.aislamiento
+            });
+            var corrienteCorregida = parametros.corrienteDirecta / factorTemp;
+            var seccionInfo = window.seleccionarSeccionMinimaDC({
+                corrienteCorregida: corrienteCorregida,
+                material: parametros.material,
+                metodo: parametros.metodo
+            });
+            var resistenciaInfo = window.calcularResistenciaCorregida({
+                material: parametros.material,
+                seccion: seccionInfo.seccion,
+                temperatura: parametros.temperatura,
+                aislamiento: parametros.aislamiento
+            });
+            resultado = {
+                criterio: 'ampacidad',
+                corriente: parametros.corrienteDirecta,
+                corrienteCorregida: corrienteCorregida,
+                factorTemperatura: factorTemp,
+                seccion: seccionInfo.seccion,
+                ampacidad: seccionInfo.ampacidad,
+                resistencia_mostrada: resistenciaInfo.R_temp,
+                resistencia_20C: resistenciaInfo.R20,
+                factor_correccion_temp: resistenciaInfo.factor_correccion,
+                margen_seguridad: seccionInfo.margemSeguranca
+            };
+        } else {
+            resultado = dimensionarPorAmpacidadDC(parametros);
+        }
 
         mostrarResultadosAmpacidadDC(resultado);
 
@@ -885,7 +938,35 @@ function calcularCaidaTensionDC_UI() {
             return;
         }
 
-        var resultado = verificarCaidaTensionDC(parametros);
+        // Use corriente directly instead of calculating from potencia
+        var tension = window.obtenerTensionEfectiva(parametros.tensionSelector, parametros.tensionPersonalizada);
+        var resistenciaInfo = window.calcularResistenciaCorregida({
+            material: parametros.material,
+            seccion: parametros.seccion,
+            temperatura: parametros.temperatura,
+            aislamiento: parametros.aislamiento
+        });
+        var caidaInfo = window.calcularCaidaTensionDC({
+            corriente: parametros.corriente,
+            longitud: parametros.longitud,
+            resistencia: resistenciaInfo.R_temp,
+            Np: parametros.conductoresPorPolo,
+            tension: tension
+        });
+        var limite = window.determinarLimiteCaidaDC(tension);
+        var resultado = {
+            criterio: 'caida_tension',
+            corriente: parametros.corriente,
+            caida_tension_V: caidaInfo.caidaTension,
+            caida_tension_pct: caidaInfo.porcentajeCaida,
+            limite_pct: limite,
+            cumple_criterio: caidaInfo.porcentajeCaida <= limite,
+            resistencia_mostrada: resistenciaInfo.R_temp,
+            resistencia_20C: resistenciaInfo.R20,
+            conductores_por_polo: parametros.conductoresPorPolo,
+            formula_usada: caidaInfo.formula_usada,
+            longitud_km: caidaInfo.longitud_km
+        };
 
         mostrarResultadosCaidaTensionDC(resultado);
 
@@ -1082,10 +1163,10 @@ function actualizarResistenciaInterna() {
 function resetearFormulario(pestana) {
     var formularios = {
         'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
-        'caida-tension': ['potencia-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
+        'caida-tension': ['corriente-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
         'cortocircuito': ['potencia-cc', 'tension-cc', 'tiempo-despeje', 'seccion-cc'],
         'ampacidad-dc': ['potencia-dc', 'tension-dc', 'tension-personalizada'],
-        'caida-tension-dc': ['potencia-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
+        'caida-tension-dc': ['corriente-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
         'cortocircuito-dc': ['elementos-serie', 'capacidad-bateria', 'resistencia-interna']
     };
 

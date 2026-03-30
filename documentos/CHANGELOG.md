@@ -4,6 +4,38 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.6.0] - 2026-03-30
+
+### Added
+- Modo entrada DC: selector Potencia/Corriente en Ampacidad DC (igual que AC)
+- Campo corriente-directa-dc para ingreso directo de corriente DC
+
+### Changed
+- Caida Tension DC: campo Potencia reemplazado por Corriente de Proyecto
+  Se propaga automaticamente desde Ampacidad DC, editable manualmente
+- Caida Tension AC: misma logica, corriente se propaga desde Ampacidad AC
+- Flujo unificado AC y DC:
+  1. Ampacidad (por potencia o corriente) -> selecciona seccion
+  2. Datos se propagan a Caida Tension (corriente, seccion, material, tension)
+  3. Ingeniero agrega longitud y verifica. Si no cumple, cambia seccion y recalcula
+  4. Datos se propagan a Cortocircuito (seccion, material)
+  5. Resultados consolidan los 3 criterios
+
+## [4.5.0] - 2026-03-30
+
+### Changed
+- Pestana Caida de Tension AC: reemplazar campo Potencia por Corriente de Proyecto
+  La corriente ya fue calculada en Ampacidad (por potencia, corriente directa, o transformador)
+  No tiene sentido recalcularla - se propaga directamente
+- Propagacion AC ahora envia corriente calculada en vez de potencia
+- Validacion caida tension AC pide corriente en vez de potencia
+- Tooltip en campo corriente explica que se precarga desde ampacidad
+
+### Fixed
+- Incoherencia: modo corriente directa en ampacidad no podia propagar a caida de tension
+  (porque caida de tension pedia potencia, que no existia en modo corriente)
+- Incoherencia: modo transformador tampoco propagaba datos correctamente
+
 ## [4.4.0] - 2026-03-30
 
 ### Added
