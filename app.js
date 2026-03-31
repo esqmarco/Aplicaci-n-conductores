@@ -291,9 +291,11 @@ function obtenerParametrosCaidaTensionAC() {
 function obtenerParametrosCortocircuitoAC() {
     var mat = document.getElementById('material-cc').value;
     var ais = document.getElementById('aislamiento-cc').value;
+    var tensionV = parseFloat(document.getElementById('tension-cc').value);
     return {
         potenciaCortocircuito: parseFloat(document.getElementById('potencia-cc').value),
-        tensionSistema: parseFloat(document.getElementById('tension-cc').value),
+        tensionSistema: tensionV / 1000,  // Convertir V a kV para la fórmula
+        tensionV: tensionV,               // Guardar en V para referencia
         tiempoDespeje: parseFloat(document.getElementById('tiempo-despeje').value),
         seccion: parseFloat(document.getElementById('seccion-cc').value),
         material: mat,
@@ -609,6 +611,18 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
         var ais = parametros.materialAislamento;
         // EPR_90, EPR_105, HEPR → EPR; PVC → PVC
         aisCC.value = (ais === 'PVC') ? 'PVC' : 'EPR';
+    }
+
+    // Tensión (misma que ampacidad, en V)
+    var selTensionCC = document.getElementById('tension-cc');
+    if (selTensionCC && parametros.tension) {
+        var tensionStr = String(parametros.tension);
+        for (var i = 0; i < selTensionCC.options.length; i++) {
+            if (selTensionCC.options[i].value === tensionStr) {
+                selTensionCC.selectedIndex = i;
+                break;
+            }
+        }
     }
 
     mostrarMensaje('Datos propagados a Caída de Tensión y Cortocircuito AC', 'info');
