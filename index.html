@@ -954,17 +954,22 @@ body {
             <h3>Parametros de Cortocircuito</h3>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="potencia-cc">Potencia de Cortocircuito (MVA):</label>
-                    <input type="number" id="potencia-cc" step="0.01" placeholder="Ej: 500">
+                    <label for="potencia-cc">Potencia de Cortocircuito (MVA):<span class="tooltip-icon" data-tooltip="Potencia de cortocircuito del sistema en el punto de alimentación. Consultar con la distribuidora o calcular desde impedancia del transformador.">?</span></label>
+                    <input type="number" id="potencia-cc" step="0.01" placeholder="Ej: 5">
                 </div>
                 <div class="form-group">
-                    <label for="tension-cc">Tension (kV):</label>
+                    <label for="tension-cc">Tension del Sistema (V):<span class="tooltip-icon" data-tooltip="Se precarga desde Ampacidad. Misma tensión del circuito.">?</span></label>
                     <select id="tension-cc">
                         <option value="">Seleccionar...</option>
-                        <option value="0.38">0.38 kV</option>
-                        <option value="6.6">6.6 kV</option>
-                        <option value="13.8">13.8 kV</option>
-                        <option value="23">23 kV</option>
+                        <option value="127">127 V</option>
+                        <option value="220">220 V</option>
+                        <option value="380">380 V</option>
+                        <option value="440">440 V</option>
+                        <option value="460">460 V</option>
+                        <option value="480">480 V</option>
+                        <option value="6600">6600 V</option>
+                        <option value="13800">13800 V</option>
+                        <option value="23000">23000 V</option>
                     </select>
                 </div>
             </div>
