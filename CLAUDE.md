@@ -29,7 +29,7 @@ app.js            - Main controller, UI logic, event handlers
 
 ## Formulas (CRITICAL - do not change without engineering review)
 - Monofasico: I = P / (V x cosPhi x eta)
-- Bifasico: I = P / (V x cosPhi x eta x sqrt(2))
+- Bifasico: I = P / (V x cosPhi x eta), V = tension entre fases [Mamede 3.5.1.1]
 - Trifasico: I = P / (sqrt(3) x V x cosPhi x eta)
 - Transformer: I = kVA x 1000 / (sqrt(3) x V) [trifasico]
 - AC voltage drop mono/bi: DV = 2 x I x L x (Rt cosPhi + X sinPhi) / n
@@ -54,7 +54,8 @@ app.js            - Main controller, UI logic, event handlers
 
 ## Common Pitfalls
 - Do NOT modify data-tables.js unless updating technical data from standards
-- The bifasico formula MUST include sqrt(2) (was a previous bug)
+- The bifasico formula must NOT include sqrt(2): that factor is only for obsolete 90-degree two-phase systems.
+  Bifasico = two phases of a three-phase system; it underestimated current by 29%
 - AC and DC ampacity both use the INPACO tables in data-tables.js (DC = 2 loaded conductors)
 - Correction factors never fall back silently to 1.0: out-of-table values throw an error
 - When adding installation methods, update both the HTML selector AND ensure data exists in data-tables.js

@@ -4,6 +4,14 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.1.0] - 2026-09-22
+
+### Fixed
+- Formula bifasica: se quita el factor raiz(2). Ahora I = P / (V x cos x eta), con V = tension
+  entre fases (Mamede 3.5.1.1). El raiz(2) solo vale para sistemas bifasicos a 90 grados, que no
+  se usan; subestimaba la corriente un 29%. Ejemplo: 7500 W, 220 V, fp 0,8, B1 PVC 40 C daba
+  30,1 A y 6 mm2; lo correcto es 42,6 A y 10 mm2. Revisado y aprobado por el usuario.
+
 ## [5.0.0] - 2026-09-22
 
 Revision integral de calculos, datos y normativa. Varios resultados cambian respecto a 4.x.
@@ -74,9 +82,6 @@ Revision integral de calculos, datos y normativa. Varios resultados cambian resp
 - Formula de caida de tension AC/DC: ahora usa R a temperatura de servicio y (R.cos + X.sen)
   para todas las secciones, segun INPACO 4.3. Confirmar que es el criterio deseado.
 - Cortocircuito con conductores en paralelo: se exige la Icc completa a cada conductor (conservador).
-- Formula bifasica con raiz(2): corresponde a un sistema bifasico de fases a 90 grados. Para una
-  carga conectada entre dos fases de un sistema trifasico (uso habitual) la corriente es
-  I = P/(V.cos.eta) y la formula actual la subestima un 29%. No se modifico por la regla de CLAUDE.md.
 
 ## [4.6.0] - 2026-03-30
 

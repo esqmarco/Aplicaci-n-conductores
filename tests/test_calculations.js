@@ -102,33 +102,36 @@ test('1000W, 127V, fp=0.9, mono -> I = 8.75A', function() {
 });
 
 // ===================================================================
-// TEST GROUP 3: AC Current - Bifasico (CRITICAL - the bug fix)
+// TEST GROUP 3: AC Current - Bifasico (Mamede 3.5.1.1: I = P / (Vff x cosPhi))
 // ===================================================================
 
-console.log('\n--- Group 3: AC Current - Bifasico (sqrt(2) fix) ---');
+console.log('\n--- Group 3: AC Current - Bifasico (sin sqrt(2)) ---');
 
-test('7500W, 220V, fp=0.8, bifasico -> I = 30.13A (uses sqrt(2))', function() {
+test('7500W, 220V entre fases, fp=0.8, bifasico -> I = 42.61A', function() {
     const result = calcularCorrenteProyecto({
         potencia: 7500, tension: 220, factorPotencia: 0.8,
         tipoSistema: 'bifasico', rendimiento: 1.0
     });
-    // 7500 / (220 * 0.8 * 1 * sqrt(2)) = 7500 / 248.90... = 30.13...
-    assertClose(result, 30.13, 0.02, 'Bifasico 7500W');
+    // 7500 / (220 * 0.8) = 42.61 A
+    assertClose(result, 42.61, 0.01, 'Bifasico 7500W');
 });
 
-test('Bifasico gives LOWER current than monofasico for same params', function() {
+test('Bifasico does NOT divide by sqrt(2) (ratio to monofasico = 1)', function() {
     const params = { potencia: 7500, tension: 220, factorPotencia: 0.8, rendimiento: 1.0 };
     const mono = calcularCorrenteProyecto({ ...params, tipoSistema: 'monofasico' });
     const bif  = calcularCorrenteProyecto({ ...params, tipoSistema: 'bifasico' });
-    assertTrue(bif < mono, `Bifasico (${bif}A) should be less than monofasico (${mono}A)`);
+    assertEqual(bif, mono, 'Misma corriente para la misma tension aplicada a la carga');
 });
 
-test('Bifasico / monofasico ratio is 1/sqrt(2)', function() {
-    const params = { potencia: 7500, tension: 220, factorPotencia: 0.8, rendimiento: 1.0 };
-    const mono = calcularCorrenteProyecto({ ...params, tipoSistema: 'monofasico' });
-    const bif  = calcularCorrenteProyecto({ ...params, tipoSistema: 'bifasico' });
-    const ratio = bif / mono;
-    assertClose(ratio, 1 / Math.sqrt(2), 0.01, 'Ratio bifasico/monofasico');
+test('Bifasico 7500W 220V B1 PVC 40C -> 10mm2 (with sqrt(2) it wrongly gave 6mm2)', function() {
+    const r = dimensionarPorAmpacidadAC({
+        modoEntrada: 'potencia', potencia: 7500, unidadPotencia: 'W', tension: 220,
+        factorPotencia: 0.8, tipoSistema: 'bifasico', rendimiento: 1,
+        materialAislamento: 'PVC', materialCondutor: 'cobre', temperaturaAmbiente: 40,
+        metodoInstalacao: 'B1', agrupamento: 1
+    });
+    // 42.61 A con 3 conductores cargados: 6mm2 = 32 A (no alcanza), 10mm2 = 44 A
+    assertEqual(r.seccion, 10);
 });
 
 // ===================================================================

@@ -90,8 +90,11 @@ function calcularCorrenteProyecto(parametros) {
             corriente = potencia / (tension * factorPotencia * rendimiento);
             break;
         case 'bifasico':
-            // CORREGIDO: Fórmula bifásica con √2 según manual
-            corriente = potencia / (tension * factorPotencia * rendimiento * Math.sqrt(2));
+            // Dos fases de un sistema trifásico (F-F o F-F-N), V = tensión entre fases.
+            // Mamede 3.5.1.1: carga entre fases → I = P / (Vff · cosφ). Con cargas
+            // repartidas F-N la corriente real es menor (P / (2·Vfn·cosφ)): del lado seguro.
+            // No lleva √2: ese factor solo aplica a sistemas bifásicos a 90°, que no se usan.
+            corriente = potencia / (tension * factorPotencia * rendimiento);
             break;
         case 'trifasico':
             corriente = potencia / (Math.sqrt(3) * tension * factorPotencia * rendimiento);
