@@ -598,7 +598,7 @@ body {
             <h1>🔧 Calculadora de Cables Eléctricos</h1>
             <p>Sistema profesional de dimensionamiento según INPACO + NBR 5410 + Mamede Filho</p>
             <div class="version-info">
-                Versión R2 Corregida - 8 Pestañas Especializadas | Fórmulas Corregidas | Tensión Personalizable
+                Versión R5 - Tablas INPACO 2021 (baja tensión) | 8 Pestañas Especializadas
             </div>
         </div>
 
@@ -686,7 +686,7 @@ body {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="tension">Tensión (V):</label>
+                            <label for="tension">Tensión (V):<span class="tooltip-icon" data-tooltip="Monofásico: tensión fase-neutro o entre fases a la que se conecta la carga. Trifásico: tensión de línea. Tablas válidas para baja tensión (hasta 1000 V).">?</span></label>
                             <select id="tension">
                                 <option value="127">127 V</option>
                                 <option value="220" selected>220 V</option>
@@ -695,12 +695,6 @@ body {
                                 <option value="600">600 V</option>
                                 <option value="750">750 V</option>
                                 <option value="1000">1000 V</option>
-                                <option value="2300">2300 V</option>
-                                <option value="4160">4160 V</option>
-                                <option value="6600">6600 V</option>
-                                <option value="13200">13200 V</option>
-                                <option value="13800">13800 V</option>
-                                <option value="23000">23000 V</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -714,7 +708,7 @@ body {
                             <label for="tipo-sistema">Tipo de Sistema:</label>
                             <select id="tipo-sistema">
                                 <option value="monofasico">Monofásico</option>
-                                <option value="bifasico">Bifásico</option>
+                                <option value="bifasico">Bifásico (2 fases, V entre fases)</option>
                                 <option value="trifasico" selected>Trifásico</option>
                             </select>
                         </div>
@@ -726,7 +720,7 @@ body {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="factor-demanda">Factor de Demanda:</label>
+                            <label for="factor-demanda">Factor de Demanda:<span class="tooltip-icon" data-tooltip="Se aplica a la potencia instalada (solo en modo Por Potencia).">?</span></label>
                             <input type="number" id="factor-demanda" step="0.01" min="0.1" max="1.0" value="1.0">
                         </div>
                         <div class="form-group">
@@ -751,9 +745,8 @@ body {
                             <label for="material-isolamento">Material de Aislamiento:</label>
                             <select id="material-isolamento">
                                 <option value="PVC">PVC (70°C)</option>
-                                <option value="EPR_90">EPR (90°C)</option>
-                                <option value="EPR_105">EPR (105°C)</option>
-                                <option value="HEPR">HEPR (125°C)</option>
+                                <option value="EPR_90">EPR / XLPE (90°C)</option>
+                                <option value="HEPR">HEPR (90°C)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -767,7 +760,7 @@ body {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="temperatura-ambiente">Temperatura Ambiente (°C):</label>
+                            <label for="temperatura-ambiente">Temperatura Ambiente (°C):<span class="tooltip-icon" data-tooltip="Aire para métodos A1 a G. Para el método D es la temperatura del suelo. Referencia de las tablas: 40 °C aire / 25 °C suelo.">?</span></label>
                             <input type="number" id="temperatura-ambiente" value="30" step="1" min="-20" max="80">
                         </div>
                         <div class="form-group">
@@ -778,31 +771,60 @@ body {
                                 <option value="B1">B1 - Conductores en tubo sobre pared</option>
                                 <option value="B2">B2 - Cable multipolar en tubo sobre pared</option>
                                 <option value="C">C - Cable sobre pared o bandeja no perforada</option>
-                                <option value="D">D - Cable en conducto enterrado</option>
-                                <option value="E">E - Cable multipolar al aire libre</option>
-                                <option value="F">F - Conductores unipolares juntos al aire libre</option>
-                                <option value="G">G - Conductores unipolares separados al aire libre</option>
-                                <option value="H">H - Cable enterrado directo (NBR/Mamede)</option>
-                                <option value="I">I - Cable enterrado espaciado (NBR/Mamede)</option>
+                                <option value="D">D - Cables en electroducto enterrado o directamente enterrados</option>
+                                <option value="E">E - Cable multipolar al aire libre / bandeja perforada</option>
+                                <option value="F">F - Cables unipolares juntos al aire libre / bandeja perforada</option>
+                                <option value="G">G - Conductores unipolares espaciados / sobre aisladores</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="agrupamento">Número de Circuitos Agrupados:<span class="tooltip-icon" data-tooltip="Número de circuitos en la misma canalización. Reduce la capacidad de corriente por calentamiento mutuo">?</span></label>
+                            <label for="agrupamento">Número de Circuitos Agrupados:<span class="tooltip-icon" data-tooltip="Circuitos en la misma canalización o bandeja, contando cada terna en paralelo como un circuito. Reduce la capacidad por calentamiento mutuo.">?</span></label>
                             <input type="number" id="agrupamento" value="1" step="1" min="1" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="conductores-por-fase">Conductores en Paralelo por Fase:</label>
+                            <select id="conductores-por-fase">
+                                <option value="1" selected>1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="neutro-cargado">Neutro con Corriente Armónica:<span class="tooltip-icon" data-tooltip="Solo trifásico. Si el neutro lleva corrientes armónicas se consideran 4 conductores cargados (0,86 × columna de 3 conductores).">?</span></label>
+                            <select id="neutro-cargado">
+                                <option value="no" selected>No (3 conductores cargados)</option>
+                                <option value="si">Sí (4 conductores cargados)</option>
+                            </select>
                         </div>
                     </div>
 
                     <div class="form-row" id="fila-resistividad" style="display:none;">
                         <div class="form-group">
-                            <label for="resistividad-suelo">Resistividad T&eacute;rmica del Suelo:</label>
+                            <label for="tipo-enterrado">Tipo de Instalaci&oacute;n Enterrada:</label>
+                            <select id="tipo-enterrado">
+                                <option value="ducto" selected>En electroducto enterrado</option>
+                                <option value="directo">Directamente enterrado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="resistividad-suelo">Resistividad T&eacute;rmica del Suelo:<span class="tooltip-icon" data-tooltip="INPACO Tabla 11. Las tablas de ampacidad están referidas a 1,0 K·m/W.">?</span></label>
                             <select id="resistividad-suelo">
-                                <option value="normal">Normal (2.5 K&middot;m/W)</option>
-                                <option value="seco">Seco (3.0 K&middot;m/W)</option>
-                                <option value="humedo">H&uacute;medo (1.5 K&middot;m/W)</option>
-                                <option value="muy_humedo">Muy H&uacute;medo (1.0 K&middot;m/W)</option>
+                                <option value="0.5">0,5 K&middot;m/W - Tierra muy h&uacute;meda</option>
+                                <option value="0.8">0,8 K&middot;m/W - Tierra h&uacute;meda</option>
+                                <option value="1" selected>1,0 K&middot;m/W - Tierra seca normal</option>
+                                <option value="1.5">1,5 K&middot;m/W - Tierra muy seca</option>
+                                <option value="2">2,0 K&middot;m/W - 70% tierra / 30% arena, muy secas</option>
+                                <option value="2.5">2,5 K&middot;m/W - 70% arena / 30% tierra, muy secas</option>
+                                <option value="3">3,0 K&middot;m/W - Arena muy seca</option>
                             </select>
                         </div>
                     </div>
@@ -837,6 +859,10 @@ body {
                         <div class="result-value" id="factor-agrup-ac">-</div>
                         <div class="result-label">Factor de Agrupamiento</div>
                     </div>
+                    <div class="result-card" id="card-factor-resistividad" style="display:none;">
+                        <div class="result-value" id="factor-resist-ac">-</div>
+                        <div class="result-label">Factor Resistividad del Suelo</div>
+                    </div>
                     <div class="result-card">
                         <div class="result-value" id="seccion-minima">-</div>
                         <div class="result-label">Sección Mínima (mm²)</div>
@@ -844,6 +870,10 @@ body {
                     <div class="result-card">
                         <div class="result-value" id="ampacidad-seleccionada">-</div>
                         <div class="result-label">Ampacidad Seleccionada (A)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="capacidad-corregida">--</div>
+                        <div class="result-label">Capacidad Corregida Iz (A)</div>
                     </div>
                     <div class="result-card">
                         <div class="result-value" id="conductor-proteccion">--</div>
@@ -870,6 +900,9 @@ body {
                         <option value="220">220 V</option>
                         <option value="380">380 V</option>
                         <option value="440">440 V</option>
+                        <option value="600">600 V</option>
+                        <option value="750">750 V</option>
+                        <option value="1000">1000 V</option>
                     </select>
                 </div>
             </div>
@@ -923,6 +956,34 @@ body {
                         <option value="aluminio">Aluminio</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="aislamiento-ct">Aislamiento:<span class="tooltip-icon" data-tooltip="Define la temperatura de servicio del conductor para la resistencia: 70 °C (PVC) o 90 °C (EPR/XLPE/HEPR).">?</span></label>
+                    <select id="aislamiento-ct">
+                        <option value="PVC">PVC (70°C)</option>
+                        <option value="EPR_90">EPR / XLPE / HEPR (90°C)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="paralelo-ct">Conductores en Paralelo por Fase:</label>
+                    <select id="paralelo-ct">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="limite-ct">L&iacute;mite de Ca&iacute;da (%):<span class="tooltip-icon" data-tooltip="ANDE / INPACO: 4% iluminación, 5% fuerza motriz. NBR 5410: 4% circuitos terminales, 5% desde red de BT de la distribuidora, 7% desde transformador propio.">?</span></label>
+                    <select id="limite-ct">
+                        <option value="4" selected>4% - Iluminaci&oacute;n / circuito terminal</option>
+                        <option value="5">5% - Fuerza motriz / desde red BT</option>
+                        <option value="7">7% - Total desde transformador propio</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -940,8 +1001,20 @@ body {
                 <div class="result-label">Caida de Tension (%)</div>
             </div>
             <div class="result-card">
+                <div class="result-value" id="caida-tension-volts">--</div>
+                <div class="result-label">Caida de Tension (V)</div>
+            </div>
+            <div class="result-card">
                 <div class="result-value" id="caida-tension-status">--</div>
                 <div class="result-label">Estado</div>
+            </div>
+            <div class="result-card">
+                <div class="result-value" id="resistencia-ct">--</div>
+                <div class="result-label">Resistencia a Temp. de Servicio (&Omega;/km)</div>
+            </div>
+            <div class="result-card">
+                <div class="result-value" id="seccion-minima-ct">--</div>
+                <div class="result-label">Secci&oacute;n M&iacute;nima por Ca&iacute;da (mm&sup2;)</div>
             </div>
         </div>
     </div>
@@ -958,7 +1031,7 @@ body {
                     <input type="number" id="potencia-cc" step="0.01" placeholder="Ej: 5">
                 </div>
                 <div class="form-group">
-                    <label for="tension-cc">Tension del Sistema (V):<span class="tooltip-icon" data-tooltip="Se precarga desde Ampacidad. Misma tensión del circuito.">?</span></label>
+                    <label for="tension-cc">Tension de Linea del Sistema (V):<span class="tooltip-icon" data-tooltip="Tensión entre fases usada con la potencia de cortocircuito trifásica: Icc = Scc / (√3 × V). En un sistema 220/380 V usar 380 V aunque el circuito sea monofásico.">?</span></label>
                     <select id="tension-cc">
                         <option value="">Seleccionar...</option>
                         <option value="127">127 V</option>
@@ -967,7 +1040,13 @@ body {
                         <option value="440">440 V</option>
                         <option value="460">460 V</option>
                         <option value="480">480 V</option>
+                        <option value="600">600 V</option>
+                        <option value="750">750 V</option>
+                        <option value="1000">1000 V</option>
+                        <option value="2300">2300 V</option>
+                        <option value="4160">4160 V</option>
                         <option value="6600">6600 V</option>
+                        <option value="13200">13200 V</option>
                         <option value="13800">13800 V</option>
                         <option value="23000">23000 V</option>
                     </select>
@@ -975,11 +1054,11 @@ body {
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="tiempo-despeje">Tiempo de Despeje (s):</label>
-                    <input type="number" id="tiempo-despeje" step="0.01" value="0.1" placeholder="Ej: 0.1">
+                    <label for="tiempo-despeje">Tiempo de Despeje (s):<span class="tooltip-icon" data-tooltip="Criterio adiabático S = I·√t / K, válido hasta 5 s (NBR 5410).">?</span></label>
+                    <input type="number" id="tiempo-despeje" step="0.01" value="0.1" min="0.01" max="5" placeholder="Ej: 0.1">
                 </div>
                 <div class="form-group">
-                    <label for="seccion-cc">Seccion del Conductor (mm2):</label>
+                    <label for="seccion-cc">Seccion del Conductor (mm2):<span class="tooltip-icon" data-tooltip="Sección de UN conductor. Con conductores en paralelo, cada uno debe soportar la Icc completa (criterio conservador).">?</span></label>
                     <select id="seccion-cc">
                         <option value="">Seleccionar...</option>
                         <option value="1.5">1.5 mm2</option>
@@ -1013,7 +1092,7 @@ body {
                     <label for="aislamiento-cc">Tipo de Aislamiento:</label>
                     <select id="aislamiento-cc">
                         <option value="PVC">PVC</option>
-                        <option value="EPR">EPR</option>
+                        <option value="EPR">EPR / XLPE / HEPR</option>
                     </select>
                 </div>
             </div>
@@ -1034,7 +1113,11 @@ body {
             </div>
             <div class="result-card">
                 <div class="result-value" id="seccion-minima-cc">--</div>
-                <div class="result-label">Seccion Minima (mm2)</div>
+                <div class="result-label">Seccion Minima Calculada (mm2)</div>
+            </div>
+            <div class="result-card">
+                <div class="result-value" id="seccion-comercial-cc">--</div>
+                <div class="result-label">Seccion Comercial Minima (mm2)</div>
             </div>
             <div class="result-card">
                 <div class="result-value" id="cortocircuito-status">--</div>
@@ -1097,6 +1180,17 @@ body {
                                 <label for="potencia-dc">Potencia DC (W):</label>
                                 <input type="number" id="potencia-dc" step="0.01" placeholder="Ej: 1000">
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="campos-corriente-dc" style="display:none">
+                        <div class="form-group">
+                            <label for="corriente-directa-dc">Corriente Conocida (A):</label>
+                            <input type="number" id="corriente-directa-dc" step="0.01" placeholder="Ej: 25">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
                             <div class="form-group">
                                 <label for="tension-dc">Tensión DC (V):</label>
                                 <select id="tension-dc">
@@ -1113,14 +1207,6 @@ body {
                                     <option value="personalizado">Personalizado</option>
                                 </select>
                             </div>
-                        </div>
-                    </div>
-
-                    <div id="campos-corriente-dc" style="display:none">
-                        <div class="form-group">
-                            <label for="corriente-directa-dc">Corriente Conocida (A):</label>
-                            <input type="number" id="corriente-directa-dc" step="0.01" placeholder="Ej: 25">
-                        </div>
                     </div>
 
                     <!-- Campo de tensión personalizada -->
@@ -1150,17 +1236,17 @@ body {
                         <div class="form-group">
                             <label for="metodo-instalacao-dc">Método de Instalación:</label>
                             <select id="metodo-instalacao-dc">
-                                <option value="A1">A1 - Condutores isolados em eletroduto embutido</option>
-                                <option value="B1">B1 - Condutores isolados em eletroduto sobre parede</option>
-                                <option value="C">C - Condutores isolados em eletroduto em espaço fechado</option>
-                                <option value="E">E - Condutores isolados ao ar livre</option>
+                                <option value="A1">A1 - Conductores en electroducto embutido en pared aislante</option>
+                                <option value="B1">B1 - Conductores en electroducto sobre pared</option>
+                                <option value="C">C - Cable sobre pared o bandeja no perforada</option>
+                                <option value="E">E - Cable al aire libre / bandeja perforada</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="aislamiento-dc">Tipo de Aislamiento:</label>
                             <select id="aislamiento-dc">
-                                <option value="PVC">PVC</option>
-                                <option value="EPR">EPR</option>
+                                <option value="PVC">PVC (70°C)</option>
+                                <option value="EPR">EPR / XLPE / HEPR (90°C)</option>
                             </select>
                         </div>
                     </div>
@@ -1198,7 +1284,7 @@ body {
                     </div>
                     <div class="result-card">
                         <div class="result-value" id="resistencia-mostrada-dc">--</div>
-                        <div class="result-label">Resistencia Real Usada (Ω/km)</div>
+                        <div class="result-label">Resistencia a Temp. de Servicio (Ω/km)</div>
                     </div>
                 </div>
             </div>
@@ -1294,14 +1380,10 @@ body {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="temperatura-ct-dc">Temperatura Ambiente (°C):</label>
-                            <input type="number" id="temperatura-ct-dc" value="30" min="-20" max="80">
-                        </div>
-                        <div class="form-group">
-                            <label for="aislamiento-ct-dc">Tipo de Aislamiento:</label>
+                            <label for="aislamiento-ct-dc">Tipo de Aislamiento:<span class="tooltip-icon" data-tooltip="La resistencia se toma a la temperatura de servicio del conductor: 70 °C (PVC) o 90 °C (EPR/XLPE/HEPR).">?</span></label>
                             <select id="aislamiento-ct-dc">
-                                <option value="PVC">PVC</option>
-                                <option value="EPR">EPR</option>
+                                <option value="PVC">PVC (70°C)</option>
+                                <option value="EPR">EPR / XLPE / HEPR (90°C)</option>
                             </select>
                         </div>
                     </div>
@@ -1347,7 +1429,7 @@ body {
                     </div>
                     <div class="result-card">
                         <div class="result-value" id="resistencia-real-dc">--</div>
-                        <div class="result-label">Resistencia Real (Ω/km)</div>
+                        <div class="result-label">Resistencia a Temp. de Servicio (Ω/km)</div>
                     </div>
                     <div class="result-card">
                         <div class="result-value" id="corriente-calculada-dc">--</div>
@@ -1385,7 +1467,7 @@ body {
                             <input type="number" id="capacidad-bateria" step="0.1" placeholder="Ej: 100">
                         </div>
                         <div class="form-group">
-                            <label for="resistencia-interna">Resistencia Interna (mΩ):</label>
+                            <label for="resistencia-interna">Resistencia Interna por Elemento (mΩ):<span class="tooltip-icon" data-tooltip="Por celda (2 V plomo-ácido, 3,2 V LiFePO4, 1,2 V NiCd). Se estima al ingresar la capacidad; use el dato del fabricante si lo tiene. R banco = elementos × R elemento.">?</span></label>
                             <input type="number" id="resistencia-interna" step="0.1" placeholder="Ej: 5.0">
                         </div>
                     </div>
@@ -1393,7 +1475,7 @@ body {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="tiempo-despeje-dc">Tiempo de Despeje (s):</label>
-                            <input type="number" id="tiempo-despeje-dc" step="0.01" value="0.1" min="0.01" max="10">
+                            <input type="number" id="tiempo-despeje-dc" step="0.01" value="0.1" min="0.01" max="5">
                         </div>
                         <div class="form-group">
                             <label for="seccion-cc-dc">Sección del Conductor (mm²):</label>
@@ -1432,7 +1514,7 @@ body {
                             <label for="aislamiento-cc-dc">Tipo de Aislamiento:</label>
                             <select id="aislamiento-cc-dc">
                                 <option value="PVC">PVC</option>
-                                <option value="EPR">EPR</option>
+                                <option value="EPR">EPR / XLPE / HEPR</option>
                             </select>
                         </div>
                     </div>
@@ -1456,6 +1538,14 @@ body {
                     <div class="result-card">
                         <div class="result-value" id="corriente-cortocircuito-dc">--</div>
                         <div class="result-label">Corriente de Cortocircuito DC (A)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="resistencia-banco-dc">--</div>
+                        <div class="result-label">Resistencia del Banco (m&Omega;)</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value" id="seccion-minima-cc-dc">--</div>
+                        <div class="result-label">Secci&oacute;n M&iacute;nima (mm&sup2;)</div>
                     </div>
                     <div class="result-card">
                         <div class="result-value" id="cortocircuito-dc-status">--</div>

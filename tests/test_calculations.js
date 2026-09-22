@@ -32,58 +32,20 @@ function assertClose(actual, expected, tolerance, msg) {
 function assertTrue(val, msg) { if (!val) throw new Error(msg || `Expected true, got ${val}`); }
 
 // ===================================================================
-// Mock window and global data-tables dependencies
+// Cargar data-tables.js, calculations.js y validations.js reales
 // ===================================================================
 
 global.window = {};
 global.console = global.console; // keep console available
 
-// Mock tabelasNBR with a small subset of real data
-window.tabelasNBR = {
-    seccionesNominales: [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300],
-    resistencias: {
-        cobre: { 1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08, 10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 70: 0.268, 95: 0.193, 120: 0.153, 150: 0.124, 185: 0.0991, 240: 0.0754, 300: 0.0601 },
-        aluminio: { 16: 1.91, 25: 1.20, 35: 0.868, 50: 0.641, 70: 0.443, 95: 0.320, 120: 0.253, 150: 0.206, 185: 0.164, 240: 0.125, 300: 0.100 }
-    }
-};
-
-window.metodosInstalacion = { B1: { fuente: 'INPACO', tipo: 'electroducto_adosado' } };
-
-window.tabelasDC = {
-    resistenciasDC: { cobre: { 10: 1.91, 16: 1.21, 25: 0.780, 35: 0.554, 50: 0.386 }, aluminio: { 16: 1.91, 25: 1.20 } },
-    constantesK_DC: { cobre: { PVC: 115, EPR: 143 }, aluminio: { PVC: 74, EPR: 94 } },
-    seccionesNominalesDC: [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300]
-};
-
-// Mock helper functions that calculations.js calls via window.*
-window.obtenerAmpacidadBase = function(material, metodo, seccion) {
-    // PVC B1 cobre ampacities (real INPACO data)
-    const tabla = { 1.5: 15, 2.5: 21, 4: 28, 6: 36, 10: 50, 16: 66, 25: 88, 35: 108, 50: 131, 70: 167, 95: 202, 120: 234, 150: 269, 185: 307, 240: 361, 300: 415 };
-    if (tabla[seccion] !== undefined) return tabla[seccion];
-    throw new Error('Section not found');
-};
-
-window.obtenerFactorTemperatura = function(mat, temp, metodo, enterrado) {
-    if (temp === 30) return 1.15;
-    if (temp === 40) return 1.00;
-    return 1.00;
-};
-
-window.obtenerFactorAgrupamento = function(metodo, n) {
-    const factores = { 1: 1.00, 2: 0.80, 3: 0.70 };
-    return factores[n] || 0.70;
-};
-
-window.obtenerResistencia = function(material, seccion) {
-    return window.tabelasNBR.resistencias[material][seccion];
-};
-
-// ===================================================================
-// Load calculations.js by evaluating it
-// ===================================================================
-
-const code = fs.readFileSync(path.join(__dirname, '..', 'calculations.js'), 'utf8');
-eval(code);
+function cargar(archivo) {
+    const code = fs.readFileSync(path.join(__dirname, '..', archivo), 'utf8');
+    // Ejecutar en el ámbito global para que las funciones queden accesibles
+    (0, eval)(code);
+}
+cargar('data-tables.js');
+cargar('calculations.js');
+cargar('validations.js');
 
 // ===================================================================
 // TEST GROUP 1: Unit Conversion (convertirAWatts)
@@ -140,33 +102,36 @@ test('1000W, 127V, fp=0.9, mono -> I = 8.75A', function() {
 });
 
 // ===================================================================
-// TEST GROUP 3: AC Current - Bifasico (CRITICAL - the bug fix)
+// TEST GROUP 3: AC Current - Bifasico (Mamede 3.5.1.1: I = P / (Vff x cosPhi))
 // ===================================================================
 
-console.log('\n--- Group 3: AC Current - Bifasico (sqrt(2) fix) ---');
+console.log('\n--- Group 3: AC Current - Bifasico (sin sqrt(2)) ---');
 
-test('7500W, 220V, fp=0.8, bifasico -> I = 30.13A (uses sqrt(2))', function() {
+test('7500W, 220V entre fases, fp=0.8, bifasico -> I = 42.61A', function() {
     const result = calcularCorrenteProyecto({
         potencia: 7500, tension: 220, factorPotencia: 0.8,
         tipoSistema: 'bifasico', rendimiento: 1.0
     });
-    // 7500 / (220 * 0.8 * 1 * sqrt(2)) = 7500 / 248.90... = 30.13...
-    assertClose(result, 30.13, 0.02, 'Bifasico 7500W');
+    // 7500 / (220 * 0.8) = 42.61 A
+    assertClose(result, 42.61, 0.01, 'Bifasico 7500W');
 });
 
-test('Bifasico gives LOWER current than monofasico for same params', function() {
+test('Bifasico does NOT divide by sqrt(2) (ratio to monofasico = 1)', function() {
     const params = { potencia: 7500, tension: 220, factorPotencia: 0.8, rendimiento: 1.0 };
     const mono = calcularCorrenteProyecto({ ...params, tipoSistema: 'monofasico' });
     const bif  = calcularCorrenteProyecto({ ...params, tipoSistema: 'bifasico' });
-    assertTrue(bif < mono, `Bifasico (${bif}A) should be less than monofasico (${mono}A)`);
+    assertEqual(bif, mono, 'Misma corriente para la misma tension aplicada a la carga');
 });
 
-test('Bifasico / monofasico ratio is 1/sqrt(2)', function() {
-    const params = { potencia: 7500, tension: 220, factorPotencia: 0.8, rendimiento: 1.0 };
-    const mono = calcularCorrenteProyecto({ ...params, tipoSistema: 'monofasico' });
-    const bif  = calcularCorrenteProyecto({ ...params, tipoSistema: 'bifasico' });
-    const ratio = bif / mono;
-    assertClose(ratio, 1 / Math.sqrt(2), 0.01, 'Ratio bifasico/monofasico');
+test('Bifasico 7500W 220V B1 PVC 40C -> 10mm2 (with sqrt(2) it wrongly gave 6mm2)', function() {
+    const r = dimensionarPorAmpacidadAC({
+        modoEntrada: 'potencia', potencia: 7500, unidadPotencia: 'W', tension: 220,
+        factorPotencia: 0.8, tipoSistema: 'bifasico', rendimiento: 1,
+        materialAislamento: 'PVC', materialCondutor: 'cobre', temperaturaAmbiente: 40,
+        metodoInstalacao: 'B1', agrupamento: 1
+    });
+    // 42.61 A con 3 conductores cargados: 6mm2 = 32 A (no alcanza), 10mm2 = 44 A
+    assertEqual(r.seccion, 10);
 });
 
 // ===================================================================
@@ -260,30 +225,60 @@ test('dimensionarPorAmpacidadAC transformer mode', function() {
 
 console.log('\n--- Group 7: AC Voltage Drop ---');
 
-test('Trifasico voltage drop: 50A, 380V, 100m, 10mm2 cobre', function() {
+test('Trifasico voltage drop: 50A, 380V, 100m, 10mm2 cobre PVC', function() {
     const result = calcularCaidaTensionAC({
         corriente: 50, tension: 380, longitud: 100,
         seccion: 10, materialCondutor: 'cobre',
-        tipoSistema: 'trifasico', factorPotencia: 0.85
+        tipoSistema: 'trifasico', factorPotencia: 0.85, aislamiento: 'PVC'
     });
-    // R = 1.83 ohm/km, L = 0.1km (section < 50, no fp multiplication)
-    // dV = sqrt(3) * 1.83 * 50 * 0.1 = 15.86V
-    // pct = 15.86 / 380 * 100 = 4.17%
-    assertClose(result.caidaTensionV, 15.86, 0.1, 'Voltage drop V');
-    assertClose(result.caidaTensionPct, 4.17, 0.1, 'Voltage drop %');
+    // R70 = 1.83 * (1 + 0.00393*50) = 2.1896 ohm/km; X = 0.094; sen = 0.5268
+    // dV = sqrt(3) * 50 * 0.1 * (2.1896*0.85 + 0.094*0.5268) = 16.55 V -> 4.35%
+    assertClose(result.caidaTensionV, 16.55, 0.02, 'Voltage drop V');
+    assertClose(result.caidaTensionPct, 4.35, 0.02, 'Voltage drop %');
+    assertEqual(result.temperaturaConductor, 70, 'PVC a 70 C');
 });
 
-test('Monofasico voltage drop uses 2*R*I*L formula', function() {
+test('Monofasico voltage drop uses 2*R70*I*L with fp=1', function() {
     const result = calcularCaidaTensionAC({
         corriente: 30, tension: 220, longitud: 50,
         seccion: 4, materialCondutor: 'cobre',
         tipoSistema: 'monofasico', factorPotencia: 1.0
     });
-    // R = 4.61, L = 0.05km, I = 30
-    // dV = 2 * 4.61 * 30 * 0.05 = 13.83V
-    // pct = 13.83 / 220 * 100 = 6.29%
-    assertClose(result.caidaTensionV, 13.83, 0.1, 'Mono voltage drop V');
+    // R70 = 4.61 * 1.1965 = 5.5159; dV = 2 * 5.5159 * 30 * 0.05 = 16.55 V
+    assertClose(result.caidaTensionV, 16.55, 0.02, 'Mono voltage drop V');
     assertTrue(!result.cumple, 'Should exceed 4% limit');
+});
+
+test('EPR/XLPE uses resistance at 90 C (higher drop than PVC)', function() {
+    const result = calcularCaidaTensionAC({
+        corriente: 30, tension: 220, longitud: 50, seccion: 4, materialCondutor: 'cobre',
+        tipoSistema: 'monofasico', factorPotencia: 1.0, aislamiento: 'EPR_90'
+    });
+    // R90 = 4.61 * (1 + 0.00393*70) = 5.8782; dV = 2 * 5.8782 * 30 * 0.05 = 17.63 V
+    assertClose(result.caidaTensionV, 17.63, 0.02, 'EPR voltage drop');
+});
+
+test('Parallel conductors divide the voltage drop', function() {
+    const uno = calcularCaidaTensionAC({ corriente: 400, tension: 380, longitud: 80, seccion: 150,
+        materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.9 });
+    const dos = calcularCaidaTensionAC({ corriente: 400, tension: 380, longitud: 80, seccion: 150,
+        materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.9, conductoresPorFase: 2 });
+    assertClose(dos.caidaTensionV, uno.caidaTensionV / 2, 0.02, 'Half drop with 2 in parallel');
+});
+
+test('Custom limit (5%) is applied', function() {
+    const r = calcularCaidaTensionAC({ corriente: 50, tension: 380, longitud: 100, seccion: 10,
+        materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85, limite: 5 });
+    assertEqual(r.limite, 5, 'Limit');
+    assertTrue(r.cumple, '4.35% <= 5%');
+});
+
+test('Minimum section by voltage drop: 50A 380V 100m -> 16mm2', function() {
+    const r = calcularSeccionMinimaCaidaAC({ corriente: 50, tension: 380, longitud: 100,
+        materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85, aislamiento: 'PVC', limite: 4 });
+    // 10mm2 -> 4.35% (no cumple); 16mm2 -> 2.77%
+    assertEqual(r.seccion, 16, 'Section by voltage drop');
+    assertClose(r.caidaTensionPct, 2.77, 0.02, 'Drop at 16mm2');
 });
 
 // ===================================================================
@@ -309,7 +304,17 @@ test('Smin = Icc*sqrt(t)/K = 20920*sqrt(0.1)/115 = 57.52mm2', function() {
         materialCondutor: 'cobre', materialAislamiento: 'PVC'
     });
     assertClose(result.seccionMinima, 57.52, 0.5, 'Section minima');
+    assertEqual(result.seccionComercial, 70, 'Commercial section');
     assertTrue(result.cumple, '70mm2 should pass for 57.52mm2 requirement');
+});
+
+test('Short circuit K accepts EPR_90/HEPR names (aluminio -> 94, cobre -> 143)', function() {
+    const al = calcularCortocircuitoAC({ potenciaCortocircuito: 10, tensionSistema: 0.38, tiempoDespeje: 0.1,
+        seccion: 25, materialCondutor: 'aluminio', materialAislamiento: 'EPR_90' });
+    const cu = calcularCortocircuitoAC({ potenciaCortocircuito: 10, tensionSistema: 0.38, tiempoDespeje: 0.1,
+        seccion: 25, materialCondutor: 'cobre', materialAislamiento: 'HEPR' });
+    assertEqual(al.constanteK, 94, 'Al EPR');
+    assertEqual(cu.constanteK, 143, 'Cu HEPR');
 });
 
 test('Short circuit with aluminium uses K=76', function() {
@@ -372,7 +377,7 @@ test('DC voltage drop with parallel conductors (Np=2) halves the drop', function
 
 console.log('\n--- Group 11: DC Short Circuit ---');
 
-test('Plomo-acido, 60 elements, 5 mohm -> V=120V, Icc=24000A', function() {
+test('Plomo-acido, 60 elements, 5 mohm/element -> V=120V, R=300 mohm, Icc=400A', function() {
     const result = analizarCortocircuitoDC({
         tipoBateria: 'plomo-acido',
         elementosSerie: 60,
@@ -383,27 +388,36 @@ test('Plomo-acido, 60 elements, 5 mohm -> V=120V, Icc=24000A', function() {
         material: 'cobre',
         aislamiento: 'PVC'
     });
-    // tensionElemento = 2.0V, tensionBanco = 60 * 2.0 = 120V
-    // Icc = 120 / (5/1000) = 120 / 0.005 = 24000A
+    // V = 60 * 2.0 = 120 V; R banco = 60 * 5 = 300 mohm; Icc = 120 / 0.3 = 400 A
     assertEqual(result.tension_banco, 120, 'Battery bank voltage');
-    assertEqual(result.corriente_cortocircuito, 24000, 'DC short circuit current');
+    assertEqual(result.resistencia_banco_mohm, 300, 'Bank resistance');
+    assertEqual(result.corriente_cortocircuito, 400, 'DC short circuit current');
 });
 
 test('DC short circuit section check with K=115 (cobre PVC)', function() {
     const result = analizarCortocircuitoDC({
         tipoBateria: 'plomo-acido',
         elementosSerie: 60,
-        capacidad: 200,
-        resistenciaInterna: 5,
+        capacidad: 2000,
+        resistenciaInterna: 0.1,
         tiempoDespeje: 0.1,
         seccion: 120,
         material: 'cobre',
         aislamiento: 'PVC'
     });
-    // Smin = 24000 * sqrt(0.1) / 115 = 24000 * 0.31623 / 115 = 65.99mm2
-    assertClose(result.seccion_minima, 65.99, 0.5, 'DC min section');
-    assertTrue(result.cumple_criterio, '120mm2 should pass for ~66mm2 requirement');
+    // R banco = 6 mohm; Icc = 120 / 0.006 = 20000 A
+    // Smin = 20000 * sqrt(0.1) / 115 = 55.00 mm2 -> comercial 70 mm2
+    assertEqual(result.corriente_cortocircuito, 20000, 'Icc');
+    assertClose(result.seccion_minima, 55.0, 0.05, 'DC min section');
+    assertEqual(result.seccion_comercial, 70, 'Commercial section');
+    assertTrue(result.cumple_criterio, '120mm2 should pass');
     assertEqual(result.constante_K, 115, 'K constant for cobre PVC');
+});
+
+test('DC short circuit aluminio PVC uses K=76 (NBR 5410)', function() {
+    const r = analizarCortocircuitoDC({ tipoBateria: 'plomo-acido', elementosSerie: 24, resistenciaInterna: 1,
+        tiempoDespeje: 0.1, seccion: 35, material: 'aluminio', aislamiento: 'PVC' });
+    assertEqual(r.constante_K, 76, 'K Al PVC');
 });
 
 test('Litio battery uses 3.2V per element', function() {
@@ -449,15 +463,21 @@ test('determinarLimiteCaidaDC returns correct limits', function() {
     assertEqual(determinarLimiteCaidaDC(250), 2.0, '250V limit');
 });
 
-test('calcularFactorTemperaturaDC PVC returns 1.0 at 30C (reference)', function() {
-    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 30, aislamiento: 'PVC' });
-    assertEqual(result, 1.0, 'PVC factor at 30C');
+test('determinarLimiteCaidaDC uses application limit when given', function() {
+    assertEqual(determinarLimiteCaidaDC(48, 'sistemas_fotovoltaicos'), 3.0, 'FV 3%');
+    assertEqual(determinarLimiteCaidaDC(48, 'alimentacion_critica'), 1.0, 'UPS 1%');
+    assertEqual(determinarLimiteCaidaDC(48, 'general'), 5.0, 'General by voltage');
+});
+
+test('calcularFactorTemperaturaDC PVC returns 1.0 at 40C (INPACO reference)', function() {
+    const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 40, aislamiento: 'PVC' });
+    assertEqual(result, 1.0, 'PVC factor at 40C');
 });
 
 test('calcularFactorTemperaturaDC PVC interpolates between table values', function() {
     const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 32, aislamiento: 'PVC' });
-    // Between 30 (1.00) and 35 (0.94): 1.00 + (0.94-1.00)*(32-30)/(35-30) = 1.00 - 0.024 = 0.976
-    assertClose(result, 0.976, 0.002, 'Interpolated PVC factor at 32C');
+    // Entre 30 (1.15) y 35 (1.08): 1.15 - 0.07*2/5 = 1.122
+    assertClose(result, 1.122, 0.001, 'Interpolated PVC factor at 32C');
 });
 
 // ===================================================================
@@ -466,14 +486,14 @@ test('calcularFactorTemperaturaDC PVC interpolates between table values', functi
 
 console.log('\n--- Group 12: DC Temperature Factor by Insulation ---');
 
-test('PVC factor at 30C = 1.00 (reference temp)', function() {
+test('PVC factor at 30C = 1.15 (INPACO Tabla 6)', function() {
     const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 30, aislamiento: 'PVC' });
-    assertEqual(result, 1.0, 'PVC at 30C');
+    assertEqual(result, 1.15, 'PVC at 30C');
 });
 
-test('EPR factor at 30C = 1.00 (reference temp)', function() {
+test('EPR factor at 30C = 1.10 (INPACO Tabla 6)', function() {
     const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 30, aislamiento: 'EPR' });
-    assertEqual(result, 1.0, 'EPR at 30C');
+    assertEqual(result, 1.10, 'EPR at 30C');
 });
 
 test('PVC has lower factor than EPR at high temperature', function() {
@@ -482,9 +502,16 @@ test('PVC has lower factor than EPR at high temperature', function() {
     assertTrue(pvc < epr, `PVC (${pvc}) should be < EPR (${epr}) at 50C`);
 });
 
-test('PVC max usable temp is ~60C (factor near 0.50)', function() {
+test('PVC max usable temp is 60C (factor 0.57)', function() {
     const result = calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 60, aislamiento: 'PVC' });
-    assertClose(result, 0.50, 0.05, 'PVC at 60C');
+    assertEqual(result, 0.57, 'PVC at 60C');
+});
+
+test('PVC above 60C throws instead of using a silent factor', function() {
+    let threw = false;
+    try { calcularFactorTemperaturaDC({ material: 'cobre', temperatura: 62, aislamiento: 'PVC' }); }
+    catch (e) { threw = true; }
+    assertTrue(threw, 'Should throw at 62C for PVC');
 });
 
 test('EPR allows higher temps (factor at 70C still > 0.5)', function() {
@@ -498,13 +525,13 @@ test('EPR allows higher temps (factor at 70C still > 0.5)', function() {
 
 console.log('\n--- Group 13: Reactance for Large Sections ---');
 
-test('Small section (<50mm2) uses simple formula', function() {
+test('Voltage drop formula R*cos + X*sin (4mm2, fp 0.8)', function() {
     const result = calcularCaidaTensionAC({
         corriente: 30, tension: 220, longitud: 50, seccion: 4,
-        materialCondutor: 'cobre', tipoSistema: 'monofasico', factorPotencia: 1.0
+        materialCondutor: 'cobre', tipoSistema: 'monofasico', factorPotencia: 0.8
     });
-    // R=4.61, L=0.05km, k=2: dV = 2 * 4.61 * 30 * 0.05 * 1.0 = 13.83V
-    assertClose(result.caidaTensionV, 13.83, 0.1, 'Simple formula for 4mm2');
+    // R70 = 5.5159, X = 0.107: dV = 2*30*0.05*(5.5159*0.8 + 0.107*0.6) = 13.43 V
+    assertClose(result.caidaTensionV, 13.43, 0.02, 'Formula for 4mm2');
 });
 
 test('Large section (>=50mm2) includes reactance component', function() {
@@ -512,11 +539,9 @@ test('Large section (>=50mm2) includes reactance component', function() {
         corriente: 200, tension: 380, longitud: 100, seccion: 95,
         materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85
     });
-    // R=0.193, X=0.076, fp=0.85, sinφ=0.5268
-    // dV = √3 * 200 * 0.1 * (0.193*0.85 + 0.076*0.5268) = √3 * 200 * 0.1 * (0.16405 + 0.04004)
-    // dV = √3 * 200 * 0.1 * 0.20409 = 7.07V
-    assertTrue(result.caidaTensionV > 0, 'Should calculate positive voltage drop');
-    assertTrue(result.caidaTensionPct > 0, 'Should have positive percentage');
+    // R70 = 0.193*1.1965 = 0.23092; X=0.076; fp=0.85, sen=0.5268
+    // dV = √3 * 200 * 0.1 * (0.23092*0.85 + 0.076*0.5268) = √3 * 20 * 0.23632 = 8.19 V
+    assertClose(result.caidaTensionV, 8.19, 0.02, 'Large section voltage drop');
 });
 
 // ===================================================================
@@ -581,6 +606,231 @@ test('Phase > 35mm2: ground = half of phase (rounded to commercial section)', fu
     assertEqual(calcularConductorProteccion(50), 25, '50mm2 phase -> 25mm2 ground');
     assertEqual(calcularConductorProteccion(120), 70, '120mm2 phase -> 60 -> 70mm2 commercial');
     assertEqual(calcularConductorProteccion(240), 120, '240mm2 phase -> 120mm2 ground');
+});
+
+test('PE by short circuit: HEPR uses K=143 (not 176)', function() {
+    // 10000 A, 0.1 s -> 10000*0.31623/143 = 22.11 -> 25 mm2
+    assertEqual(calcularConductorProteccion(16, { corrienteCC: 10000, tiempoDespeje: 0.1, aislamiento: 'HEPR' }), 25, 'PE HEPR');
+});
+
+// ===================================================================
+// TEST GROUP 17: Tablas INPACO (datos corregidos)
+// ===================================================================
+
+console.log('\n--- Group 17: INPACO tables ---');
+
+test('PVC B2 2 conductores 2.5mm2 = 19.5 A (INPACO Tabla 2)', function() {
+    assertEqual(obtenerAmpacidadBase('PVC', 'B2', 2.5, 2), 19.5);
+});
+
+test('PVC A2 3 conductores 300mm2 = 260 A (INPACO Tabla 2)', function() {
+    assertEqual(obtenerAmpacidadBase('PVC', 'A2', 300, 3), 260);
+});
+
+test('XLPE D 3 conductores 10mm2 = 69 A (INPACO Tabla 3)', function() {
+    assertEqual(obtenerAmpacidadBase('EPR_90', 'D', 10, 3), 69);
+});
+
+test('HEPR uses the same 90 C table as EPR/XLPE', function() {
+    assertEqual(obtenerAmpacidadBase('HEPR', 'A1', 2.5, 2), obtenerAmpacidadBase('EPR_90', 'A1', 2.5, 2));
+    assertEqual(obtenerAmpacidadBase('HEPR', 'A1', 2.5, 2), 24);
+});
+
+test('E/F/G columns: E 3c = col 2, F 3c = trefoil, G = vertical', function() {
+    assertEqual(obtenerAmpacidadBase('PVC', 'E', 300, 3), 432);
+    assertEqual(obtenerAmpacidadBase('PVC', 'F', 300, 3), 488);
+    assertEqual(obtenerAmpacidadBase('PVC', 'G', 300, 3), 573);
+});
+
+test('4 conductores cargados = 0.86 x columna de 3', function() {
+    assertClose(obtenerAmpacidadBase('PVC', 'B1', 10, 4), 44 * 0.86, 0.05);
+});
+
+test('Methods H and I (medium voltage data) are no longer accepted', function() {
+    let threw = false;
+    try { obtenerAmpacidadBase('PVC', 'H', 10, 3); } catch (e) { threw = true; }
+    assertTrue(threw, 'H should throw');
+});
+
+test('Temperature factor interpolates (PVC 42 C = 0.964)', function() {
+    assertEqual(obtenerFactorTemperatura('PVC', 42, 'B1'), 0.964);
+});
+
+test('Soil temperature is used for method D (PVC 30 C suelo = 0.94)', function() {
+    assertEqual(obtenerFactorTemperatura('PVC', 30, 'D'), 0.94);
+});
+
+test('Grouping factors follow INPACO Tabla 7/9/10', function() {
+    assertEqual(obtenerFactorAgrupamento('B1', 10), 0.50, 'haz 10');
+    assertEqual(obtenerFactorAgrupamento('B1', 25), 0.38, 'haz >=20');
+    assertEqual(obtenerFactorAgrupamento('E', 3), 0.82, 'bandeja 3');
+    assertEqual(obtenerFactorAgrupamento('E', 12), 0.72, 'bandeja >9 sin reduccion adicional');
+    assertEqual(obtenerFactorAgrupamento('D', 3, 'directo'), 0.65, 'directo 3');
+    assertEqual(obtenerFactorAgrupamento('D', 3, 'ducto'), 0.70, 'ducto 3');
+    assertEqual(obtenerFactorAgrupamento('D', 8, 'ducto'), 0.52, 'ducto >6 conservador');
+});
+
+test('Soil resistivity factor (INPACO Tabla 11)', function() {
+    assertEqual(obtenerFactorResistividadSuelo(1.0, 'ducto'), 1.0);
+    assertEqual(obtenerFactorResistividadSuelo(2.5, 'directo'), 0.67);
+    assertEqual(obtenerFactorResistividadSuelo(2.5, 'ducto'), 0.85);
+});
+
+// ===================================================================
+// TEST GROUP 18: Dimensionamiento AC corregido
+// ===================================================================
+
+console.log('\n--- Group 18: AC sizing corrections ---');
+
+const baseAC = {
+    modoEntrada: 'corriente', tension: 380, factorPotencia: 0.8, rendimiento: 1,
+    materialAislamento: 'PVC', materialCondutor: 'cobre', temperaturaAmbiente: 40,
+    metodoInstalacao: 'B1', agrupamento: 1, tipoCircuito: 'general'
+};
+
+test('Trifasico uses 3 loaded conductors, monofasico 2', function() {
+    const tri = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 26, tipoSistema: 'trifasico' }));
+    const mono = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 26, tipoSistema: 'monofasico' }));
+    // B1 PVC: 4mm2 -> 28 A (2c) / 25 A (3c)
+    assertEqual(tri.conductoresCargados, 3);
+    assertEqual(tri.seccion, 6, 'Tri needs 6mm2');
+    assertEqual(mono.conductoresCargados, 2);
+    assertEqual(mono.seccion, 4, 'Mono 4mm2');
+});
+
+test('Bifasico is sized with 3 loaded conductors (conservative)', function() {
+    const r = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 26, tipoSistema: 'bifasico' }));
+    assertEqual(r.conductoresCargados, 3);
+});
+
+test('Aluminio ampacity = cobre x sqrt(RCu/RAl), min 16mm2', function() {
+    const r = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 40, tipoSistema: 'trifasico', materialCondutor: 'aluminio' }));
+    // B1 3c 16mm2 cobre = 59 A -> Al = 59 * sqrt(1.15/1.91) = 45.8 A
+    assertEqual(r.seccion, 16);
+    assertClose(r.ampacidad, 45.8, 0.05, 'Al ampacity');
+    assertTrue(r.advertencias.length > 0, 'Warn about aluminium estimate');
+});
+
+test('Demand factor is applied in power mode', function() {
+    const r = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, {
+        modoEntrada: 'potencia', potencia: 10000, unidadPotencia: 'W', tension: 220,
+        factorPotencia: 1, tipoSistema: 'monofasico', factorDemanda: 0.5 }));
+    assertClose(r.corriente, 22.73, 0.01, '5000 W / 220 V');
+});
+
+test('Parallel conductors: grouping uses at least one circuit per set', function() {
+    const r = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, {
+        corrienteDirecta: 600, tipoSistema: 'trifasico', materialAislamento: 'EPR_90', conductoresPorFase: 2 }));
+    assertEqual(r.circuitosAgrupamiento, 2);
+    assertEqual(r.factorAgrupamiento, 0.8);
+    assertClose(r.corrientePorConductor, 300, 0.01);
+});
+
+test('Buried method applies soil resistivity factor', function() {
+    const r = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, {
+        corrienteDirecta: 50, tipoSistema: 'trifasico', metodoInstalacao: 'D', temperaturaAmbiente: 25,
+        resistividadSuelo: 2.5, tipoEnterrado: 'directo' }));
+    assertEqual(r.factorResistividad, 0.67);
+    assertEqual(r.factorTemperatura, 1.0, 'Soil reference 25 C');
+});
+
+test('Temperature out of range throws (no silent factor 1.0)', function() {
+    let threw = false;
+    try { dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 20, tipoSistema: 'trifasico', temperaturaAmbiente: 65 })); }
+    catch (e) { threw = true; }
+    assertTrue(threw, 'PVC at 65 C must throw');
+});
+
+test('Voltage above 1000 V is rejected (LV tables only)', function() {
+    let threw = false;
+    try { dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 20, tipoSistema: 'trifasico', tension: 13800 })); }
+    catch (e) { threw = true; }
+    assertTrue(threw, 'MV must throw');
+});
+
+test('Current above 300mm2 capacity asks for parallel conductors', function() {
+    let msg = '';
+    try { dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 800, tipoSistema: 'trifasico' })); }
+    catch (e) { msg = e.message; }
+    assertTrue(/paralelo/.test(msg), 'Message suggests parallel conductors');
+});
+
+test('Short circuit commercial section is checked with its own K (PVC > 300 mm2)', function() {
+    // Icc tal que S_min(K=115) = 395 mm2 -> 400 mm2 tiene K=103 -> 441 mm2 -> 500 mm2
+    const t = 1;
+    const IccA = 395 * 115;
+    const r = calcularCortocircuitoAC({ potenciaCortocircuito: IccA * Math.sqrt(3) * 0.38 / 1000, tensionSistema: 0.38,
+        tiempoDespeje: t, seccion: 240, materialCondutor: 'cobre', materialAislamiento: 'PVC' });
+    assertEqual(r.seccionComercial, 500);
+});
+
+test('Unknown insulation throws instead of silently using K=143', function() {
+    let threw = false;
+    try { calcularCortocircuitoAC({ potenciaCortocircuito: 10, tensionSistema: 0.38, tiempoDespeje: 0.1,
+        seccion: 25, materialCondutor: 'cobre', materialAislamiento: 'EPR_105' }); } catch (e) { threw = true; }
+    assertTrue(threw);
+});
+
+test('Invalid demand factor throws', function() {
+    let threw = false;
+    try { dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { modoEntrada: 'potencia', potencia: 1000,
+        unidadPotencia: 'W', tipoSistema: 'trifasico', factorDemanda: 1.2 })); } catch (e) { threw = true; }
+    assertTrue(threw);
+});
+
+// ===================================================================
+// TEST GROUP 19: DC corregido
+// ===================================================================
+
+console.log('\n--- Group 19: DC corrections ---');
+
+test('DC ampacity uses INPACO 2-conductor table, EPR and grouping', function() {
+    const r = dimensionarPorAmpacidadDC({ modoEntrada: 'corriente', corrienteDirecta: 80, material: 'cobre',
+        temperatura: 30, metodo: 'B1', aislamiento: 'EPR', agrupamiento: 2 });
+    // ft = 1.10, fa = 0.80 -> Ic = 90.9 A -> XLPE B1 2c: 16mm2 = 91 A
+    assertEqual(r.seccion, 16);
+    assertEqual(r.ampacidad, 91);
+    assertEqual(r.factorAgrupamiento, 0.8);
+});
+
+test('DC corriente mode does not require voltage', function() {
+    const r = dimensionarPorAmpacidadDC({ modoEntrada: 'corriente', corrienteDirecta: 20, material: 'cobre',
+        temperatura: 40, metodo: 'B1', aislamiento: 'PVC', tensionSelector: '' });
+    assertEqual(r.corriente, 20);
+});
+
+test('DC resistance is taken at service temperature (PVC 70 C)', function() {
+    const r = calcularResistenciaCorregida({ material: 'cobre', seccion: 25, aislamiento: 'PVC' });
+    // 0.780 * (1 + 0.00393*50) = 0.9333
+    assertClose(r.R_temp, 0.9333, 0.0001);
+    assertEqual(r.temperatura, 70);
+});
+
+test('DC voltage drop validation works with current (no power field)', function() {
+    const v = validarParametrosCaidaTensionDC({ corriente: 80, tensionSelector: '48', longitud: 20,
+        conductoresPorPolo: 1, seccion: 25, material: 'cobre', aislamiento: 'PVC' });
+    assertTrue(v.valido, 'Should be valid: ' + v.errores.join('; '));
+});
+
+test('DC ampacity validation in current mode does not ask for power', function() {
+    const v = validarParametrosAmpacidadDC({ modoEntrada: 'corriente', corrienteDirecta: 20, material: 'cobre',
+        temperatura: 30, metodo: 'B1' });
+    assertTrue(v.valido, 'Should be valid: ' + v.errores.join('; '));
+});
+
+test('verificarCaidaTensionDC applies application limit', function() {
+    const r = verificarCaidaTensionDC({ corriente: 80, tensionSelector: '48', longitud: 20, conductoresPorPolo: 1,
+        seccion: 25, material: 'cobre', aislamiento: 'PVC', aplicacionDC: 'sistemas_fotovoltaicos' });
+    // R70 = 0.9333; dV = 2*0.9333*80*0.02 = 2.99 V = 6.22%
+    assertEqual(r.limite_pct, 3.0);
+    assertClose(r.caida_tension_pct, 6.22, 0.01);
+    assertTrue(!r.cumple_criterio);
+});
+
+test('calcularSeccionParaCaidaDC returns null when 300mm2 is not enough', function() {
+    const s = calcularSeccionParaCaidaDC({ corriente: 500, tensionSelector: '12', longitud: 200, conductoresPorPolo: 1,
+        material: 'cobre', aislamiento: 'PVC' });
+    assertEqual(s, null);
 });
 
 // ===================================================================

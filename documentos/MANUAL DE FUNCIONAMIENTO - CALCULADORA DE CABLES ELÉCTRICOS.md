@@ -268,8 +268,10 @@ I = P / (V × cos φ × η)
 
 #### Sistemas Bifásicos
 ```
-I = P / (V × cos φ × η × √2)
+I = P / (V × cos φ × η)
 ```
+V = tensión entre las dos fases. Carga entre fases: resultado exacto (Mamede 3.5.1.1).
+Cargas repartidas entre cada fase y neutro: resultado del lado seguro.
 
 #### Sistemas Trifásicos
 ```

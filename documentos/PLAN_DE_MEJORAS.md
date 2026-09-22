@@ -3,7 +3,7 @@
 ## Estado Actual (Version R3 - Reparada)
 
 ### Bugs Corregidos
-1. **Formula bifasica corregida** - Ahora usa `I = P / (V x cos phi x eta x sqrt(2))` segun manual
+1. **Formula bifasica** - En R3 se agrego sqrt(2); era un error y se quito en 5.1.0. Correcta: `I = P / (V x cos phi x eta)` con V entre fases (Mamede 3.5.1.1)
 2. **Funciones AC calcularCaidaTension() y calcularCortocircuito() implementadas** - Ya no dan error al hacer clic
 3. **HTML huerfano eliminado** - Los selectores de material/aislamiento ya no flotan entre header y pestanas
 4. **resistenciasInternasBateria definido** - La sugerencia de resistencia interna de bateria funciona
@@ -94,7 +94,7 @@ app.js            - Controlador principal y logica de UI
 
 **Corriente AC:**
 - Monofasico: `I = P / (V x fp x eta)`
-- Bifasico: `I = P / (V x fp x eta x sqrt(2))`
+- Bifasico: `I = P / (V x fp x eta)` con V entre fases (corregido en 5.1.0: se quito sqrt(2))
 - Trifasico: `I = P / (sqrt(3) x V x fp x eta)`
 
 **Corriente Corregida:**

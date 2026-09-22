@@ -44,7 +44,7 @@ Dimensionar cables electricos requiere consultar multiples tablas, aplicar facto
 
 **Sistemas electricos soportados:**
 - Monofasico: `I = P / (V x fp x eta)`
-- Bifasico: `I = P / (V x fp x eta x sqrt(2))`
+- Bifasico: `I = P / (V x fp x eta)` con V entre fases (corregido en 5.1.0: se quito sqrt(2))
 - Trifasico: `I = P / (sqrt(3) x V x fp x eta)`
 
 **Factores de correccion:**

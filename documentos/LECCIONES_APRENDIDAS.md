@@ -13,7 +13,7 @@
 ## 2. Sobre los Bugs Encontrados
 
 ### Bug mas critico: Formula bifasica
-- La formula para sistemas bifasicos no incluia el factor √2, lo que producia corrientes incorrectas.
+- En R3 se agrego un factor √2 a la formula bifasica tomandolo del manual interno, sin referencia bibliografica. Ese factor solo vale para sistemas bifasicos a 90° (obsoletos) y subestimaba la corriente un 29%. Se quito en 5.1.0 (Mamede 3.5.1.1: I = P / (Vff × cosφ)).
 - Leccion: Las formulas de ingenieria deben tener una referencia bibliografica clara y tests que las verifiquen con valores conocidos.
 
 ### Funciones que no existian
