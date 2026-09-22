@@ -44,7 +44,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Validacion en tiempo real
     configurarValidacionEnTiempoReal();
+
+    // Mostrar datos del suelo solo para el método enterrado (D)
+    configurarFilaResistividad();
 });
+
+function configurarFilaResistividad() {
+    var metodo = document.getElementById('metodo-instalacao');
+    var fila = document.getElementById('fila-resistividad');
+    if (!metodo || !fila) return;
+    var actualizar = function () {
+        fila.style.display = metodo.value === 'D' ? '' : 'none';
+    };
+    metodo.addEventListener('change', actualizar);
+    actualizar();
+}
 
 // ===================================================================
 // SISTEMA DE PESTANAS
@@ -186,9 +200,7 @@ function aplicarModoEntrada(modo) {
 
 function configurarSincronizacionDC() {
     var camposComunes = [
-        { id: 'potencia-dc', campo: 'potencia' },
-        { id: 'material-condutor-dc', campo: 'material' },
-        { id: 'temperatura-ambiente-dc', campo: 'temperatura' }
+        { id: 'material-condutor-dc', campo: 'material' }
     ];
 
     camposComunes.forEach(function (item) {
@@ -207,17 +219,13 @@ function sincronizarDatosCompartidosDC() {
 
     if (calc.ampacidadDC && calc.ampacidadDC.parametros) {
         var params = calc.ampacidadDC.parametros;
-        rellenarSiVacio('potencia-ct-dc', params.potencia);
         rellenarSiVacio('material-conductor-ct-dc', params.material);
-        rellenarSiVacio('temperatura-ct-dc', params.temperatura);
     }
 }
 
 function sincronizarCampoEnOtrasPestanasDC(campo, valor) {
     var selectores = {
-        'potencia': ['potencia-ct-dc'],
-        'material': ['material-conductor-ct-dc', 'material-cc-dc'],
-        'temperatura': ['temperatura-ct-dc']
+        'material': ['material-conductor-ct-dc', 'material-cc-dc']
     };
 
     var ids = selectores[campo];
@@ -253,9 +261,12 @@ function obtenerParametrosProyecto() {
         temperaturaAmbiente: parseFloat(document.getElementById('temperatura-ambiente').value),
         metodoInstalacao: document.getElementById('metodo-instalacao').value,
         agrupamento: parseInt(document.getElementById('agrupamento').value),
-        factorDemanda: parseFloat(document.getElementById('factor-demanda')?.value) || 1.0,
+        factorDemanda: parseFloat(document.getElementById('factor-demanda')?.value),
         tipoCircuito: document.getElementById('tipo-circuito')?.value || 'general',
-        resistividadSuelo: document.getElementById('resistividad-suelo')?.value || 'normal',
+        resistividadSuelo: parseFloat(document.getElementById('resistividad-suelo')?.value) || 1.0,
+        tipoEnterrado: document.getElementById('tipo-enterrado')?.value || 'ducto',
+        conductoresPorFase: parseInt(document.getElementById('conductores-por-fase')?.value) || 1,
+        neutroCargado: document.getElementById('neutro-cargado')?.value === 'si',
     };
 
     switch (modo) {
@@ -284,7 +295,10 @@ function obtenerParametrosCaidaTensionAC() {
         tipoSistema: document.getElementById('tipo-sistema-ct').value,
         factorPotencia: parseFloat(document.getElementById('fp-ct').value),
         material: mat,
-        materialCondutor: mat
+        materialCondutor: mat,
+        aislamiento: document.getElementById('aislamiento-ct')?.value || 'PVC',
+        conductoresPorFase: parseInt(document.getElementById('paralelo-ct')?.value) || 1,
+        limite: parseFloat(document.getElementById('limite-ct')?.value) || 4
     };
 }
 
@@ -295,7 +309,6 @@ function obtenerParametrosCortocircuitoAC() {
     return {
         potenciaCortocircuito: parseFloat(document.getElementById('potencia-cc').value),
         tensionSistema: tensionV / 1000,  // Convertir V a kV para la fórmula
-        tensionV: tensionV,               // Guardar en V para referencia
         tiempoDespeje: parseFloat(document.getElementById('tiempo-despeje').value),
         seccion: parseFloat(document.getElementById('seccion-cc').value),
         material: mat,
@@ -346,7 +359,6 @@ function obtenerParametrosCaidaTensionDC() {
         conductoresPorPolo: parseInt(document.getElementById('conductores-paralelo').value),
         seccion: parseFloat(document.getElementById('seccion-ct-dc').value),
         material: document.getElementById('material-conductor-ct-dc') ? document.getElementById('material-conductor-ct-dc').value : 'cobre',
-        temperatura: parseFloat(document.getElementById('temperatura-ct-dc').value),
         aislamiento: document.getElementById('aislamiento-ct-dc') ? document.getElementById('aislamiento-ct-dc').value : 'PVC',
         aplicacionDC: document.getElementById('aplicacion-dc')?.value || 'general',
     };
@@ -379,27 +391,20 @@ function propagarDatosAmpacidadDC(parametros, resultado) {
     var selTensionCTDC = document.getElementById('tension-ct-dc');
     if (selTensionCTDC && parametros.tensionSelector) {
         selTensionCTDC.value = parametros.tensionSelector;
+        var filaPers = document.getElementById('tension-personalizada-ct-dc-row');
+        var inputPers = document.getElementById('tension-personalizada-ct-dc');
+        if (parametros.tensionSelector === 'personalizado' && filaPers && inputPers) {
+            filaPers.style.display = 'block';
+            inputPers.value = parametros.tensionPersonalizada;
+        }
     }
 
     // Sección (seleccionar la que se calculó por ampacidad)
-    var selSeccionCTDC = document.getElementById('seccion-ct-dc');
-    if (selSeccionCTDC && resultado.seccion) {
-        var secStr = String(resultado.seccion);
-        for (var i = 0; i < selSeccionCTDC.options.length; i++) {
-            if (selSeccionCTDC.options[i].value === secStr) {
-                selSeccionCTDC.selectedIndex = i;
-                break;
-            }
-        }
-    }
+    seleccionarOpcionPorValor('seccion-ct-dc', resultado.seccion);
 
     // Material
     var matCTDC = document.getElementById('material-conductor-ct-dc');
     if (matCTDC && parametros.material) matCTDC.value = parametros.material;
-
-    // Temperatura
-    var tempCTDC = document.getElementById('temperatura-ct-dc');
-    if (tempCTDC && parametros.temperatura) tempCTDC.value = parametros.temperatura;
 
     // Aislamiento
     var aisCTDC = document.getElementById('aislamiento-ct-dc');
@@ -407,16 +412,7 @@ function propagarDatosAmpacidadDC(parametros, resultado) {
 
     // --- Pestaña Cortocircuito DC ---
     // Sección
-    var selSeccionCCDC = document.getElementById('seccion-cc-dc');
-    if (selSeccionCCDC && resultado.seccion) {
-        var secStr = String(resultado.seccion);
-        for (var i = 0; i < selSeccionCCDC.options.length; i++) {
-            if (selSeccionCCDC.options[i].value === secStr) {
-                selSeccionCCDC.selectedIndex = i;
-                break;
-            }
-        }
-    }
+    seleccionarOpcionPorValor('seccion-cc-dc', resultado.seccion);
 
     // Material
     var matCCDC = document.getElementById('material-cc-dc');
@@ -476,10 +472,9 @@ function calcularProyecto() {
 
         mostrarMensaje('Dimensionamiento AC calculado correctamente', 'exito');
 
-        // Mostrar advertencia si se usó método fallback
-        if (resultado.advertenciaFallback) {
-            mostrarMensaje(resultado.advertenciaFallback, 'advertencia');
-        }
+        (resultado.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
         // Propagar datos a pestañas de Caída de Tensión y Cortocircuito AC
         propagarDatosAmpacidadAC(parametros, resultado);
@@ -493,6 +488,7 @@ function calcularProyecto() {
         guardarEnHistorial('proyecto', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de proyecto:', error);
+        descartarResultados('proyecto', 'resultados-proyecto');
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
     } finally {
         appState.isCalculating = false;
@@ -511,8 +507,11 @@ function mostrarResultadosProyecto(resultado) {
         'corriente-corregida': resultado.corrienteCorregida !== undefined ? resultado.corrienteCorregida.toFixed(2) + ' A' : '--',
         'factor-temp-ac': resultado.factorTemperatura !== undefined ? resultado.factorTemperatura.toFixed(2) : '--',
         'factor-agrup-ac': resultado.factorAgrupamiento !== undefined ? resultado.factorAgrupamiento.toFixed(2) : '--',
-        'seccion-minima': resultado.seccion !== undefined ? resultado.seccion + ' mm\u00B2' : '--',
-        'ampacidad-seleccionada': resultado.ampacidad !== undefined ? resultado.ampacidad + ' A' : '--'
+        'seccion-minima': resultado.seccion !== undefined
+            ? (resultado.conductoresPorFase > 1 ? resultado.conductoresPorFase + ' \u00D7 ' : '') + resultado.seccion + ' mm\u00B2'
+            : '--',
+        'ampacidad-seleccionada': resultado.ampacidad !== undefined ? resultado.ampacidad + ' A' : '--',
+        'capacidad-corregida': resultado.capacidadCorregida !== undefined ? resultado.capacidadCorregida.toFixed(1) + ' A' : '--'
     };
 
     Object.keys(campos).forEach(function (id) {
@@ -520,16 +519,50 @@ function mostrarResultadosProyecto(resultado) {
         if (el) el.textContent = campos[id];
     });
 
-    // Show ground conductor
+    // Factor de resistividad del suelo: solo relevante en instalaciones enterradas
+    var cardResist = document.getElementById('card-factor-resistividad');
+    if (cardResist) {
+        var enterrado = resultado.metodoUsado === 'D';
+        cardResist.style.display = enterrado ? '' : 'none';
+        setTexto('factor-resist-ac', enterrado ? resultado.factorResistividad.toFixed(2) : '--');
+    }
+
+    // Conductor de protección (NBR 5410 Tabla 58) sobre la sección TOTAL de fase
     if (window.calcularConductorProteccion && resultado.seccion) {
-        var seccionTierra = window.calcularConductorProteccion(resultado.seccion);
-        setTexto('conductor-proteccion', seccionTierra + ' mm\u00B2');
+        var n = resultado.conductoresPorFase || 1;
+        if (n > 1) {
+            var faseTotal = n * resultado.seccion;
+            var peTotal = faseTotal <= 16 ? faseTotal : (faseTotal <= 35 ? 16 : faseTotal / 2);
+            var pePorTerna = window.redondearSeccionComercial(peTotal / n) || peTotal / n;
+            setTexto('conductor-proteccion', n + ' \u00D7 ' + pePorTerna + ' mm\u00B2 (\u2265 ' + peTotal + ' mm\u00B2 total)');
+        } else {
+            setTexto('conductor-proteccion', window.calcularConductorProteccion(resultado.seccion) + ' mm\u00B2');
+        }
     }
 }
 
 // ===================================================================
 // PROPAGACION DE DATOS ENTRE PESTAÑAS AC
 // ===================================================================
+
+/**
+ * Selecciona en un <select> la opción cuyo value coincide con `valor`.
+ * Si no existe, vuelve a la primera opción ("Seleccionar...") para no dejar
+ * un valor obsoleto de un cálculo anterior.
+ */
+function seleccionarOpcionPorValor(id, valor) {
+    var sel = document.getElementById(id);
+    if (!sel) return false;
+    var valorStr = String(valor);
+    for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === valorStr) {
+            sel.selectedIndex = i;
+            return true;
+        }
+    }
+    sel.selectedIndex = 0;
+    return false;
+}
 
 /**
  * Después de calcular ampacidad, propaga sección, corriente y parámetros
@@ -539,27 +572,11 @@ function mostrarResultadosProyecto(resultado) {
 function propagarDatosAmpacidadAC(parametros, resultado) {
     // --- Pestaña Caída de Tensión AC ---
     // Sección del conductor (seleccionar la opción correspondiente)
-    var selSeccion = document.getElementById('seccion-ct');
-    if (selSeccion) {
-        var seccionStr = String(resultado.seccion);
-        for (var i = 0; i < selSeccion.options.length; i++) {
-            if (selSeccion.options[i].value === seccionStr) {
-                selSeccion.selectedIndex = i;
-                break;
-            }
-        }
-    }
+    seleccionarOpcionPorValor('seccion-ct', resultado.seccion);
 
     // Tensión
-    var selTensionCT = document.getElementById('tension-ct');
-    if (selTensionCT && parametros.tension) {
-        var tensionStr = String(parametros.tension);
-        for (var i = 0; i < selTensionCT.options.length; i++) {
-            if (selTensionCT.options[i].value === tensionStr) {
-                selTensionCT.selectedIndex = i;
-                break;
-            }
-        }
+    if (parametros.tension) {
+        seleccionarOpcionPorValor('tension-ct', parametros.tension);
     }
 
     // Tipo de sistema
@@ -580,6 +597,15 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
         matCT.value = parametros.materialCondutor;
     }
 
+    // Aislamiento (define la temperatura de servicio para la resistencia)
+    var aisCT = document.getElementById('aislamiento-ct');
+    if (aisCT && parametros.materialAislamento) {
+        aisCT.value = (parametros.materialAislamento === 'PVC') ? 'PVC' : 'EPR_90';
+    }
+
+    // Conductores en paralelo por fase
+    seleccionarOpcionPorValor('paralelo-ct', resultado.conductoresPorFase || 1);
+
     // Corriente de proyecto (siempre propagar, independiente del modo de entrada)
     var corrienteCT = document.getElementById('corriente-ct');
     if (corrienteCT && resultado.corriente) {
@@ -588,16 +614,7 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
 
     // --- Pestaña Cortocircuito AC ---
     // Sección del conductor
-    var selSeccionCC = document.getElementById('seccion-cc');
-    if (selSeccionCC) {
-        var seccionStr = String(resultado.seccion);
-        for (var i = 0; i < selSeccionCC.options.length; i++) {
-            if (selSeccionCC.options[i].value === seccionStr) {
-                selSeccionCC.selectedIndex = i;
-                break;
-            }
-        }
-    }
+    seleccionarOpcionPorValor('seccion-cc', resultado.seccion);
 
     // Material del conductor
     var matCC = document.getElementById('material-cc');
@@ -613,16 +630,11 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
         aisCC.value = (ais === 'PVC') ? 'PVC' : 'EPR';
     }
 
-    // Tensión (misma que ampacidad, en V)
-    var selTensionCC = document.getElementById('tension-cc');
-    if (selTensionCC && parametros.tension) {
-        var tensionStr = String(parametros.tension);
-        for (var i = 0; i < selTensionCC.options.length; i++) {
-            if (selTensionCC.options[i].value === tensionStr) {
-                selTensionCC.selectedIndex = i;
-                break;
-            }
-        }
+    // Tensión de línea: solo se copia si el circuito es trifásico. En mono/bifásico
+    // la tensión del circuito puede ser fase-neutro y la fórmula Scc/(√3·V) pide
+    // la tensión entre fases, así que se deja para que el usuario la elija.
+    if (parametros.tension && parametros.tipoSistema === 'trifasico') {
+        seleccionarOpcionPorValor('tension-cc', parametros.tension);
     }
 
     mostrarMensaje('Datos propagados a Caída de Tensión y Cortocircuito AC', 'info');
@@ -643,17 +655,13 @@ function calcularCaidaTension() {
             mostrarErroresValidacion(validacion.errores);
             return;
         }
+        (validacion.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
         // Usar corriente directamente (ya viene del cálculo de ampacidad o ingresada manualmente)
-        var resultado = calcularCaidaTensionAC({
-            corriente: parametros.corriente,
-            tension: parametros.tension,
-            longitud: parametros.longitud,
-            seccion: parametros.seccion,
-            materialCondutor: parametros.materialCondutor,
-            tipoSistema: parametros.tipoSistema,
-            factorPotencia: parametros.factorPotencia
-        });
+        var resultado = calcularCaidaTensionAC(parametros);
+        resultado.seccionMinimaCaida = calcularSeccionMinimaCaidaAC(parametros);
 
         // Mostrar resultados
         mostrarResultadosCaidaTensionAC(resultado);
@@ -675,6 +683,7 @@ function calcularCaidaTension() {
         guardarEnHistorial('caida-tension', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de caida de tension AC:', error);
+        descartarResultados('caidaTension', 'resultados-caida-tension');
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
     } finally {
         appState.isCalculating = false;
@@ -688,7 +697,12 @@ function mostrarResultadosCaidaTensionAC(resultado) {
     }
 
     var elPct = document.getElementById('caida-tension-valor');
-    if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '%';
+    if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '% (l\u00EDmite ' + resultado.limite + '%)';
+    setTexto('caida-tension-volts', resultado.caidaTensionV.toFixed(2) + ' V');
+    setTexto('resistencia-ct', resultado.resistencia + ' \u03A9/km a ' + resultado.temperaturaConductor + ' \u00B0C');
+    setTexto('seccion-minima-ct', resultado.seccionMinimaCaida
+        ? resultado.seccionMinimaCaida.seccion + ' mm\u00B2'
+        : 'Ninguna \u2264 300 mm\u00B2: aumentar paralelo');
 
     var elStatus = document.getElementById('caida-tension-status');
     if (elStatus) {
@@ -712,6 +726,9 @@ function calcularCortocircuito() {
             mostrarErroresValidacion(validacion.errores);
             return;
         }
+        (validacion.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
         var resultado = calcularCortocircuitoAC({
             potenciaCortocircuito: parametros.potenciaCortocircuito,
@@ -742,6 +759,7 @@ function calcularCortocircuito() {
         guardarEnHistorial('cortocircuito', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de cortocircuito AC:', error);
+        descartarResultados('cortocircuito', 'resultados-cortocircuito');
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
     } finally {
         appState.isCalculating = false;
@@ -759,6 +777,7 @@ function mostrarResultadosCortocircuitoAC(resultado) {
 
     var elSeccion = document.getElementById('seccion-minima-cc');
     if (elSeccion) elSeccion.textContent = resultado.seccionMinima + ' mm\u00B2';
+    setTexto('seccion-comercial-cc', resultado.seccionComercial ? resultado.seccionComercial + ' mm\u00B2' : '> 1000 mm\u00B2');
 
     var elStatus = document.getElementById('cortocircuito-status');
     if (elStatus) {
@@ -818,24 +837,51 @@ function actualizarResumenAC() {
 
 function determinarSeccionFinalAC() {
     var proyecto = appState.calculos.proyecto;
+    var caida = appState.calculos.caidaTension;
     var cc = appState.calculos.cortocircuito;
 
     var secciones = [];
+    var sinSolucion = null;
 
     if (proyecto && proyecto.resultado && proyecto.resultado.seccion) {
         secciones.push({ valor: proyecto.resultado.seccion, criterio: 'Ampacidad' });
     }
 
-    if (cc && cc.resultado && cc.resultado.seccionMinima) {
-        secciones.push({ valor: cc.resultado.seccionMinima, criterio: 'Cortocircuito' });
+    var nParalelo = (proyecto && proyecto.resultado && proyecto.resultado.conductoresPorFase) || 1;
+
+    // Menor sección que cumple la caída de tensión, con el mismo número de
+    // conductores en paralelo que el dimensionamiento por ampacidad
+    if (caida && caida.resultado) {
+        var minCaida = caida.resultado.seccionMinimaCaida;
+        if (proyecto && proyecto.resultado && caida.parametros.conductoresPorFase !== nParalelo) {
+            minCaida = calcularSeccionMinimaCaidaAC(Object.assign({}, caida.parametros, { conductoresPorFase: nParalelo }));
+        }
+        if (minCaida) {
+            secciones.push({ valor: minCaida.seccion, criterio: 'Ca\u00EDda de Tensi\u00F3n' });
+        } else {
+            sinSolucion = 'Ca\u00EDda de tensi\u00F3n: ninguna secci\u00F3n hasta 300 mm\u00B2 cumple; aumentar conductores en paralelo';
+        }
     }
 
-    if (secciones.length > 0) {
+    // Cortocircuito: sección comercial mínima. Con conductores en paralelo se exige
+    // a CADA conductor (una falla en uno de ellos puede recibir casi toda la Icc).
+    if (cc && cc.resultado) {
+        if (cc.resultado.seccionComercial) {
+            secciones.push({ valor: cc.resultado.seccionComercial, criterio: 'Cortocircuito' });
+        } else {
+            sinSolucion = 'Cortocircuito: la secci\u00F3n requerida supera 1000 mm\u00B2';
+        }
+    }
+
+    if (sinSolucion) {
+        setTexto('seccion-final-ac', 'Revisar');
+        setTexto('criterio-restrictivo-ac', sinSolucion);
+    } else if (secciones.length > 0) {
         var maxSeccion = secciones.reduce(function (max, cur) {
             return cur.valor > max.valor ? cur : max;
         });
 
-        setTexto('seccion-final-ac', maxSeccion.valor + ' mm2');
+        setTexto('seccion-final-ac', (nParalelo > 1 ? nParalelo + ' \u00D7 ' : '') + maxSeccion.valor + ' mm2');
         setTexto('criterio-restrictivo-ac', maxSeccion.criterio);
     } else {
         setTexto('seccion-final-ac', 'No calculado');
@@ -858,47 +904,11 @@ function calcularAmpacidadDC() {
             mostrarErroresValidacion(validacion.errores);
             return;
         }
+        (validacion.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
-        var resultado;
-        if (parametros.modoEntrada === 'corriente') {
-            // Direct current mode - validate and calculate
-            if (!parametros.corrienteDirecta || isNaN(parametros.corrienteDirecta) || parametros.corrienteDirecta <= 0) {
-                mostrarMensaje('Corriente debe ser mayor que 0', 'error');
-                return;
-            }
-            var tension = window.obtenerTensionEfectiva(parametros.tensionSelector, parametros.tensionPersonalizada);
-            var factorTemp = window.calcularFactorTemperaturaDC({
-                material: parametros.material,
-                temperatura: parametros.temperatura,
-                aislamiento: parametros.aislamiento
-            });
-            var corrienteCorregida = parametros.corrienteDirecta / factorTemp;
-            var seccionInfo = window.seleccionarSeccionMinimaDC({
-                corrienteCorregida: corrienteCorregida,
-                material: parametros.material,
-                metodo: parametros.metodo
-            });
-            var resistenciaInfo = window.calcularResistenciaCorregida({
-                material: parametros.material,
-                seccion: seccionInfo.seccion,
-                temperatura: parametros.temperatura,
-                aislamiento: parametros.aislamiento
-            });
-            resultado = {
-                criterio: 'ampacidad',
-                corriente: parametros.corrienteDirecta,
-                corrienteCorregida: corrienteCorregida,
-                factorTemperatura: factorTemp,
-                seccion: seccionInfo.seccion,
-                ampacidad: seccionInfo.ampacidad,
-                resistencia_mostrada: resistenciaInfo.R_temp,
-                resistencia_20C: resistenciaInfo.R20,
-                factor_correccion_temp: resistenciaInfo.factor_correccion,
-                margen_seguridad: seccionInfo.margemSeguranca
-            };
-        } else {
-            resultado = dimensionarPorAmpacidadDC(parametros);
-        }
+        var resultado = dimensionarPorAmpacidadDC(parametros);
 
         mostrarResultadosAmpacidadDC(resultado);
 
@@ -918,6 +928,7 @@ function calcularAmpacidadDC() {
         guardarEnHistorial('ampacidad-dc', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de ampacidad DC:', error);
+        descartarResultados('ampacidadDC', 'resultados-ampacidad-dc');
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
     } finally {
         appState.isCalculating = false;
@@ -933,7 +944,7 @@ function mostrarResultadosAmpacidadDC(resultado) {
     var campos = {
         'corriente-dc': resultado.corriente + ' A',
         'seccion-ampacidad-dc': resultado.seccion + ' mm2',
-        'resistencia-mostrada-dc': resultado.resistencia_mostrada + ' ohm/km'
+        'resistencia-mostrada-dc': resultado.resistencia_mostrada + ' ohm/km a ' + resultado.temperatura_conductor + ' \u00B0C'
     };
 
     Object.keys(campos).forEach(function (id) {
@@ -957,36 +968,11 @@ function calcularCaidaTensionDC_UI() {
             mostrarErroresValidacion(validacion.errores);
             return;
         }
+        (validacion.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
-        // Use corriente directly instead of calculating from potencia
-        var tension = window.obtenerTensionEfectiva(parametros.tensionSelector, parametros.tensionPersonalizada);
-        var resistenciaInfo = window.calcularResistenciaCorregida({
-            material: parametros.material,
-            seccion: parametros.seccion,
-            temperatura: parametros.temperatura,
-            aislamiento: parametros.aislamiento
-        });
-        var caidaInfo = window.calcularCaidaTensionDC({
-            corriente: parametros.corriente,
-            longitud: parametros.longitud,
-            resistencia: resistenciaInfo.R_temp,
-            Np: parametros.conductoresPorPolo,
-            tension: tension
-        });
-        var limite = window.determinarLimiteCaidaDC(tension);
-        var resultado = {
-            criterio: 'caida_tension',
-            corriente: parametros.corriente,
-            caida_tension_V: caidaInfo.caidaTension,
-            caida_tension_pct: caidaInfo.porcentajeCaida,
-            limite_pct: limite,
-            cumple_criterio: caidaInfo.porcentajeCaida <= limite,
-            resistencia_mostrada: resistenciaInfo.R_temp,
-            resistencia_20C: resistenciaInfo.R20,
-            conductores_por_polo: parametros.conductoresPorPolo,
-            formula_usada: caidaInfo.formula_usada,
-            longitud_km: caidaInfo.longitud_km
-        };
+        var resultado = verificarCaidaTensionDC(parametros);
 
         mostrarResultadosCaidaTensionDC(resultado);
 
@@ -1003,6 +989,7 @@ function calcularCaidaTensionDC_UI() {
         guardarEnHistorial('caida-tension-dc', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de caida de tension DC:', error);
+        descartarResultados('caidaTensionDC', 'resultados-caida-tension-dc');
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
     } finally {
         appState.isCalculating = false;
@@ -1016,7 +1003,7 @@ function mostrarResultadosCaidaTensionDC(resultado) {
     }
 
     var elValor = document.getElementById('caida-tension-dc-valor');
-    if (elValor) elValor.textContent = resultado.caida_tension_pct + '%';
+    if (elValor) elValor.textContent = resultado.caida_tension_pct + '% (l\u00EDmite ' + resultado.limite_pct + '%)';
 
     var elStatus = document.getElementById('caida-tension-dc-status');
     if (elStatus) {
@@ -1025,7 +1012,7 @@ function mostrarResultadosCaidaTensionDC(resultado) {
     }
 
     var elRes = document.getElementById('resistencia-real-dc');
-    if (elRes) elRes.textContent = resultado.resistencia_mostrada + ' ohm/km';
+    if (elRes) elRes.textContent = resultado.resistencia_mostrada + ' ohm/km a ' + resultado.temperatura_conductor + ' \u00B0C';
 
     var elCorr = document.getElementById('corriente-calculada-dc');
     if (elCorr) elCorr.textContent = resultado.corriente + ' A';
@@ -1046,6 +1033,9 @@ function calcularCortocircuitoDC() {
             mostrarErroresValidacion(validacion.errores);
             return;
         }
+        (validacion.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
         var resultado = analizarCortocircuitoDC(parametros);
 
@@ -1064,6 +1054,7 @@ function calcularCortocircuitoDC() {
         guardarEnHistorial('cortocircuito-dc', parametros, resultado);
     } catch (error) {
         console.error('Error en calculo de cortocircuito DC:', error);
+        descartarResultados('cortocircuitoDC', 'resultados-cortocircuito-dc');
         mostrarMensaje('Error en calculo: ' + error.message, 'error');
     } finally {
         appState.isCalculating = false;
@@ -1078,6 +1069,9 @@ function mostrarResultadosCortocircuitoDC(resultado) {
 
     var elCorriente = document.getElementById('corriente-cortocircuito-dc');
     if (elCorriente) elCorriente.textContent = resultado.corriente_cortocircuito + ' A';
+    setTexto('resistencia-banco-dc', resultado.resistencia_banco_mohm + ' m\u03A9');
+    setTexto('seccion-minima-cc-dc', resultado.seccion_minima + ' mm\u00B2 (comercial: ' +
+        (resultado.seccion_comercial ? resultado.seccion_comercial + ' mm\u00B2' : '> 1000 mm\u00B2') + ')');
 
     var elStatus = document.getElementById('cortocircuito-dc-status');
     if (elStatus) {
@@ -1132,20 +1126,33 @@ function determinarSeccionFinalDC() {
         secciones.push({ valor: amp.resultado.seccion, criterio: 'Ampacidad' });
     }
 
-    if (caida && caida.resultado && !caida.resultado.cumple_criterio) {
+    var sinSolucion = null;
+
+    if (caida && caida.resultado) {
         try {
             var seccionNecesaria = calcularSeccionParaCaidaDC(caida.parametros);
-            secciones.push({ valor: seccionNecesaria, criterio: 'Caida de Tension' });
+            if (seccionNecesaria === null) {
+                sinSolucion = 'Ca\u00EDda de tensi\u00F3n: ninguna secci\u00F3n hasta 300 mm\u00B2 cumple; aumentar conductores por polo';
+            } else {
+                secciones.push({ valor: seccionNecesaria, criterio: 'Caida de Tension' });
+            }
         } catch (e) {
             console.error('Error al calcular seccion necesaria para caida de tension:', e);
         }
     }
 
     if (cc && cc.resultado) {
-        secciones.push({ valor: cc.resultado.seccion_minima, criterio: 'Cortocircuito' });
+        if (cc.resultado.seccion_comercial) {
+            secciones.push({ valor: cc.resultado.seccion_comercial, criterio: 'Cortocircuito' });
+        } else {
+            sinSolucion = 'Cortocircuito: la secci\u00F3n requerida supera 1000 mm\u00B2';
+        }
     }
 
-    if (secciones.length > 0) {
+    if (sinSolucion) {
+        setTexto('criterio-restrictivo', sinSolucion);
+        setTexto('seccion-final-dc', 'Revisar');
+    } else if (secciones.length > 0) {
         var maxSeccion = secciones.reduce(function (max, cur) {
             return cur.valor > max.valor ? cur : max;
         });
@@ -1168,6 +1175,7 @@ function actualizarResistenciaInterna() {
     var capacidad = parseFloat(capacidadInput.value);
     if (isNaN(capacidad) || capacidad <= 0) return;
 
+    // Estimación por elemento: R (mΩ) = constante (mΩ·Ah) / capacidad (Ah)
     var constantes = window.resistenciasInternasBateria || {};
     var constanteTipo = constantes[tipo];
     if (constanteTipo) {
@@ -1267,6 +1275,16 @@ function mostrarMensaje(texto, tipo) {
 // ===================================================================
 // UTILIDADES
 // ===================================================================
+
+/**
+ * Oculta resultados y borra el estado de un cálculo que falló, para no dejar
+ * en pantalla (ni en el resumen) valores de un cálculo anterior.
+ */
+function descartarResultados(clave, idResultados) {
+    appState.calculos[clave] = null;
+    var el = document.getElementById(idResultados);
+    if (el) el.style.display = 'none';
+}
 
 function setTexto(id, texto) {
     var el = document.getElementById(id);

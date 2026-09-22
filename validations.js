@@ -99,26 +99,33 @@ function validarParametrosAmpacidadDC(params) {
     const advertencias = [];
 
     try {
-        // Validar potencia DC
-        if (!params.potencia || isNaN(params.potencia)) {
-            errores.push('Potencia DC es requerida y debe ser numérica');
-        } else {
-            const potencia = parseFloat(params.potencia);
-            if (potencia <= 0) {
-                errores.push('Potencia DC debe ser mayor que 0');
-            } else if (potencia > 1000000) { // 1 MW
-                errores.push('Potencia DC debe ser menor que 1MW');
-            } else if (potencia < 1) {
-                advertencias.push('Potencia DC muy baja, verificar unidades');
+        if (params.modoEntrada === 'corriente') {
+            // Validar corriente conocida (la tensión no interviene en la ampacidad)
+            if (!params.corrienteDirecta || isNaN(params.corrienteDirecta) || params.corrienteDirecta <= 0) {
+                errores.push('Corriente DC es requerida y debe ser mayor que 0');
             }
-        }
+        } else {
+            // Validar potencia DC
+            if (!params.potencia || isNaN(params.potencia)) {
+                errores.push('Potencia DC es requerida y debe ser numérica');
+            } else {
+                const potencia = parseFloat(params.potencia);
+                if (potencia <= 0) {
+                    errores.push('Potencia DC debe ser mayor que 0');
+                } else if (potencia > 1000000) { // 1 MW
+                    errores.push('Potencia DC debe ser menor que 1MW');
+                } else if (potencia < 1) {
+                    advertencias.push('Potencia DC muy baja, verificar unidades');
+                }
+            }
 
-        // Validar tensión DC (incluyendo personalizada)
-        const validacionTension = validarTensionDC(params.tensionSelector, params.tensionPersonalizada);
-        if (!validacionTension.valido) {
-            errores.push(...validacionTension.errores);
+            // Validar tensión DC (incluyendo personalizada)
+            const validacionTension = validarTensionDC(params.tensionSelector, params.tensionPersonalizada);
+            if (!validacionTension.valido) {
+                errores.push(...validacionTension.errores);
+            }
+            advertencias.push(...validacionTension.advertencias);
         }
-        advertencias.push(...validacionTension.advertencias);
 
         // Validar material del conductor
         if (!params.material) {
@@ -168,14 +175,9 @@ function validarParametrosCaidaTensionDC(params) {
     const advertencias = [];
 
     try {
-        // Validar potencia DC
-        if (!params.potencia || isNaN(params.potencia)) {
-            errores.push('Potencia DC es requerida y debe ser numérica');
-        } else {
-            const potencia = parseFloat(params.potencia);
-            if (potencia <= 0) {
-                errores.push('Potencia DC debe ser mayor que 0');
-            }
+        // Validar corriente DC
+        if (!params.corriente || isNaN(params.corriente) || params.corriente <= 0) {
+            errores.push('Corriente DC es requerida y debe ser mayor que 0');
         }
 
         // Validar tensión DC (incluyendo personalizada)
@@ -225,16 +227,8 @@ function validarParametrosCaidaTensionDC(params) {
             errores.push('Material del conductor es requerido');
         } else if (!['cobre', 'aluminio'].includes(params.material.toLowerCase())) {
             errores.push('Material debe ser cobre o aluminio');
-        }
-
-        // Validar temperatura ambiente
-        if (params.temperatura === undefined || isNaN(params.temperatura)) {
-            errores.push('Temperatura ambiente es requerida y debe ser numérica');
-        } else {
-            const temp = parseFloat(params.temperatura);
-            if (temp < -20 || temp > 80) {
-                errores.push('Temperatura ambiente debe estar entre -20°C y 80°C');
-            }
+        } else if (params.material.toLowerCase() === 'aluminio' && parseFloat(params.seccion) < 16) {
+            errores.push('Aluminio: sección mínima 16 mm²');
         }
 
         return {
@@ -298,9 +292,9 @@ function validarParametrosCortocircuitoDC(params) {
             if (resistencia <= 0) {
                 errores.push('Resistencia interna debe ser mayor que 0');
             } else if (resistencia > 100) {
-                errores.push('Resistencia interna debe ser menor que 100 mΩ');
-            } else if (resistencia < 0.1) {
-                advertencias.push('Resistencia interna muy baja, verificar especificación');
+                errores.push('Resistencia interna por elemento debe ser menor que 100 mΩ');
+            } else if (resistencia < 0.05) {
+                advertencias.push('Resistencia interna por elemento muy baja, verificar especificación');
             }
         }
 
@@ -309,10 +303,8 @@ function validarParametrosCortocircuitoDC(params) {
             errores.push('Tiempo de despeje es requerido');
         } else {
             const tiempo = parseFloat(params.tiempoDespeje);
-            if (tiempo <= 0 || tiempo > 10) {
-                errores.push('Tiempo de despeje debe estar entre 0.01s y 10s');
-            } else if (tiempo > 5) {
-                advertencias.push('Tiempo de despeje muy alto, verificar protección');
+            if (tiempo <= 0 || tiempo > 5) {
+                errores.push('Tiempo de despeje debe estar entre 0.01 s y 5 s (validez del criterio adiabático)');
             }
         }
 
@@ -338,7 +330,7 @@ function validarParametrosCortocircuitoDC(params) {
         if (!params.aislamiento) {
             errores.push('Material de aislamiento es requerido');
         } else {
-            const aislamientoValido = ['PVC', 'EPR', 'EPR_90', 'EPR_105', 'HEPR', 'XLPE', 'EPR_XLPE'];
+            const aislamientoValido = ['PVC', 'EPR', 'EPR_90', 'HEPR', 'XLPE', 'EPR_XLPE'];
             if (!aislamientoValido.includes(params.aislamiento)) {
                 errores.push('Material de aislamiento no válido');
             }
@@ -701,7 +693,7 @@ function validarParametrosCaidaTensionAC(params) {
             errores.push('Tensión es requerida y debe ser numérica');
         } else {
             const tension = parseFloat(params.tension);
-            const tensionesValidas = [127, 220, 380, 440];
+            const tensionesValidas = [127, 220, 380, 440, 600, 750, 1000];
             if (!tensionesValidas.includes(tension)) {
                 errores.push(`Tensión debe ser una de: ${tensionesValidas.join(', ')} V`);
             }
@@ -801,6 +793,12 @@ function validarParametrosCortocircuitoAC(params) {
             const tension = parseFloat(params.tensionSistema);
             if (tension <= 0) {
                 errores.push('Tensión del sistema debe ser mayor que 0');
+            } else if (params.potenciaCortocircuito > 0) {
+                // tensionSistema en kV → Icc en kA
+                const icc = params.potenciaCortocircuito / (Math.sqrt(3) * tension);
+                if (tension <= 1 && icc > 100) {
+                    advertencias.push(`Icc = ${icc.toFixed(1)} kA es muy alta para baja tensión: verificar que la potencia de cortocircuito (MVA) corresponda a este punto del sistema`);
+                }
             }
         }
 
@@ -809,10 +807,8 @@ function validarParametrosCortocircuitoAC(params) {
             errores.push('Tiempo de despeje es requerido y debe ser numérico');
         } else {
             const tiempo = parseFloat(params.tiempoDespeje);
-            if (tiempo < 0.01 || tiempo > 10) {
-                errores.push('Tiempo de despeje debe estar entre 0.01s y 10s');
-            } else if (tiempo > 5) {
-                advertencias.push('Tiempo de despeje muy alto, verificar protección');
+            if (tiempo < 0.01 || tiempo > 5) {
+                errores.push('Tiempo de despeje debe estar entre 0.01 s y 5 s (validez del criterio adiabático)');
             }
         }
 

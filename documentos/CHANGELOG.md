@@ -4,6 +4,80 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.0.0] - 2026-09-22
+
+Revision integral de calculos, datos y normativa. Varios resultados cambian respecto a 4.x.
+
+### Fixed - Datos (data-tables.js)
+- Tablas de ampacidad AC rehechas desde el catalogo INPACO 2021 (Tablas 2 a 5), extraidas
+  automaticamente del PDF del repo. Antes las columnas estaban desalineadas: "A2" contenia
+  A1 con 3 conductores, "B2" contenia B1 con 3 conductores, y HEPR tenia valores de
+  instalacion al aire libre (hasta 37% mas altos que los reales en A1).
+- Se agregan columnas de 2 y 3 conductores cargados; antes todo usaba 2 conductores,
+  lo que sobreestimaba la ampacidad de circuitos trifasicos en ~10-13%.
+- EPR 90 C y HEPR usan la misma tabla (INPACO: XLPE/HEPR 90 C). HEPR figuraba como 125 C.
+- Retirados metodos H, I y EPR 105 C: eran tablas de media tension (NBR 14039, Mamede
+  3.28/3.29) mal etiquetadas. Ejemplo: "PVC H enterrado" era en realidad XLPE MT al aire libre.
+- Retiradas ampacidades 400-1000 mm2 sin fuente. Para corrientes mayores: conductores en paralelo.
+- Factores de agrupamiento corregidos segun INPACO Tabla 7 (haz: 9-11 = 0,50, >=20 = 0,38),
+  bandeja perforada para E/F/G (antes E usaba valores mas altos y G usaba la tabla de enterrados),
+  Tablas 9/10 para el metodo D (directo/ducto).
+- Metodo F ya no se trata como enterrado (es al aire libre, INPACO 3.3.3).
+- Resistencias de cobre/aluminio 400-1000 mm2 ajustadas a IEC 60228.
+- K aluminio-PVC para cortocircuito DC: 74 -> 76 (NBR 5410).
+
+### Fixed - Calculos (calculations.js)
+- Aluminio usaba la ampacidad del cobre. Ahora: I_Al = I_Cu x raiz(R_Cu/R_Al) (~0,78), con aviso.
+- Factor de temperatura: interpola entre valores de tabla. Antes una temperatura fuera de los
+  multiplos de 5 C (ej. 42 C) caia silenciosamente a factor 1,0. Fuera de rango ahora da error
+  (PVC admite hasta 60 C).
+- Factor de agrupamiento no encontrado ya no se reemplaza por 1,0 en silencio.
+- Factor de demanda: se leia pero no se aplicaba. Ahora se aplica en modo Por Potencia.
+- Resistividad termica del suelo: se leia pero no se aplicaba. Ahora aplica INPACO Tabla 11
+  (referencia 1,0 K.m/W) en el metodo D.
+- Caida de tension AC y DC: la resistencia se toma a la temperatura de servicio del conductor
+  (70 C PVC / 90 C EPR) como indica INPACO 4.3; antes se usaba 20 C (caida subestimada ~20-28%).
+  Formula AC unificada: DV = k.I.L.(R.cos + X.sen) para todas las secciones.
+- Caida de tension DC usaba la temperatura AMBIENTE como temperatura del conductor.
+- Cortocircuito AC: constante K correcta para cualquier nombre de aislacion (EPR_90/HEPR con
+  aluminio caia a K=115); K de PVC > 300 mm2 = 103/68.
+- Cortocircuito DC: la resistencia interna es por elemento y se multiplica por los elementos en serie.
+  Constantes de estimacion ajustadas a mOhm por elemento.
+- Conductor de proteccion: HEPR/EPR 105 usaban K=176 (valor de conductor separado); ahora 143.
+- Seccion final AC ahora considera caida de tension (menor seccion que cumple) y usa la seccion
+  comercial de cortocircuito (antes mostraba valores como 57,52 mm2).
+- Seccion final DC usa la seccion comercial de cortocircuito; si ninguna seccion cumple lo indica.
+- Ampacidad DC: tablas INPACO de 2 conductores de la aislacion elegida (antes una tabla interna
+  que ignoraba EPR y tenia la columna A1 hasta 14% alta). Se aplica el agrupamiento DC.
+- Limite de caida DC por tipo de aplicacion ahora se aplica (antes se ignoraba).
+
+### Fixed - Interfaz y validaciones
+- Caida de Tension DC nunca calculaba: la validacion pedia "Potencia" que el formulario ya no tenia.
+- Ampacidad DC en modo corriente pedia potencia y tension.
+- Tension de cortocircuito AC solo se copia desde Ampacidad en sistemas trifasicos (la formula
+  Scc/(raiz(3).V) pide tension de linea).
+- Ampacidad AC limitada a baja tension (hasta 1000 V).
+- Tiempo de despeje limitado a 5 s (validez del criterio adiabatico).
+- Al fallar un calculo se ocultan los resultados anteriores.
+- Las advertencias de validacion ahora se muestran.
+
+### Added
+- Conductores en paralelo por fase (ampacidad y caida de tension AC).
+- Neutro con armonicos (4 conductores cargados, 0,86 x columna de 3).
+- Tipo de instalacion enterrada (electroducto / directo) y resistividad del suelo segun INPACO.
+- Limite de caida AC seleccionable (4%, 5%, 7%) y aislacion en la pestana de caida AC.
+- Resultados: capacidad corregida Iz, caida en V, resistencia usada, seccion minima por caida,
+  seccion comercial de cortocircuito, resistencia del banco de baterias.
+- Tests cargan las tablas reales (87 tests).
+
+### Pendiente de revision de ingenieria
+- Formula de caida de tension AC/DC: ahora usa R a temperatura de servicio y (R.cos + X.sen)
+  para todas las secciones, segun INPACO 4.3. Confirmar que es el criterio deseado.
+- Cortocircuito con conductores en paralelo: se exige la Icc completa a cada conductor (conservador).
+- Formula bifasica con raiz(2): corresponde a un sistema bifasico de fases a 90 grados. Para una
+  carga conectada entre dos fases de un sistema trifasico (uso habitual) la corriente es
+  I = P/(V.cos.eta) y la formula actual la subestima un 29%. No se modifico por la regla de CLAUDE.md.
+
 ## [4.6.0] - 2026-03-30
 
 ### Added
