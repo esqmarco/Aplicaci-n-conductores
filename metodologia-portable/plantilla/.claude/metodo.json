@@ -1,0 +1,13 @@
+{
+  "proyecto": "NOMBRE DEL PROYECTO (una línea: qué es)",
+  "testCommand": "npm test",
+  "testAlArrancar": true,
+  "codigo": "\\.(js|mjs|ts|jsx|tsx|py|html|css)$",
+  "archivosCriticos": [],
+  "mensajeCritico": "Cambio sensible: citar la fuente de la decisión, agregar un test que lo fije (verlo en rojo antes) y registrar en el changelog.",
+  "docs": {
+    "plan": "documentos/PLAN_DE_MEJORAS.md",
+    "changelog": "documentos/CHANGELOG.md",
+    "lecciones": "documentos/LECCIONES_APRENDIDAS.md"
+  }
+}

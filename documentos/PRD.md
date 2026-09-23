@@ -54,26 +54,25 @@ Dimensionar cables electricos requiere consultar multiples tablas, aplicar facto
 
 **Seleccion automatica de seccion por ampacidad:**
 - Consulta de tablas INPACO/NBR 5410 segun metodo de instalacion
-- Secciones normalizadas desde 1.5mm2 hasta 500mm2
+- Secciones normalizadas desde 1.5mm2 hasta 300mm2 (limite de las tablas INPACO; mas corriente = conductores en paralelo)
 
-**Metodos de instalacion (11 metodos):**
+**Metodos de instalacion (9 metodos, INPACO Tabla 1 / NBR 5410):**
 - A1: Conductores aislados en conducto embutido en pared aislante
 - A2: Cable multipolar en conducto embutido en pared aislante
 - B1: Conductores aislados en conducto sobre pared
 - B2: Cable multipolar en conducto sobre pared
 - C: Cables unipolares o multipolar sobre pared
-- D: Cable multipolar en conducto enterrado
+- D: Cables en electroducto enterrado o directamente enterrados
 - E: Cable multipolar al aire libre
 - F: Cables unipolares en contacto al aire libre
-- G: Cables unipolares separados al aire libre
-- H: Conductores aislados en escalerilla/bandeja perforada
-- I: Cables unipolares en bandeja perforada
+- G: Cables unipolares espaciados al aire libre / sobre aisladores
+- (H e I retirados en 5.0.0: eran metodos de media tension NBR 14039)
 
 **Tipos de aislamiento (4 tipos):**
 - PVC (70C)
-- EPR 90C
-- EPR 105C
-- HEPR (alta temperatura)
+- EPR/XLPE 90C
+- HEPR 90C (misma tabla INPACO que XLPE)
+- (EPR 105C retirado en 5.0.0: sus tablas eran de media tension, NBR 14039)
 
 **Materiales conductores:**
 - Cobre (Cu)
@@ -165,7 +164,7 @@ Dimensionar cables electricos requiere consultar multiples tablas, aplicar facto
 | F2.1 | Factor de agrupamiento en DC | Selector y calculo de agrupamiento para pestanas DC | DC actualmente no considera agrupamiento |
 | F2.2 | Limites de caida DC por aplicacion | Seleccion: UPS (1%), servicios auxiliares (2%), fotovoltaico (3%) | Los datos ya existen en data-tables.js |
 | F2.3 | Factor de demanda | Para dimensionamiento de alimentadores con multiples cargas | Importante para proyectos reales |
-| F2.4 | Correccion por resistividad del suelo | Para metodos de instalacion enterrados H e I | Los datos ya existen en fatoresEspeciais |
+| F2.4 | Correccion por resistividad del suelo | Para el metodo enterrado D (INPACO Tabla 11) - hecho en 5.0.0 | Los datos ya existen en fatoresEspeciais |
 | F2.5 | Cable de proteccion (tierra) | Calcular calibre del conductor de proteccion segun norma | Requisito de toda instalacion electrica |
 | F2.6 | Verificacion de aluminio en AC | Asegurar que aluminio funcione correctamente con seccion minima 16mm2 | Completar soporte de materiales |
 

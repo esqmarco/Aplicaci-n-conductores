@@ -4,6 +4,18 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.2.0] - 2026-09-23 — Método de trabajo v8
+
+- **Quién:** Marco + Claude (Opus 5.5)
+- **Qué se hizo:**
+  - Metodología portable actualizada para Opus 5.5 en `metodologia-portable/` (plantilla + README con los cambios respecto de la v7a de NeuroTEA).
+  - Método instalado en este proyecto: `CLAUDE.md` con reglas del método, `.claude/metodo.json`, hook de arranque (estado, git, comandos y tests al abrir y tras compactar), gate de archivos críticos (`calculations.js`, `data-tables.js`), comandos `/verificar`, `/cierre` y `/auditar`, y pre-commit (tests + changelog obligatorio si cambian tablas o fórmulas).
+  - `PLAN_DE_MEJORAS.md` reescrito: estado actual, backlog vivo con evidencia y decisiones vigentes. Lo ya resuelto en 5.x salió del backlog.
+  - Drift corregido: manual y PRD ya no mencionan métodos H/I, EPR 105 °C ni tensiones de media tensión. Los cuatro documentos de especificación originales quedaron marcados SUPERADO.
+  - Lecciones de la revisión v5 agregadas con su destino ejecutable.
+- **Decisiones de Marco:** 2026-09-23 — adoptar el método de trabajo de NeuroTEA, actualizado a Opus 5.5.
+- **Pendiente:** verificar los hooks en la PC de Marco (Windows).
+
 ## [5.1.0] - 2026-09-22
 
 ### Fixed
