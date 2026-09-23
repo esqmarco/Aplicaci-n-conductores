@@ -1,0 +1,13 @@
+{
+  "proyecto": "Calculadora de conductores eléctricos AC + DC (INPACO 2021 / NBR 5410 / Mamede)",
+  "testCommand": "node tests/test_calculations.js",
+  "testAlArrancar": true,
+  "codigo": "\\.(js|mjs|html)$",
+  "archivosCriticos": ["calculations.js", "data-tables.js"],
+  "mensajeCritico": "Datos o fórmulas normativas. Citar la fuente (tabla INPACO, NBR 5410, Mamede) en el comentario, agregar un test con valor verificado a mano (verlo en rojo antes del cambio), revisar los gemelos AC↔DC y cobre↔aluminio, y registrar en documentos/CHANGELOG.md. Las fórmulas de CLAUDE.md no cambian sin OK de Marco.",
+  "docs": {
+    "plan": "documentos/PLAN_DE_MEJORAS.md",
+    "changelog": "documentos/CHANGELOG.md",
+    "lecciones": "documentos/LECCIONES_APRENDIDAS.md"
+  }
+}

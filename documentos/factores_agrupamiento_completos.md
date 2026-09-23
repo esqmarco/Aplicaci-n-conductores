@@ -1,5 +1,12 @@
 # 📊 FACTORES DE AGRUPAMIENTO COMPLETOS - CALCULADORA CABLES ELÉCTRICOS
 
+> **SUPERADO (2026-09-22, v5.0.0).** Este documento fue la especificación original y contiene datos
+> que resultaron incorrectos (columnas INPACO desalineadas, tablas de media tensión NBR 14039 rotuladas
+> como baja tensión, métodos H/I y EPR 105 °C). **No usar como fuente.** Los datos vigentes están en
+> `data-tables.js`, extraídos del catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`).
+> Se conserva solo como historia; ver `documentos/CHANGELOG.md` 5.0.0.
+
+
 ## INSTRUCCIONES PARA EL DESARROLLADOR:
 **Usar estas tablas EXACTAMENTE como están definidas para implementar en data-tables.js**
 **Son datos consolidados de Catálogo INPACO 2021 + NBR 5410 + Mamede Filho**

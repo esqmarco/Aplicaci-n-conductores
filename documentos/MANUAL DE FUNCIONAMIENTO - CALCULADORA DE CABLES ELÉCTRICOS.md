@@ -26,10 +26,10 @@
 La calculadora debe dimensionar correctamente cables eléctricos para instalaciones industriales y residenciales, siguiendo las normativas técnicas brasileñas (NBR 5410) y utilizando datos de fabricantes reconocidos (INPACO) complementados con metodologías académicas (Mamede Filho).
 
 ### Alcance Técnico
-- **Tensiones:** 127V hasta 34.5kV
+- **Tensiones:** baja tensión, 127 V hasta 1000 V (las tablas INPACO son para cables 450/750 V y 0,6/1 kV). Cortocircuito AC acepta también media tensión.
 - **Potencias:** Desde 100W hasta 1000kW
-- **Métodos de instalación:** A1 hasta I (11 métodos diferentes)
-- **Materiales de aislamiento:** PVC, EPR 90°C, EPR 105°C, HEPR
+- **Métodos de instalación:** A1, A2, B1, B2, C, D, E, F, G (INPACO Tabla 1 / NBR 5410). D es el único enterrado.
+- **Materiales de aislamiento:** PVC (70 °C), EPR/XLPE (90 °C), HEPR (90 °C)
 - **Tipos de sistema:** Monofásico, bifásico, trifásico
 - **Conductores:** Cobre y aluminio
 
@@ -229,7 +229,7 @@ La calculadora debe dimensionar correctamente cables eléctricos para instalacio
 - **Corriente de cortocircuito:** Coherente con nivel de tensión
 
 #### Compatibilidad de Parámetros
-- **Material vs Temperatura:** PVC hasta 70°C, EPR hasta 90°C/105°C
+- **Material vs Temperatura:** conductor PVC 70 °C, EPR/XLPE/HEPR 90 °C; temperatura ambiente máxima PVC 60 °C
 - **Método vs Material:** Algunos métodos no aplican a ciertos materiales
 - **Tensión vs Potencia:** Coherencia en rangos típicos
 - **Sistema vs Tensión:** Monofásico solo hasta 440V
@@ -512,7 +512,7 @@ Alimentador para transformador 500kVA, 13.8kV, cabo subterráneo, distancia 200m
 #### Conformidad Normativa
 - ✅ Tablas NBR 5410 implementadas correctamente
 - ✅ Datos INPACO actualizados y precisos
-- ✅ Metodología Mamede Filho para métodos H e I
+- ✅ Fórmulas de corriente y caída de tensión según Mamede Filho (Ec. 3.8 y 3.18)
 - ✅ Factores de corrección según norma
 
 #### Casos de Prueba
@@ -579,5 +579,5 @@ El éxito se medirá por:
 
 *Manual de Funcionamiento v2.0*  
 *Calculadora de Cables Eléctricos - INPACO + NBR + Mamede Filho*  
-*Estructura Modular | Métodos A1 hasta I | PVC, EPR 90°, EPR 105°, HEPR*
+*Estructura Modular | Métodos A1 a G | PVC 70 °C, EPR/XLPE/HEPR 90 °C*
 

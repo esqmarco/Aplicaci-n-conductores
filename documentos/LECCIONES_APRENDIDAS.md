@@ -1,5 +1,41 @@
 # Lecciones Aprendidas - Calculadora de Cables Electricos
 
+Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
+
+## Revision integral v5 (2026-09-22)
+
+### Los datos tecnicos se toman de la fuente primaria, no de una especificacion intermedia
+- **Que paso:** `tablas_universales_cables.md` ordenaba "usar EXACTAMENTE" tablas con columnas INPACO desalineadas y tablas de media tension rotuladas como baja tension. La app las copio tal cual.
+- **Por que:** nadie contrasto la especificacion contra el catalogo, que estaba en el mismo repo.
+- **Como aplicarlo:** extraer los valores del PDF de la fuente con un script (no a mano) y verificar monotonicidad y coherencia (3 conductores <= 2 conductores).
+- **Destino ejecutable:** tests del Grupo 17 fijan valores del catalogo; los documentos intermedios quedaron marcados SUPERADO.
+
+### Una formula "corregida" sin cita es una sospecha
+- **Que paso:** en R3 se agrego un sqrt(2) a la formula bifasica tomado del manual interno. Subestimaba la corriente un 29% y quedo protegido como "regla critica" en CLAUDE.md.
+- **Por que:** la regla protegia la formula sin exigir la referencia que la justificara.
+- **Como aplicarlo:** toda formula lleva su fuente (libro, ecuacion, tabla). Una regla que protege un valor sin fuente se revisa antes de obedecerla.
+- **Destino ejecutable:** CLAUDE.md lista cada formula con su fuente; test "Bifasico 7500W 220V -> 10mm2".
+
+### Un campo que se lee pero no se aplica engana al usuario
+- **Que paso:** factor de demanda, resistividad del suelo, agrupamiento DC y tipo de aplicacion DC se leian del formulario y no cambiaban el resultado.
+- **Por que:** se agregaron a la UI y a `obtenerParametros...` sin conectarlos al calculo.
+- **Como aplicarlo:** cada entrada nueva necesita un test donde cambiarla cambia el resultado.
+- **Destino ejecutable:** tests de los Grupos 18 y 19; `/verificar` paso 1 (consecuencias).
+
+### Cambiar un formulario sin cambiar su validacion rompe la pestana entera
+- **Que paso:** en 4.6.0 la Caida de Tension DC paso de potencia a corriente, pero la validacion siguio pidiendo potencia: la pestana nunca volvio a calcular.
+- **Por que:** UI, validacion y calculo son gemelos y se cambio uno solo; no habia test de la validacion.
+- **Como aplicarlo:** al cambiar un formulario, revisar juntos UI -> validacion -> calculo y probar la pestana en el navegador.
+- **Destino ejecutable:** test "DC voltage drop validation works with current"; `/verificar` pasos 1 y 4.
+
+### Un valor por defecto silencioso esconde el error
+- **Que paso:** si no habia factor de temperatura para 42 C, el calculo usaba 1,0 sin avisar; lo mismo con agrupamiento.
+- **Por que:** `try/catch` con valor por defecto "para que no se rompa".
+- **Como aplicarlo:** interpolar cuando corresponde y lanzar error cuando el dato no existe.
+- **Destino ejecutable:** tests "PVC above 60C throws", "Temperature out of range throws"; regla en CLAUDE.md.
+
+---
+
 ## 1. Sobre la Arquitectura
 
 ### Lo que funciono bien

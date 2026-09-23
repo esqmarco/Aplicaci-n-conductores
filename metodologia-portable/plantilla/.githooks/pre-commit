@@ -1,0 +1,4 @@
+#!/bin/sh
+# Método de trabajo v8 — guardarraíl de commits. La lógica vive en .claude/hooks/pre-commit.mjs.
+# Se activa con: git config core.hooksPath .githooks (el hook de arranque lo hace solo).
+exec node "$(git rev-parse --show-toplevel)/.claude/hooks/pre-commit.mjs"
