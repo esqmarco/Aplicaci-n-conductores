@@ -22,10 +22,12 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Aislaciones AC: PVC (70 °C); EPR_90 y HEPR (90 °C, misma tabla INPACO XLPE/HEPR). DC: PVC, EPR.
 - Conductores: cobre, aluminio (mínimo 16 mm²). Ampacidad de aluminio = cobre INPACO × (I_Al/I_Cu) de NBR 5410 Tablas 36–39, mismo método, aislación y conductores cargados (fuente: `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`).
 - Clase del conductor (IEC 60228) para resistencias: cobre flexible clase 5 (por defecto) o rígido clase 2; aluminio solo rígido. Una sola tabla de resistencias (`tabelasNBR.resistencias`) para AC y DC.
-- Métodos de instalación: A1, A2, B1, B2, C, D, E, F, G (INPACO Tabla 1 / NBR 5410). D es el único enterrado.
+- Métodos de instalación: A1, A2, B1, B2, C, D, E, F, G en AC (INPACO Tabla 1 / NBR 5410); D es el único enterrado. DC ofrece A1, B1, C, E.
 - Tablas de ampacidad: INPACO 2021, cobre, 40 °C aire / 25 °C suelo, 1,0 K·m/W, 2 y 3 conductores cargados, hasta 300 mm². Corrientes mayores: conductores en paralelo.
 - Ampacidad AC solo para baja tensión (≤ 1000 V). Las tablas de media tensión (NBR 14039) no están en la app.
-- Los factores de corrección nunca caen en silencio a 1,0: un valor fuera de tabla lanza error.
+- Los factores de corrección nunca caen en silencio a 1,0: un valor fuera de tabla lanza error. Un campo vacío es error de validación, no un valor por defecto.
+- Un cálculo cuyas entradas cambiaron se invalida (`descartarResultados`): al recalcular la ampacidad, al fallar la validación y con Limpiar. El resumen y el reporte solo usan cálculos vigentes.
+- Cortocircuito: la sección elegida se verifica con su propio K y la comercial también (`seccionComercialCortocircuito`, compartida AC/DC; aluminio ≥ 16 mm²).
 - AC y DC usan las mismas tablas INPACO (DC = 2 conductores cargados).
 
 ## Fórmulas (no se cambian sin OK de Marco)

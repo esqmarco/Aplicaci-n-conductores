@@ -458,6 +458,29 @@ function obtenerConstanteK(material, aislamiento, seccion) {
     return tabla[mat][esPVC ? 'PVC' : 'EPR'];
 }
 
+/**
+ * Menor sección comercial que soporta Icc durante t con SU propio K
+ * (por encima de 300 mm² el K del PVC es menor). Compartida por AC y DC.
+ */
+function seccionComercialCortocircuito(Icc_A, t, material, aislamiento) {
+    const esAluminio = normalizarMaterial(material) === 'aluminio';
+    for (const s of SECCIONES_COMERCIALES) {
+        if (esAluminio && s < 16) continue; // aluminio: sección mínima 16 mm²
+        if (s >= Icc_A * Math.sqrt(t) / obtenerConstanteK(material, aislamiento, s)) return s;
+    }
+    return null;
+}
+
+/**
+ * Sección mínima requerida por cortocircuito (mm²): con el K de hasta 300 mm²; si el
+ * resultado pasa de 300 mm², con el K menor de las secciones mayores (PVC).
+ * No depende de la sección elegida. Compartida por AC y DC.
+ */
+function seccionMinimaCortocircuito(Icc_A, t, material, aislamiento) {
+    const s = Icc_A * Math.sqrt(t) / obtenerConstanteK(material, aislamiento, 300);
+    return s <= 300 ? s : Icc_A * Math.sqrt(t) / obtenerConstanteK(material, aislamiento, 400);
+}
+
 function calcularCortocircuitoAC(parametros) {
     const { potenciaCortocircuito, tensionSistema, tiempoDespeje, seccion, materialCondutor, materialAislamiento } = parametros;
 
@@ -475,25 +498,20 @@ function calcularCortocircuitoAC(parametros) {
 
     // Sección mínima (criterio adiabático, válido para t ≤ 5 s): S_min = Icc × √t / K
     const t = parseFloat(tiempoDespeje);
-    const seccionMinima = (Icc_A * Math.sqrt(t)) / K;
+    const seccionMinima = seccionMinimaCortocircuito(Icc_A, t, materialCondutor, materialAislamiento);
     const seccionMinRedondeada = Math.round(seccionMinima * 100) / 100;
 
+    // La sección elegida se verifica con SU propio K
     const seccionElegida = parseFloat(seccion);
-    const cumple = seccionElegida >= seccionMinima;
+    const cumple = seccionElegida >= (Icc_A * Math.sqrt(t)) / K;
 
-    // Menor sección comercial que cumple con SU propio K
-    let seccionComercial = null;
-    for (const s of SECCIONES_COMERCIALES) {
-        if (s >= Icc_A * Math.sqrt(t) / obtenerConstanteK(materialCondutor, materialAislamiento, s)) {
-            seccionComercial = s;
-            break;
-        }
-    }
+    const seccionComercial = seccionComercialCortocircuito(Icc_A, t, materialCondutor, materialAislamiento);
 
     return {
         corrienteCortocircuito: Math.round(Icc_kA * 100) / 100,
         corrienteCortocircuitoA: Math.round(Icc_A),
         seccionMinima: seccionMinRedondeada,
+        constanteKMinima: obtenerConstanteK(materialCondutor, materialAislamiento, seccionMinima),
         seccionComercial,
         cumple,
         constanteK: K,
@@ -524,9 +542,8 @@ function calcularResistenciaCorregida(parametros) {
     if (!material) throw new Error('Material del conductor es requerido');
     if (!seccion || seccion <= 0) throw new Error('Sección debe ser mayor que 0');
 
-    const temperatura = (parametros.temperatura !== undefined && !isNaN(parametros.temperatura))
-        ? parseFloat(parametros.temperatura)
-        : temperaturaServicioConductor(aislamiento);
+    const tIngresada = parseFloat(parametros.temperatura);
+    const temperatura = !isNaN(tIngresada) ? tIngresada : temperaturaServicioConductor(aislamiento);
     const mat = normalizarMaterial(material);
     const R20 = obtenerResistencia20C(mat, seccion, aislamiento, clase);
     const alpha = ALFA_RESISTENCIA[mat];
@@ -558,6 +575,7 @@ function calcularCaidaTensionDC(parametros) {
     return {
         caidaTension: Math.round(caidaTension * 100) / 100,
         porcentajeCaida: Math.round(porcentajeCaida * 100) / 100,
+        porcentajeCaidaExacto: porcentajeCaida,
         resistencia,
         Np,
         longitud_km,
@@ -629,7 +647,7 @@ function verificarCaidaTensionDC(parametros) {
         caida_tension_V: caidaInfo.caidaTension,
         caida_tension_pct: caidaInfo.porcentajeCaida,
         limite_pct: limite,
-        cumple_criterio: caidaInfo.porcentajeCaida <= limite,
+        cumple_criterio: caidaInfo.porcentajeCaidaExacto <= limite,
         resistencia_mostrada: resistenciaInfo.R_temp,
         resistencia_20C: resistenciaInfo.R20,
         temperatura_conductor: resistenciaInfo.temperatura,
@@ -651,9 +669,10 @@ function analizarCortocircuitoDC(parametros) {
     const tensionBanco = tensionElemento * n;
     const resistenciaBanco_mOhm = n * parseFloat(resistenciaInterna);
     const corrienteCortocircuito = tensionBanco / (resistenciaBanco_mOhm / 1000);
-    const constanteK = obtenerConstanteKDC(material, aislamiento);
-    const seccionMinima = (corrienteCortocircuito * Math.sqrt(tiempoDespeje)) / constanteK;
-    const cumpleCriterio = seccion >= seccionMinima;
+    const constanteK = obtenerConstanteKDC(material, aislamiento, seccion);
+    const seccionMinima = seccionMinimaCortocircuito(corrienteCortocircuito, tiempoDespeje, material, aislamiento);
+    // La sección elegida se verifica con SU propio K (igual que AC)
+    const cumpleCriterio = seccion >= (corrienteCortocircuito * Math.sqrt(tiempoDespeje)) / constanteK;
 
     return {
         criterio: 'cortocircuito',
@@ -661,7 +680,8 @@ function analizarCortocircuitoDC(parametros) {
         resistencia_banco_mohm: Math.round(resistenciaBanco_mOhm * 1000) / 1000,
         corriente_cortocircuito: Math.round(corrienteCortocircuito),
         seccion_minima: Math.round(seccionMinima * 100) / 100,
-        seccion_comercial: redondearSeccionComercial(seccionMinima),
+        constante_K_minima: obtenerConstanteK(material, aislamiento, seccionMinima),
+        seccion_comercial: seccionComercialCortocircuito(corrienteCortocircuito, tiempoDespeje, material, aislamiento),
         seccion_elegida: seccion,
         cumple_criterio: cumpleCriterio,
         constante_K: constanteK,
@@ -733,13 +753,9 @@ function obtenerTensionElementoBateria(tipo) {
     return { 'plomo-acido': 2.0, 'litio': 3.2, 'niquel-cadmio': 1.2 }[tipo] || 2.0;
 }
 
-function obtenerConstanteKDC(material, aislamiento) {
-    const materialKey = normalizarMaterial(material);
-    const constantesK = window.tabelasDC && window.tabelasDC.constantesK_DC;
-    const esPVC = esAislacionPVC(aislamiento);
-    const porDefecto = { cobre: { PVC: 115, EPR: 143 }, aluminio: { PVC: 76, EPR: 94 } };
-    const tabla = (constantesK && constantesK[materialKey]) || porDefecto[materialKey];
-    return tabla[esPVC ? 'PVC' : 'EPR'];
+function obtenerConstanteKDC(material, aislamiento, seccion) {
+    // Mismos K que en AC (NBR 5410 Tabla 30): el calentamiento adiabático no depende del tipo de corriente
+    return obtenerConstanteK(material, aislamiento, seccion);
 }
 
 /**
@@ -844,10 +860,10 @@ function calcularConductorProteccion(seccionFase, parametrosCC) {
     else seccionTabla = seccionFase / 2;
 
     // K para PE que forma parte de un cable multipolar o agrupado con los de fase
-    // (NBR 5410 Tabla 55): PVC 115, EPR/XLPE/HEPR 143. Es el caso más desfavorable.
+    // (NBR 5410 Tabla 55): cobre PVC 115, EPR/XLPE/HEPR 143; aluminio 76 / 94.
     let seccionCC = 0;
     if (parametrosCC && parametrosCC.corrienteCC && parametrosCC.tiempoDespeje) {
-        const K = esAislacionPVC(parametrosCC.aislamiento) ? 115 : 143;
+        const K = obtenerConstanteK(parametrosCC.material || 'cobre', parametrosCC.aislamiento, 300);
         seccionCC = (parametrosCC.corrienteCC * Math.sqrt(parametrosCC.tiempoDespeje)) / K;
     }
 
@@ -865,6 +881,8 @@ console.log('✅ Calculations.js R5 cargado - AC + DC con tablas INPACO');
 window.SECCIONES_COMERCIALES = SECCIONES_COMERCIALES;
 window.SECCIONES_TABLA = SECCIONES_TABLA;
 window.redondearSeccionComercial = redondearSeccionComercial;
+window.seccionComercialCortocircuito = seccionComercialCortocircuito;
+window.seccionMinimaCortocircuito = seccionMinimaCortocircuito;
 window.temperaturaServicioConductor = temperaturaServicioConductor;
 window.convertirAWatts = convertirAWatts;
 window.calcularCorrenteProyecto = calcularCorrenteProyecto;

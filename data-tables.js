@@ -868,20 +868,8 @@ const tabelasDC = {
         sistemas_fotovoltaicos: 3.0     // % - Sistemas fotovoltaicos
     },
     
-    // Constantes K para verificación térmica de cortocircuito DC
-    constantesK_DC: {
-        cobre: {
-            PVC: 115,      // A·s^(1/2)/mm² - Cobre con aislamiento PVC
-            EPR: 143,      // A·s^(1/2)/mm² - Cobre con aislamiento EPR/XLPE
-            XLPE: 143      // A·s^(1/2)/mm² - Cobre con aislamiento XLPE
-        },
-        aluminio: {
-            PVC: 76,       // A·s^(1/2)/mm² - Aluminio con aislamiento PVC (NBR 5410 Tabla 30)
-            EPR: 94,       // A·s^(1/2)/mm² - Aluminio con aislamiento EPR/XLPE
-            XLPE: 94       // A·s^(1/2)/mm² - Aluminio con aislamiento XLPE
-        }
-    },
-    
+    // Constantes K de cortocircuito DC: las mismas que AC (obtenerConstanteK en calculations.js).
+
     // Los factores de temperatura DC usan INPACO Tabla 6 (ver obtenerFactorTemperatura),
     // igual que las ampacidades DC, que usan las tablas INPACO de 2 conductores cargados.
 

@@ -2,6 +2,26 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Auditoria general (2026-09-23)
+
+### Un calculo guardado vale solo mientras sus entradas no cambian
+- **Que paso:** la ampacidad copiaba corriente y seccion nuevas a caida y cortocircuito, pero sus resultados viejos seguian guardados y la seccion final los usaba. Lo mismo tras una validacion fallida o Limpiar. Podia dar 50 mm2 donde hacian falta 150 mm2.
+- **Por que:** cada pestana guardaba su resultado sin saber de que dependia; solo el `catch` lo descartaba.
+- **Como aplicarlo:** todo camino que cambia o rechaza las entradas de un calculo lo invalida (`descartarResultados`); el resumen y el reporte solo leen calculos vigentes.
+- **Destino ejecutable:** test estatico "Every failed validation in app.js discards that tab result"; regla en CLAUDE.md.
+
+### Un valor por defecto al leer un campo es un dato inventado
+- **Que paso:** `parseInt(campo) || 1` convertia un agrupamiento vacio en 1 circuito, el caso menos conservador.
+- **Por que:** el `|| 1` se puso para evitar NaN, no para representar un dato del usuario.
+- **Como aplicarlo:** un campo que el usuario puede vaciar se valida y da error; solo un select (nunca vacio) puede llevar valor por defecto.
+- **Destino ejecutable:** test estatico "No user-typed field gets a silent numeric default in app.js".
+
+### El gemelo se arregla con una funcion compartida, no con una copia
+- **Que paso:** el K reducido por encima de 300 mm2 se corrigio en AC y no en DC; la comparacion con el porcentaje sin redondear, lo mismo.
+- **Por que:** AC y DC tenian cada uno su propia copia de la logica.
+- **Como aplicarlo:** si la regla fisica es la misma, una sola funcion (`seccionComercialCortocircuito`, `seccionMinimaCortocircuito`) y los dos lados la llaman.
+- **Destino ejecutable:** tests de cortocircuito DC por encima de 300 mm2 y de caida DC al borde del limite.
+
 ## Aluminio (2026-09-23)
 
 ### "Del lado seguro" es una afirmacion que se mide

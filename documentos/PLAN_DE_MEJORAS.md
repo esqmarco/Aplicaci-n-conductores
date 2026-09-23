@@ -1,9 +1,9 @@
 # Plan de mejoras — Calculadora de conductores eléctricos
 
 ## Estado actual
-- **Último avance:** 2026-09-23 — v5.7.0: ampacidad de aluminio con la relación Al/Cu de NBR 5410 Tablas 36–39 (fuente aportada por Marco, validada contra INPACO). Ya no quedan filas que afecten resultados técnicos.
-- **Sin verificar:** los hooks en la PC de Marco (Windows, `$CLAUDE_PROJECT_DIR` con espacios en la ruta). La tabla NBR se contrastó en cobre (INPACO); la columna de aluminio no tiene segunda fuente en el repo.
-- **Siguiente paso recomendado:** `/auditar` (revisión general después de siete PRs seguidos).
+- **Último avance:** 2026-09-23 — v5.8.0: auditoría general (`documentos/auditorias/AUDITORIA_2026-09-23.md`). Se corrigieron 16 hallazgos reproducidos; los más serios eran resultados viejos que seguían entrando en la sección final y el cortocircuito DC por encima de 300 mm². El manual y el PRD se reescribieron según el código.
+- **Sin verificar:** los hooks en la PC de Marco (Windows, `$CLAUDE_PROJECT_DIR` con espacios en la ruta). La columna de aluminio de NBR no tiene segunda fuente en el repo. El PDF real del diálogo de impresión, y Safari/Firefox.
+- **Siguiente paso recomendado:** que Marco decida las filas #11 y #12 (datos sin fuente y temperatura por defecto): afectan resultados.
 
 ## Backlog
 
@@ -11,6 +11,10 @@
 |---|---|---|---|---|
 | 2 | Módulo de media tensión (NBR 14039, Mamede Tablas 3.28/3.29) si se necesita dimensionar cables de MT | Retirado en 5.0.0; el selector AC llega a 1000 V | Baja | Marco |
 | 7 | Separar el CSS inline de `index.html` a `styles.css` | `index.html` | Baja | Claude |
+| 10 | DC: ofrecer los métodos A2, B2 y F (INPACO tiene la columna de 2 conductores) y D. D necesita temperatura y resistividad del suelo; hoy `calcularFactorTemperaturaDC` fuerza aire | Auditoría 2026-09-23; selector `metodo-instalacao-dc` | Baja | Marco |
+| 11 | Fuente para los límites de caída DC (`limitesNormativosDC`, `determinarLimiteCaidaDC`) y para la sección mínima de 6 mm² en alimentadores: no tienen cita | `data-tables.js`, `calculations.js` | Media | Marco |
+| 12 | Temperatura ambiente por defecto de 30 °C con tablas INPACO a 40 °C: el factor por defecto es mayor que 1. ¿Pasar el valor inicial a 40 °C? | `index.html` (`temperatura-ambiente`, `temperatura-ambiente-dc`) | Media | Marco |
+| 13 | Quitar código y datos sin uso: `validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`; la sincronización DC (`rellenarSiVacio` sobre selects, no hace nada); `aplicacionesDC`, `seccionesNominalesDC` (incluye 400–800 sin tabla), `tensionesNominalesDC`, `parametrosBaterias` | Auditoría 2026-09-23 | Baja | Claude |
 | 8 | Ideas a futuro: exportar PDF, modo oscuro, cálculo de canalización, comparar 2–3 secciones, catálogo de cables comerciales | — | Baja | Marco |
 
 ## Decisiones vigentes
