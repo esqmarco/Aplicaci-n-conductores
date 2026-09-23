@@ -2,6 +2,14 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Clase del conductor (2026-09-23)
+
+### Un dato cargado dos veces termina con dos valores
+- **Que paso:** la resistencia del aluminio estaba en la tabla AC y en la DC; desde 500 mm2 los valores ya no coincidian. La clase 5 del cobre vivia solo en DC y AC no podia usarla.
+- **Por que:** cada pestana se armo con su propia tabla en vez de apuntar a una fuente comun.
+- **Como aplicarlo:** una sola tabla por dato; los demas modulos la referencian.
+- **Destino ejecutable:** test "Single aluminium resistance table for AC and DC" (compara por identidad, no por valor).
+
 ## Revision integral v5 (2026-09-22)
 
 ### Los datos tecnicos se toman de la fuente primaria, no de una especificacion intermedia

@@ -957,6 +957,13 @@ body {
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="clase-ct">Clase del Conductor:<span class="tooltip-icon" data-tooltip="IEC 60228. Flexible (clase 5) tiene hasta ~10 % más resistencia que rígido (clase 2), según la sección. El aluminio solo existe rígido.">?</span></label>
+                    <select id="clase-ct">
+                        <option value="flexible" selected>Flexible (clase 5): Multifilar, Inpavinil, Inpatox</option>
+                        <option value="rigido">R&iacute;gido / cableado (clase 2)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="aislamiento-ct">Aislamiento:<span class="tooltip-icon" data-tooltip="Define la temperatura de servicio del conductor para la resistencia: 70 °C (PVC) o 90 °C (EPR/XLPE/HEPR).">?</span></label>
                     <select id="aislamiento-ct">
                         <option value="PVC">PVC (70°C)</option>
@@ -1397,6 +1404,13 @@ body {
                     </div>
 
                     <div class="form-row">
+                        <div class="form-group">
+                            <label for="clase-ct-dc">Clase del Conductor:<span class="tooltip-icon" data-tooltip="IEC 60228. Flexible (clase 5) tiene hasta ~10 % más resistencia que rígido (clase 2), según la sección. El aluminio solo existe rígido.">?</span></label>
+                            <select id="clase-ct-dc">
+                                <option value="flexible" selected>Flexible (clase 5)</option>
+                                <option value="rigido">R&iacute;gido / cableado (clase 2)</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label for="aislamiento-ct-dc">Tipo de Aislamiento:<span class="tooltip-icon" data-tooltip="La resistencia se toma a la temperatura de servicio del conductor: 70 °C (PVC) o 90 °C (EPR/XLPE/HEPR).">?</span></label>
                             <select id="aislamiento-ct-dc">

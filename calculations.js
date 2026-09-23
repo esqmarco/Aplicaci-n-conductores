@@ -338,7 +338,8 @@ function calcularResistenciaAC(parametros) {
     if (!FRECUENCIAS_AC.includes(f)) throw new Error(`Frecuencia ${f} Hz no soportada (50 o 60 Hz)`);
     if (!DISPOSICIONES_AC[disposicion]) throw new Error(`Disposición ${disposicion} no reconocida`);
 
-    const R20 = window.obtenerResistencia(material, seccion);
+    const clase = parametros.clase || window.claseConductorPorDefecto(material);
+    const R20 = window.obtenerResistencia(material, seccion, clase);
     const temperaturaConductor = temperaturaServicioConductor(parametros.aislamiento);
     const rt = R20 * (1 + ALFA_RESISTENCIA[material] * (temperaturaConductor - 20));
 
@@ -352,7 +353,7 @@ function calcularResistenciaAC(parametros) {
         ? F * r * r * 2.9
         : F * r * r * (0.312 * r * r + 1.18 / (F + 0.27));
 
-    return { rt, rac: rt * (1 + ys + yp), ys, yp, R20, temperaturaConductor };
+    return { rt, rac: rt * (1 + ys + yp), ys, yp, R20, temperaturaConductor, clase };
 }
 
 /**
@@ -370,7 +371,8 @@ function obtenerReactanciaAC(seccion, disposicion, frecuencia) {
 /**
  * ΔV = k · I · L · (Rca·cosφ + X·senφ) / n   (INPACO 4.3, Mamede Ec. 3.18)
  *  k = 2 (mono/bifásico), √3 (trifásico)
- *  Rca: resistencia AC a 70 °C (PVC) o 90 °C (XLPE/EPR/HEPR), ver calcularResistenciaAC
+ *  Rca: resistencia AC a 70 °C (PVC) o 90 °C (XLPE/EPR/HEPR), ver calcularResistenciaAC.
+ *       Clase del conductor: 'flexible' (clase 5, por defecto en cobre) o 'rigido' (clase 2)
  *  X: INPACO Tabla 15 según disposición y frecuencia
  *  n = conductores en paralelo por fase
  */
@@ -389,7 +391,8 @@ function calcularCaidaTensionAC(parametros) {
     const seccionNum = parseFloat(seccion);
     const rac = calcularResistenciaAC({
         materialCondutor, seccion: seccionNum, aislamiento: parametros.aislamiento || 'PVC',
-        frecuencia, disposicion, conductoresCargados: tipoSistema === 'trifasico' ? 3 : 2
+        clase: parametros.clase, frecuencia, disposicion,
+        conductoresCargados: tipoSistema === 'trifasico' ? 3 : 2
     });
     const X = obtenerReactanciaAC(seccionNum, disposicion, frecuencia);
 
@@ -410,6 +413,7 @@ function calcularCaidaTensionAC(parametros) {
         resistencia: Math.round(rac.rac * 10000) / 10000,
         resistencia20C: rac.R20,
         temperaturaConductor: rac.temperaturaConductor,
+        clase: rac.clase,
         reactancia: Math.round(X * 10000) / 10000,
         frecuencia,
         disposicion
@@ -515,7 +519,7 @@ function calcularCorrenteDC(parametros) {
  * el valor conservador para caída de tensión.
  */
 function calcularResistenciaCorregida(parametros) {
-    const { material, seccion, aislamiento } = parametros;
+    const { material, seccion, aislamiento, clase } = parametros;
     if (!material) throw new Error('Material del conductor es requerido');
     if (!seccion || seccion <= 0) throw new Error('Sección debe ser mayor que 0');
 
@@ -523,7 +527,7 @@ function calcularResistenciaCorregida(parametros) {
         ? parseFloat(parametros.temperatura)
         : temperaturaServicioConductor(aislamiento);
     const mat = normalizarMaterial(material);
-    const R20 = obtenerResistencia20C(mat, seccion, aislamiento);
+    const R20 = obtenerResistencia20C(mat, seccion, aislamiento, clase);
     const alpha = ALFA_RESISTENCIA[mat];
     const R_temp = R20 * (1 + alpha * (temperatura - 20));
 
@@ -592,7 +596,7 @@ function dimensionarPorAmpacidadDC(parametros) {
     const factorAgrupamiento = window.obtenerFactorAgrupamento(metodo, circuitos);
     const corrienteCorregida = corriente / (factorTemperatura * factorAgrupamiento);
     const seccionInfo = seleccionarSeccionMinimaDC({ corrienteCorregida, material, metodo, aislamiento });
-    const resistenciaInfo = calcularResistenciaCorregida({ material, seccion: seccionInfo.seccion, aislamiento });
+    const resistenciaInfo = calcularResistenciaCorregida({ material, seccion: seccionInfo.seccion, aislamiento, clase: parametros.clase });
 
     return {
         criterio: 'ampacidad',
@@ -614,7 +618,7 @@ function verificarCaidaTensionDC(parametros) {
     const { tensionSelector, tensionPersonalizada, longitud, conductoresPorPolo, seccion, material, aislamiento } = parametros;
     const tension = obtenerTensionEfectiva(tensionSelector, tensionPersonalizada);
     const corriente = obtenerCorrienteDC(parametros, tension);
-    const resistenciaInfo = calcularResistenciaCorregida({ material, seccion, aislamiento });
+    const resistenciaInfo = calcularResistenciaCorregida({ material, seccion, aislamiento, clase: parametros.clase });
     const caidaInfo = calcularCaidaTensionDC({ corriente, longitud, resistencia: resistenciaInfo.R_temp, Np: conductoresPorPolo, tension });
     const limite = determinarLimiteCaidaDC(tension, parametros.aplicacionDC);
 
@@ -695,18 +699,11 @@ function seleccionarSeccionMinimaDC(parametros) {
 }
 
 /**
- * Resistencia DC a 20 °C (Ω/km). Cobre: IEC 60228 clase 5 (cable flexible, habitual en
- * DC/baterías; algo mayor que la clase 2 usada en AC, del lado seguro). Aluminio: clase 2.
- * Si la sección no está en la tabla, se calcula con la resistividad IACS.
+ * Resistencia DC a 20 °C (Ω/km), IEC 60228. Clase 'flexible' (clase 5, por defecto en cobre,
+ * habitual en DC y baterías) o 'rigido' (clase 2; única clase del aluminio).
  */
-function obtenerResistencia20C(material, seccion, aislamiento) {
-    const matKey = normalizarMaterial(material);
-    const tablas = window.tabelasDC && window.tabelasDC.resistenciasDC;
-    if (tablas && tablas[matKey] && tablas[matKey][seccion] !== undefined) {
-        return tablas[matKey][seccion];
-    }
-    const resistividades = { 'cobre': 0.017241, 'aluminio': 0.028264 };
-    return (resistividades[matKey] * 1000) / seccion;
+function obtenerResistencia20C(material, seccion, aislamiento, clase) {
+    return window.obtenerResistencia(normalizarMaterial(material), seccion, clase);
 }
 
 /**
@@ -759,7 +756,7 @@ function calcularSeccionParaCaidaDC(parametros) {
 
     for (const seccion of SECCIONES_TABLA) {
         if (mat === 'aluminio' && seccion < 16) continue;
-        const resistenciaInfo = calcularResistenciaCorregida({ material: mat, seccion, aislamiento });
+        const resistenciaInfo = calcularResistenciaCorregida({ material: mat, seccion, aislamiento, clase: parametros.clase });
         if (resistenciaInfo.R_temp <= resistenciaMaxima) return seccion;
     }
     return null;
