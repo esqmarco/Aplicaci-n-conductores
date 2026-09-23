@@ -298,7 +298,9 @@ function obtenerParametrosCaidaTensionAC() {
         materialCondutor: mat,
         aislamiento: document.getElementById('aislamiento-ct')?.value || 'PVC',
         conductoresPorFase: parseInt(document.getElementById('paralelo-ct')?.value) || 1,
-        limite: parseFloat(document.getElementById('limite-ct')?.value) || 4
+        limite: parseFloat(document.getElementById('limite-ct')?.value) || 4,
+        disposicion: document.getElementById('disposicion-ct')?.value || 'trebol',
+        frecuencia: parseFloat(document.getElementById('frecuencia-ct')?.value) || 50
     };
 }
 
@@ -606,6 +608,10 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
     // Conductores en paralelo por fase
     seleccionarOpcionPorValor('paralelo-ct', resultado.conductoresPorFase || 1);
 
+    // Disposición (define la reactancia): multipolar, unipolares en contacto o espaciados
+    var disposicionPorMetodo = { A2: 'tripolar', B2: 'tripolar', E: 'tripolar', G: 'plano_2D' };
+    seleccionarOpcionPorValor('disposicion-ct', disposicionPorMetodo[parametros.metodoInstalacao] || 'trebol');
+
     // Corriente de proyecto (siempre propagar, independiente del modo de entrada)
     var corrienteCT = document.getElementById('corriente-ct');
     if (corrienteCT && resultado.corriente) {
@@ -699,7 +705,8 @@ function mostrarResultadosCaidaTensionAC(resultado) {
     var elPct = document.getElementById('caida-tension-valor');
     if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '% (l\u00EDmite ' + resultado.limite + '%)';
     setTexto('caida-tension-volts', resultado.caidaTensionV.toFixed(2) + ' V');
-    setTexto('resistencia-ct', resultado.resistencia + ' \u03A9/km a ' + resultado.temperaturaConductor + ' \u00B0C');
+    setTexto('resistencia-ct', 'R ' + resultado.resistencia + ' / X ' + resultado.reactancia + ' \u03A9/km (' +
+        resultado.temperaturaConductor + ' \u00B0C, ' + resultado.frecuencia + ' Hz)');
     setTexto('seccion-minima-ct', resultado.seccionMinimaCaida
         ? resultado.seccionMinimaCaida.seccion + ' mm\u00B2'
         : 'Ninguna \u2264 300 mm\u00B2: aumentar paralelo');
@@ -1257,11 +1264,20 @@ function mostrarMensaje(texto, tipo) {
         mensajesActuales = contenedor.querySelectorAll('.mensaje');
     }
 
+    // Nodos con textContent: el texto (que puede traer valores ingresados o mensajes de error)
+    // nunca se interpreta como HTML
     var mensaje = document.createElement('div');
     mensaje.className = 'mensaje mensaje-' + tipo;
-    mensaje.innerHTML =
-        '<span>' + texto + '</span>' +
-        '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:18px;">&times;</button>';
+    var cuerpo = document.createElement('span');
+    cuerpo.textContent = texto;
+    var cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.textContent = '\u00D7';
+    cerrar.setAttribute('aria-label', 'Cerrar');
+    cerrar.style.cssText = 'background:none;border:none;color:inherit;cursor:pointer;font-size:18px;';
+    cerrar.addEventListener('click', function () { mensaje.remove(); });
+    mensaje.appendChild(cuerpo);
+    mensaje.appendChild(cerrar);
 
     contenedor.appendChild(mensaje);
 

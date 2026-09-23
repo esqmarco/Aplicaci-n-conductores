@@ -32,9 +32,11 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Bifásico: I = P / (V × cosφ × η), V = tensión entre fases [Mamede 3.5.1.1]. Sin √2: ese factor es de sistemas bifásicos a 90°, que no se usan; subestimaba la corriente un 29%.
 - Trifásico: I = P / (√3 × V × cosφ × η)
 - Transformador: I = kVA × 1000 / (√3 × V) [trifásico]
-- Caída AC mono/bi: ΔV = 2 × I × L × (Rt cosφ + X senφ) / n
-- Caída AC tri: ΔV = √3 × I × L × (Rt cosφ + X senφ) / n
+- Caída AC mono/bi: ΔV = 2 × I × L × (Rca cosφ + X senφ) / n
+- Caída AC tri: ΔV = √3 × I × L × (Rca cosφ + X senφ) / n
 - Rt = R20 × (1 + α × (T − 20)), T = 70 °C (PVC) o 90 °C (EPR/XLPE/HEPR) [INPACO 4.3]
+- Rca = Rt × (1 + Ys + Yp), efecto pelicular y de proximidad [INPACO 4.3.1 / IEC 60287]; en contacto dc/S = 1 (cota superior)
+- X: INPACO Tabla 15 a 50 Hz según disposición (trébol, tripolar, plano 2D, plano 20 cm) × f/50
 - Caída DC: ΔV = 2 × Rt × I × L / Np
 - Cortocircuito de baterías: Icc = V_banco / (N_serie × R_elemento)
 - Cortocircuito: S_min = Icc × √t / K (t ≤ 5 s)
@@ -45,6 +47,7 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Toda corrección tiene su gemelo: AC ↔ DC, cobre ↔ aluminio, pestaña de cálculo ↔ resumen final.
 - Al agregar un método de instalación: selector HTML + datos en `data-tables.js` + test.
 - Referencias de temperatura: INPACO 40 °C aire / 25 °C suelo; NBR 30 °C / 20 °C. No mezclar.
+- Frecuencia: 50 Hz en Paraguay (ANDE), 60 Hz en Brasil. Afecta la reactancia y la resistencia AC.
 
 ## Idioma
 - Interfaz: castellano. Comentarios: castellano/inglés. Variables: castellano (corriente, tension, potencia…).

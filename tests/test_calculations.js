@@ -231,10 +231,11 @@ test('Trifasico voltage drop: 50A, 380V, 100m, 10mm2 cobre PVC', function() {
         seccion: 10, materialCondutor: 'cobre',
         tipoSistema: 'trifasico', factorPotencia: 0.85, aislamiento: 'PVC'
     });
-    // R70 = 1.83 * (1 + 0.00393*50) = 2.1896 ohm/km; X = 0.094; sen = 0.5268
-    // dV = sqrt(3) * 50 * 0.1 * (2.1896*0.85 + 0.094*0.5268) = 16.55 V -> 4.35%
-    assertClose(result.caidaTensionV, 16.55, 0.02, 'Voltage drop V');
-    assertClose(result.caidaTensionPct, 4.35, 0.02, 'Voltage drop %');
+    // R70 = 1.83 * (1 + 0.00393*50) = 2.1896 ohm/km (efecto pelicular despreciable en 10 mm2)
+    // X = 0.098 (INPACO Tabla 15, trebol, 50 Hz); sen = 0.5268
+    // dV = sqrt(3) * 50 * 0.1 * (2.1898*0.85 + 0.098*0.5268) = 16.57 V -> 4.36%
+    assertClose(result.caidaTensionV, 16.57, 0.02, 'Voltage drop V');
+    assertClose(result.caidaTensionPct, 4.36, 0.02, 'Voltage drop %');
     assertEqual(result.temperaturaConductor, 70, 'PVC a 70 C');
 });
 
@@ -270,15 +271,53 @@ test('Custom limit (5%) is applied', function() {
     const r = calcularCaidaTensionAC({ corriente: 50, tension: 380, longitud: 100, seccion: 10,
         materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85, limite: 5 });
     assertEqual(r.limite, 5, 'Limit');
-    assertTrue(r.cumple, '4.35% <= 5%');
+    assertTrue(r.cumple, '4.36% <= 5%');
 });
 
 test('Minimum section by voltage drop: 50A 380V 100m -> 16mm2', function() {
     const r = calcularSeccionMinimaCaidaAC({ corriente: 50, tension: 380, longitud: 100,
         materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85, aislamiento: 'PVC', limite: 4 });
-    // 10mm2 -> 4.35% (no cumple); 16mm2 -> 2.77%
+    // 10mm2 -> 4.36% (no cumple); 16mm2 -> ~2.77%
     assertEqual(r.seccion, 16, 'Section by voltage drop');
-    assertClose(r.caidaTensionPct, 2.77, 0.02, 'Drop at 16mm2');
+    assertClose(r.caidaTensionPct, 2.77, 0.03, 'Drop at 16mm2');
+});
+
+test('AC resistance: skin effect ys = 0.01385 for 300mm2 XLPE 90C at 50 Hz (IEC 60287)', function() {
+    const r = calcularResistenciaAC({ seccion: 300, materialCondutor: 'cobre', aislamiento: 'EPR_90',
+        frecuencia: 50, disposicion: 'trebol', conductoresCargados: 3 });
+    // R90 = 0.0601*1.2751 = 0.076634 ohm/km; xs^2 = 8*pi*50e-7/7.6634e-5 = 1.6398; ys = xs^4/(192+0.8 xs^4)
+    assertClose(r.ys, 0.01385, 0.00002, 'ys');
+    assertClose(r.rac, 0.08244, 0.00005, 'Rac = Rt (1 + ys + yp)');
+});
+
+test('AC resistance at 60 Hz stays within +0..4% of Mamede Tabla 3.22 (PVC, trebol)', function() {
+    // Mamede Tabla 3.22: resistencia de secuencia positiva, PVC/70 C, 60 Hz, trebol (Ohm/km)
+    const mamede = { 150: 0.1502, 185: 0.1226, 240: 0.0958, 300: 0.0781 };
+    Object.keys(mamede).forEach(function(s) {
+        const r = calcularResistenciaAC({ seccion: parseFloat(s), materialCondutor: 'cobre', aislamiento: 'PVC',
+            frecuencia: 60, disposicion: 'trebol', conductoresCargados: 3 });
+        assertTrue(r.rac >= mamede[s] && r.rac <= mamede[s] * 1.04,
+            s + 'mm2: Rac ' + r.rac.toFixed(5) + ' vs Mamede ' + mamede[s]);
+    });
+});
+
+test('Reactance comes from INPACO Tabla 15 by arrangement and scales with frequency', function() {
+    const base = { corriente: 400, tension: 380, longitud: 100, seccion: 300, materialCondutor: 'cobre',
+        tipoSistema: 'trifasico', factorPotencia: 0.8, aislamiento: 'EPR_90' };
+    const trebol = calcularCaidaTensionAC(Object.assign({}, base));
+    const plano60 = calcularCaidaTensionAC(Object.assign({}, base, { frecuencia: 60, disposicion: 'plano_2D' }));
+    assertEqual(trebol.reactancia, 0.075, 'trebol 50 Hz');
+    assertClose(plano60.reactancia, 0.1608, 0.0001, 'plano S=2D a 60 Hz = 0.134 x 1.2');
+    // dV = sqrt(3)*400*0.1*(0.07973*0.8 + 0.1608*0.6) = 11.10 V
+    assertClose(plano60.caidaTensionV, 11.10, 0.02, 'drop plano 2D 60 Hz');
+});
+
+test('Unknown arrangement or frequency throws', function() {
+    let threw = 0;
+    const base = { corriente: 50, tension: 380, longitud: 100, seccion: 10, materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.9 };
+    try { calcularCaidaTensionAC(Object.assign({}, base, { disposicion: 'otra' })); } catch (e) { threw++; }
+    try { calcularCaidaTensionAC(Object.assign({}, base, { frecuencia: 55 })); } catch (e) { threw++; }
+    assertEqual(threw, 2);
 });
 
 // ===================================================================
@@ -530,8 +569,8 @@ test('Voltage drop formula R*cos + X*sin (4mm2, fp 0.8)', function() {
         corriente: 30, tension: 220, longitud: 50, seccion: 4,
         materialCondutor: 'cobre', tipoSistema: 'monofasico', factorPotencia: 0.8
     });
-    // R70 = 5.5159, X = 0.107: dV = 2*30*0.05*(5.5159*0.8 + 0.107*0.6) = 13.43 V
-    assertClose(result.caidaTensionV, 13.43, 0.02, 'Formula for 4mm2');
+    // R70 = 5.5159, X = 0.112 (INPACO trebol 50 Hz): dV = 2*30*0.05*(5.5159*0.8 + 0.112*0.6) = 13.44 V
+    assertClose(result.caidaTensionV, 13.44, 0.02, 'Formula for 4mm2');
 });
 
 test('Large section (>=50mm2) includes reactance component', function() {
@@ -539,9 +578,9 @@ test('Large section (>=50mm2) includes reactance component', function() {
         corriente: 200, tension: 380, longitud: 100, seccion: 95,
         materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85
     });
-    // R70 = 0.193*1.1965 = 0.23092; X=0.076; fp=0.85, sen=0.5268
-    // dV = √3 * 200 * 0.1 * (0.23092*0.85 + 0.076*0.5268) = √3 * 20 * 0.23632 = 8.19 V
-    assertClose(result.caidaTensionV, 8.19, 0.02, 'Large section voltage drop');
+    // R70 = 0.193*1.1965 = 0.23092 -> Rac = 0.23294 (IEC 60287 / INPACO 4.3.1)
+    // X = 0.079 (INPACO trebol 50 Hz); fp=0.85, sen=0.5268 -> dV = 8.30 V
+    assertClose(result.caidaTensionV, 8.30, 0.02, 'Large section voltage drop');
 });
 
 // ===================================================================
