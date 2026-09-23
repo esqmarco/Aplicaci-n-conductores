@@ -4,6 +4,17 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.5.0] - 2026-09-23 — Memoria de cálculo imprimible (backlog #4)
+
+- **Quién:** Marco + Claude (Opus 5.5)
+- **Qué se hizo:**
+  - Botón "Imprimir memoria de cálculo (PDF)" en Resultados AC y DC. Arma un reporte con los datos de entrada y resultados de cada pestaña (los guardados al calcular), la fuente normativa de cada criterio, las advertencias, la sección final con el aporte de cada criterio y espacio para responsable y firma. Se imprime o se guarda como PDF desde el navegador. Construido con nodos y `textContent`.
+  - El conductor de protección ahora se informa sobre la sección de fase **adoptada** (en el reporte y en Resultados AC). Antes solo se veía el de la sección por ampacidad: con 16 mm² por ampacidad y 95 mm² por cortocircuito mostraba 16 mm² en lugar de 50 mm².
+  - Sección final DC con conductores por polo: la ampacidad se recalcula por conductor (I/Np, cada conductor en paralelo cuenta como circuito), igual que en AC. Antes se mezclaba la sección de un solo conductor con la caída calculada para Np. La lógica quedó en `calculations.js` (`calcularSeccionFinalDCDesde`, con tests) y reemplaza a `dimensionarCompletoDC`, que no se usaba.
+  - La sección final AC y DC se calcula en una sola función que usan la pantalla y el reporte.
+  - Impresión directa (Ctrl+P) de una pestaña: imprime la pestaña activa.
+- **Tests:** 102.
+
 ## [5.4.0] - 2026-09-23 — Clase del conductor en caída de tensión (backlog #9)
 
 - **Quién:** Marco + Claude (Opus 5.5)

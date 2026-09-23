@@ -762,27 +762,59 @@ function calcularSeccionParaCaidaDC(parametros) {
     return null;
 }
 
-function dimensionarCompletoDC(parametros) {
-    const resultados = { ampacidad: null, caida_tension: null, cortocircuito: null, seccion_final: null, criterio_restrictivo: null };
-    if (parametros.ampacidad) resultados.ampacidad = dimensionarPorAmpacidadDC(parametros.ampacidad);
-    if (parametros.caida_tension) resultados.caida_tension = verificarCaidaTensionDC(parametros.caida_tension);
-    if (parametros.cortocircuito) resultados.cortocircuito = analizarCortocircuitoDC(parametros.cortocircuito);
-
+/**
+ * Sección final DC a partir de los cálculos guardados { ampacidad, caida, cortocircuito }
+ * (cada uno { parametros, resultado } o null). Las secciones son POR CONDUCTOR:
+ * con Np conductores por polo, la ampacidad se recalcula para I/Np y cada conductor en
+ * paralelo cuenta como un circuito para el agrupamiento (misma regla que en AC); el
+ * cortocircuito exige la Icc completa a cada conductor (conservador).
+ */
+function calcularSeccionFinalDCDesde(calc) {
     const secciones = [];
-    if (resultados.ampacidad) secciones.push({ valor: resultados.ampacidad.seccion, criterio: 'ampacidad' });
-    if (resultados.caida_tension && !resultados.caida_tension.cumple_criterio) {
-        const s = calcularSeccionParaCaidaDC(parametros.caida_tension);
-        if (s === null) throw new Error('Ninguna sección hasta 300 mm² cumple la caída de tensión: aumente conductores por polo.');
-        secciones.push({ valor: s, criterio: 'caida_tension' });
-    }
-    if (resultados.cortocircuito) secciones.push({ valor: resultados.cortocircuito.seccion_comercial, criterio: 'cortocircuito' });
+    let sinSolucion = null;
+    const caida = calc.caida && calc.caida.resultado ? calc.caida : null;
+    const np = (caida && parseInt(caida.parametros.conductoresPorPolo, 10)) || 1;
 
-    if (secciones.length > 0) {
-        const max = secciones.reduce((m, c) => c.valor > m.valor ? c : m);
-        resultados.seccion_final = max.valor;
-        resultados.criterio_restrictivo = max.criterio;
+    if (calc.ampacidad && calc.ampacidad.resultado) {
+        let s = calc.ampacidad.resultado.seccion;
+        if (np > 1) {
+            try {
+                const pa = calc.ampacidad.parametros;
+                s = dimensionarPorAmpacidadDC(Object.assign({}, pa, {
+                    modoEntrada: 'corriente',
+                    corrienteDirecta: calc.ampacidad.resultado.corriente / np,
+                    agrupamiento: Math.max(parseInt(pa.agrupamiento, 10) || 1, np)
+                })).seccion;
+            } catch (e) {
+                sinSolucion = 'Ampacidad por conductor: ' + e.message;
+            }
+        }
+        secciones.push({ valor: s, criterio: np > 1 ? 'Ampacidad (por conductor)' : 'Ampacidad' });
     }
-    return resultados;
+
+    if (caida) {
+        try {
+            const s = calcularSeccionParaCaidaDC(caida.parametros);
+            if (s === null) sinSolucion = 'Caída de tensión: ninguna sección hasta 300 mm² cumple; aumentar conductores por polo';
+            else secciones.push({ valor: s, criterio: 'Caída de tensión' });
+        } catch (e) {
+            sinSolucion = 'Caída de tensión: ' + e.message;
+        }
+    }
+
+    if (calc.cortocircuito && calc.cortocircuito.resultado) {
+        const s = calc.cortocircuito.resultado.seccion_comercial;
+        if (!s) sinSolucion = 'Cortocircuito: la sección requerida supera 1000 mm²';
+        else secciones.push({ valor: s, criterio: 'Cortocircuito' });
+    }
+
+    if (sinSolucion) return { texto: 'Revisar', criterio: sinSolucion, criterios: secciones, np };
+    if (!secciones.length) return { texto: 'No calculado', criterio: '--', criterios: [], np };
+    const max = secciones.reduce((m, c) => (c.valor > m.valor ? c : m));
+    return {
+        texto: (np > 1 ? np + ' × ' : '') + max.valor + ' mm²' + (np > 1 ? ' por polo' : ''),
+        criterio: max.criterio, criterios: secciones, np, valor: max.valor
+    };
 }
 
 // ===================================================================
@@ -861,7 +893,7 @@ window.obtenerAmpacidadBaseDC = obtenerAmpacidadBaseDC;
 window.determinarLimiteCaidaDC = determinarLimiteCaidaDC;
 window.obtenerTensionElementoBateria = obtenerTensionElementoBateria;
 window.obtenerConstanteKDC = obtenerConstanteKDC;
-window.dimensionarCompletoDC = dimensionarCompletoDC;
+window.calcularSeccionFinalDCDesde = calcularSeccionFinalDCDesde;
 window.calcularSeccionParaCaidaDC = calcularSeccionParaCaidaDC;
 window.obtenerSeccionMinimaNBR = obtenerSeccionMinimaNBR;
 window.aplicarFactorDemanda = aplicarFactorDemanda;

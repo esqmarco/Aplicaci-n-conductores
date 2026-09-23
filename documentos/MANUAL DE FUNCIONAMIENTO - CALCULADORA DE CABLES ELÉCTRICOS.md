@@ -200,6 +200,7 @@ La calculadora debe dimensionar correctamente cables eléctricos para instalacio
 - **Presentación de recomendaciones** adicionales
 
 #### Contenido del Reporte
+Botón **"Imprimir memoria de cálculo (PDF)"** en Resultados AC y Resultados DC: abre el diálogo de impresión del navegador; para obtener el PDF elegir "Guardar como PDF". El reporte usa los datos con que se calculó cada pestaña (no lo que haya quedado escrito sin calcular) e incluye espacio para responsable y firma. El conductor de protección se informa sobre la sección de fase **adoptada**.
 - Resumen de parámetros de entrada
 - Resultados de cada criterio de dimensionamiento
 - Sección final recomendada
