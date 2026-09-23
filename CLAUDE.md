@@ -2,7 +2,7 @@
 
 ## Qué es y en qué fase está
 - Calculadora de sección de conductores AC y DC por ampacidad, caída de tensión y cortocircuito.
-- Fuentes: catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`), NBR 5410, Mamede Filho (`documentos/Instalacoes_Eletricas_Industriais_Joa_Ma-154-270.pdf`).
+- Fuentes: catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`), NBR 5410 (Tablas 36–39 en `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`), Mamede Filho (`documentos/Instalacoes_Eletricas_Industriais_Joa_Ma-154-270.pdf`).
 - Página única: HTML + JavaScript sin frameworks. Usuarios: ingenieros electricistas de Paraguay y Brasil.
 - Fase: en uso, mejora continua. Estado y pendientes: `documentos/PLAN_DE_MEJORAS.md`.
 
@@ -20,7 +20,7 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Todo se exporta a `window` (sin módulos). Tablas: `window.tabelasNBR`, `window.tabelasDC`, `window.metodosInstalacion`.
 - Helpers: `obtenerAmpacidadBase()`, `obtenerFactorTemperatura()`, `obtenerFactorAgrupamento()`, `obtenerFactorResistividadSuelo()`, `obtenerFactorAluminio()`, `obtenerResistencia()`.
 - Aislaciones AC: PVC (70 °C); EPR_90 y HEPR (90 °C, misma tabla INPACO XLPE/HEPR). DC: PVC, EPR.
-- Conductores: cobre, aluminio (mínimo 16 mm²). Ampacidad de aluminio = cobre × √(R_Cu/R_Al).
+- Conductores: cobre, aluminio (mínimo 16 mm²). Ampacidad de aluminio = cobre INPACO × (I_Al/I_Cu) de NBR 5410 Tablas 36–39, mismo método, aislación y conductores cargados (fuente: `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`).
 - Clase del conductor (IEC 60228) para resistencias: cobre flexible clase 5 (por defecto) o rígido clase 2; aluminio solo rígido. Una sola tabla de resistencias (`tabelasNBR.resistencias`) para AC y DC.
 - Métodos de instalación: A1, A2, B1, B2, C, D, E, F, G (INPACO Tabla 1 / NBR 5410). D es el único enterrado.
 - Tablas de ampacidad: INPACO 2021, cobre, 40 °C aire / 25 °C suelo, 1,0 K·m/W, 2 y 3 conductores cargados, hasta 300 mm². Corrientes mayores: conductores en paralelo.

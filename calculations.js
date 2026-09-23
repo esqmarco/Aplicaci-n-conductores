@@ -3,7 +3,7 @@
  * ===============================================
  * Versión R5
  * - Ampacidad AC/DC con tablas INPACO (2 o 3 conductores cargados según el sistema)
- * - Aluminio: ampacidad derivada de la de cobre por √(R_Cu/R_Al)
+ * - Aluminio: ampacidad INPACO de cobre × relación Al/Cu de NBR 5410 Tablas 36–39
  * - Factores de temperatura interpolados; errores explícitos (sin 1,0 silencioso)
  * - Factor de demanda, resistividad del suelo y conductores en paralelo aplicados
  * - Caída de tensión: R en AC a 70/90 °C (IEC 60287) y X de INPACO Tabla 15 por disposición y frecuencia
@@ -169,13 +169,14 @@ function obtenerConductoresCargados(tipoSistema, neutroCargado) {
 
 /**
  * Ampacidad base (A) para cobre o aluminio.
- * Aluminio: sección mínima 16 mm² y ampacidad = ampacidad cobre × √(R_Cu/R_Al).
+ * Aluminio: sección mínima 16 mm² y ampacidad = ampacidad cobre INPACO × (I_Al / I_Cu) de
+ * NBR 5410 Tablas 36–39 para el mismo método, aislación y conductores cargados.
  */
 function obtenerAmpacidadConductor(aislamiento, metodo, seccion, conductoresCargados, material) {
     const ampCobre = window.obtenerAmpacidadBase(aislamiento, metodo, seccion, conductoresCargados);
     if (material !== 'aluminio') return ampCobre;
     if (seccion < 16) throw new Error('Aluminio: sección mínima 16 mm²');
-    return Math.round(ampCobre * window.obtenerFactorAluminio(seccion) * 10) / 10;
+    return Math.round(ampCobre * window.obtenerFactorAluminio(seccion, aislamiento, metodo, conductoresCargados) * 10) / 10;
 }
 
 function dimensionarPorAmpacidadAC(parametros) {
@@ -277,7 +278,7 @@ function dimensionarPorAmpacidadAC(parametros) {
     }
 
     if (material === 'aluminio') {
-        advertencias.push('Ampacidad de aluminio estimada desde la tabla de cobre INPACO (factor √(R_Cu/R_Al) ≈ 0,78). Verificar con el catálogo del fabricante.');
+        advertencias.push('Ampacidad de aluminio: tabla de cobre INPACO × relación aluminio/cobre de NBR 5410 (Tablas 36–39). Verificar con el catálogo del fabricante del cable de aluminio.');
     }
 
     const ampacidadCorregida = ampacidadSeleccionada * factorTotal;
@@ -708,7 +709,7 @@ function obtenerResistencia20C(material, seccion, aislamiento, clase) {
 
 /**
  * Ampacidad DC (A): circuito DC = 2 conductores cargados. Usa las tablas INPACO
- * de la aislación indicada; aluminio vía √(R_Cu/R_Al) y sección mínima 16 mm².
+ * de la aislación indicada; aluminio con la relación Al/Cu de NBR 5410 y sección mínima 16 mm².
  */
 function obtenerAmpacidadBaseDC(material, metodo, seccion, aislamiento) {
     return obtenerAmpacidadConductor(aislamiento || 'PVC', metodo, seccion, 2, normalizarMaterial(material));
