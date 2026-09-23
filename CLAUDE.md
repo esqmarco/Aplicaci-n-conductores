@@ -8,7 +8,7 @@
 
 ## Arquitectura
 ```
-index.html        UI (HTML + CSS inline, 8 pestañas)
+index.html        UI (HTML + CSS inline, 9 pestañas: 4 AC, 4 DC e Historial)
 data-tables.js    tablas técnicas (ampacidades, factores de temperatura, agrupamiento, suelo, resistencias)
 calculations.js   cálculos AC + DC
 validations.js    validación de entradas

@@ -2,6 +2,14 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Historial (2026-09-23)
+
+### Un efecto secundario no puede tumbar el resultado principal
+- **Que paso:** el guardado del historial corria dentro del `try` del calculo. Con el almacenamiento bloqueado lanzaba error y, desde que en 5.0.0 el `catch` empezo a ocultar resultados, un calculo correcto se mostraba como "Error en calculo".
+- **Por que:** se agrego manejo de errores al calculo sin revisar que otras cosas corrian dentro del mismo `try` (fue un cambio de esta misma revision).
+- **Como aplicarlo:** lo accesorio (historial, avisos, propagacion) se aisla con su propio manejo de error; al cambiar un `catch`, revisar todo lo que corre dentro del `try`.
+- **Destino ejecutable:** `leerHistorial`/`escribirHistorial` con try/catch; `/verificar` paso 2 (inventario de salidas). Verificado en navegador con `setItem` forzado a fallar.
+
 ## Memoria de calculo (2026-09-23)
 
 ### Un resultado derivado se calcula sobre el valor final, no sobre uno intermedio

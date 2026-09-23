@@ -70,7 +70,7 @@ La calculadora debe dimensionar correctamente cables eléctricos para instalacio
 
 2. **CONFIGURACIÓN DE INSTALACIÓN**
    - Selecciona material de aislamiento del cable
-   - Define método de instalación (A1 a I)
+   - Define método de instalación (A1 a G)
    - Especifica temperatura ambiente
    - Indica número de circuitos agrupados
 
@@ -214,6 +214,13 @@ Botón **"Imprimir memoria de cálculo (PDF)"** en Resultados AC y Resultados DC
 - Temperatura ambiente extrema
 - Agrupamiento excesivo de circuitos
 - Corriente de cortocircuito muy alta
+
+### PESTAÑA HISTORIAL
+- Guarda en el navegador los últimos 50 cálculos de todas las pestañas (fecha, tipo y resumen).
+- **Abrir** carga los datos en su pestaña y recalcula con la versión actual de la calculadora, así que el resultado puede diferir del original si hubo correcciones posteriores.
+- **Borrar** quita una entrada; **Borrar todo** pide un segundo clic.
+- Los cálculos guardados antes de la versión 5.6.0 no tienen los datos del formulario: se listan pero no se pueden abrir.
+- Si el navegador bloquea el almacenamiento (modo privado), los cálculos funcionan igual y se avisa una sola vez.
 
 ---
 
