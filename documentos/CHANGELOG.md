@@ -4,6 +4,18 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.3.0] - 2026-09-23 — Resistencia y reactancia AC con fuente (backlog #5 y #6)
+
+- **Quién:** Marco + Claude (Opus 5.5)
+- **Qué se hizo:**
+  - Caída de tensión AC: resistencia en AC `Rca = Rt (1 + Ys + Yp)` según INPACO 4.3.1 (IEC 60287-1-1), con el diámetro del conductor de INPACO Tabla 15. En conductores en contacto se usa la cota superior dc/S = 1 porque las fuentes no dan el espesor de aislación: a 60 Hz queda entre +1,2 % y +3,1 % sobre Mamede Tabla 3.22 (150–300 mm²), del lado seguro.
+  - Reactancia: se reemplazó la tabla sin fuente (0,070 Ω/km en 300 mm²) por INPACO Tabla 15 a 50 Hz según disposición: trébol, tripolar, plano S = 2D y plano S = 20 cm (0,075 / 0,069 / 0,134 / 0,208 Ω/km en 300 mm²). Proporcional a la frecuencia.
+  - Nuevos campos en Caída de Tensión AC: disposición (propuesta según el método: A2/B2/E → tripolar, G → plano 2D, resto → trébol) y frecuencia (50 Hz Paraguay / 60 Hz Brasil). El resultado muestra R y X usadas.
+  - `mostrarMensaje` arma el mensaje con nodos y `textContent` en lugar de `innerHTML`. No queda `innerHTML` en el código.
+  - Tests nuevos: Ys de 300 mm² calculado a mano, contraste con Mamede Tabla 3.22, reactancia por disposición y frecuencia, errores ante disposición o frecuencia desconocidas. 94 tests.
+- **Efecto en resultados:** en secciones grandes con fp bajo, la caída calculada sube (más X y Rca); con conductores espaciados o a 60 Hz sube bastante más. Secciones chicas: cambio despreciable.
+- **Bloqueado:** backlog #1 (aluminio): sin fuente accesible desde la sesión.
+
 ## [5.2.0] - 2026-09-23 — Método de trabajo v8
 
 - **Quién:** Marco + Claude (Opus 5.5)

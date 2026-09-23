@@ -985,6 +985,24 @@ body {
                     </select>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="disposicion-ct">Disposici&oacute;n de los Conductores:<span class="tooltip-icon" data-tooltip="Define la reactancia (INPACO Tabla 15). Se propone según el método de instalación: cable multipolar (A2, B2, E) → tripolar; unipolares en contacto (A1, B1, C, D, F) → trébol; espaciados (G) → plano S = 2D.">?</span></label>
+                    <select id="disposicion-ct">
+                        <option value="trebol" selected>Unipolares en contacto (tr&eacute;bol)</option>
+                        <option value="tripolar">Cable multipolar (tripolar)</option>
+                        <option value="plano_2D">Unipolares en plano, S = 2D</option>
+                        <option value="plano_20cm">Unipolares en plano, S = 20 cm</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="frecuencia-ct">Frecuencia:</label>
+                    <select id="frecuencia-ct">
+                        <option value="50" selected>50 Hz (Paraguay)</option>
+                        <option value="60">60 Hz (Brasil)</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
     <div class="calculate-section">
@@ -1010,7 +1028,7 @@ body {
             </div>
             <div class="result-card">
                 <div class="result-value" id="resistencia-ct">--</div>
-                <div class="result-label">Resistencia a Temp. de Servicio (&Omega;/km)</div>
+                <div class="result-label">R en AC a Temp. de Servicio / X (&Omega;/km)</div>
             </div>
             <div class="result-card">
                 <div class="result-value" id="seccion-minima-ct">--</div>

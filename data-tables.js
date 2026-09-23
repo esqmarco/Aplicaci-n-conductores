@@ -297,6 +297,43 @@ const tabelasNBR = {
     },
 
     // FACTORES POR RESISTIVIDAD TÉRMICA DEL SUELO - INPACO Tabla 11 (referencia 1,0 K·m/W)
+    // INPACO Tabla 15 (cables Inpavinil XV / Inpatox XZ, XLPE/HEPR 0,6/1 kV, cobre)
+    // Diámetro del conductor (mm): se usa para el efecto de proximidad (INPACO 4.3.1)
+    diametroConductor: {
+        1: 1.25, 1.5: 1.51, 2: 1.72, 2.5: 1.93, 4: 2.43, 6: 2.98, 10: 4.02, 16: 5.25,
+        25: 6.50, 35: 7.70, 50: 9.60, 70: 11.40, 95: 13.20, 120: 14.90, 150: 16.65,
+        185: 18.40, 240: 21.00, 300: 23.70
+    },
+
+    // Reactancia inductiva XL (Ω/km) a 50 Hz según la disposición - INPACO Tabla 15.
+    // XL es proporcional a la frecuencia: a 60 Hz se multiplica por 60/50.
+    reactanciasINPACO50Hz: {
+        // Unipolares en plano, separación S = 2D (D = diámetro del cable)
+        plano_2D: {
+            1: 0.197, 1.5: 0.189, 2: 0.184, 2.5: 0.179, 4: 0.171, 6: 0.164, 10: 0.156, 16: 0.149,
+            25: 0.148, 35: 0.144, 50: 0.141, 70: 0.139, 95: 0.137, 120: 0.136, 150: 0.136,
+            185: 0.135, 240: 0.134, 300: 0.134
+        },
+        // Unipolares en plano, separación S = 20 cm
+        plano_20cm: {
+            1: 0.393, 1.5: 0.381, 2: 0.373, 2.5: 0.366, 4: 0.351, 6: 0.338, 10: 0.320, 16: 0.303,
+            25: 0.289, 35: 0.279, 50: 0.265, 70: 0.254, 95: 0.245, 120: 0.237, 150: 0.230,
+            185: 0.224, 240: 0.216, 300: 0.208
+        },
+        // Unipolares en trébol, en contacto
+        trebol: {
+            1: 0.139, 1.5: 0.131, 2: 0.126, 2.5: 0.121, 4: 0.112, 6: 0.105, 10: 0.098, 16: 0.091,
+            25: 0.090, 35: 0.086, 50: 0.083, 70: 0.081, 95: 0.079, 120: 0.078, 150: 0.078,
+            185: 0.077, 240: 0.076, 300: 0.075
+        },
+        // Cable tripolar (multipolar)
+        tripolar: {
+            1: 0.107, 1.5: 0.101, 2: 0.097, 2.5: 0.094, 4: 0.088, 6: 0.084, 10: 0.078, 16: 0.075,
+            25: 0.075, 35: 0.073, 50: 0.072, 70: 0.071, 95: 0.069, 120: 0.069, 150: 0.069,
+            185: 0.070, 240: 0.069, 300: 0.069
+        }
+    },
+
     fatoresResistividadSuelo: {
         0.5: { ducto: 1.08, directo: 1.25, descripcion: 'Tierra muy húmeda' },
         0.8: { ducto: 1.02, directo: 1.08, descripcion: 'Tierra húmeda' },

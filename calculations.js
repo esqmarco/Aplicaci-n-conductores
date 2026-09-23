@@ -6,7 +6,7 @@
  * - Aluminio: ampacidad derivada de la de cobre por √(R_Cu/R_Al)
  * - Factores de temperatura interpolados; errores explícitos (sin 1,0 silencioso)
  * - Factor de demanda, resistividad del suelo y conductores en paralelo aplicados
- * - Caída de tensión con resistencia a la temperatura de servicio (70/90 °C)
+ * - Caída de tensión: R en AC a 70/90 °C (IEC 60287) y X de INPACO Tabla 15 por disposición y frecuencia
  * - Cortocircuito con sección comercial resultante
  */
 
@@ -308,36 +308,90 @@ function dimensionarPorAmpacidadAC(parametros) {
 // CAÍDA DE TENSIÓN AC
 // ===================================================================
 
-// Reactancia inductiva típica (Ω/km) de cables en electroducto, baja tensión
-const REACTANCIAS_AC = {
-    1.5: 0.115, 2.5: 0.110, 4: 0.107, 6: 0.100, 10: 0.094, 16: 0.090,
-    25: 0.086, 35: 0.083, 50: 0.081, 70: 0.078, 95: 0.076, 120: 0.075,
-    150: 0.073, 185: 0.072, 240: 0.071, 300: 0.070
+// Disposiciones con reactancia publicada en INPACO Tabla 15, y la relación dc/S que se usa
+// para el efecto de proximidad. Las fuentes no dan el espesor de aislación, así que en
+// conductores en contacto se toma el límite superior dc/S = 1 (conservador: con 300 mm² a
+// 60 Hz queda ~3 % por encima de Mamede Tabla 3.22). En plano S = 2D ≥ 2·dc → dc/S ≤ 0,5.
+const DISPOSICIONES_AC = {
+    trebol:     { dcSobreS: () => 1 },
+    tripolar:   { dcSobreS: () => 1 },
+    plano_2D:   { dcSobreS: () => 0.5 },
+    plano_20cm: { dcSobreS: (dc) => dc / 200 }
 };
 
+const FRECUENCIAS_AC = [50, 60]; // 50 Hz Paraguay (ANDE), 60 Hz Brasil
+
 /**
- * ΔV = k · I · L · (R_t·cosφ + X·senφ) / n   (INPACO 4.3, Mamede)
+ * Resistencia en corriente alterna a la temperatura de servicio (Ω/km).
+ * INPACO 4.3.1 (IEC 60287-1-1): Rca = Rcct (1 + Ys + Yp), Ks = Kp = 1 (conductor circular,
+ * aislación extruida).
+ *   Xs² = Xp² = 8π·f·10⁻⁷ / R'   (R' en Ω/m)
+ *   Ys = Xs⁴ / (192 + 0,8·Xs⁴)
+ *   Yp (3 conductores) = F·(dc/S)²·[0,312·(dc/S)² + 1,18/(F + 0,27)],  F = Xp⁴/(192 + 0,8·Xp⁴)
+ *   Yp (2 conductores) = F·(dc/S)²·2,9
+ */
+function calcularResistenciaAC(parametros) {
+    const material = normalizarMaterial(parametros.materialCondutor);
+    const seccion = parseFloat(parametros.seccion);
+    const f = parseFloat(parametros.frecuencia) || 50;
+    const disposicion = parametros.disposicion || 'trebol';
+    if (!FRECUENCIAS_AC.includes(f)) throw new Error(`Frecuencia ${f} Hz no soportada (50 o 60 Hz)`);
+    if (!DISPOSICIONES_AC[disposicion]) throw new Error(`Disposición ${disposicion} no reconocida`);
+
+    const R20 = window.obtenerResistencia(material, seccion);
+    const temperaturaConductor = temperaturaServicioConductor(parametros.aislamiento);
+    const rt = R20 * (1 + ALFA_RESISTENCIA[material] * (temperaturaConductor - 20));
+
+    const x2 = 8 * Math.PI * f * 1e-7 / (rt / 1000);
+    const F = (x2 * x2) / (192 + 0.8 * x2 * x2);
+    const ys = F;
+    const dc = window.tabelasNBR.diametroConductor[seccion];
+    if (dc === undefined) throw new Error(`Diámetro del conductor no disponible para ${seccion} mm²`);
+    const r = DISPOSICIONES_AC[disposicion].dcSobreS(dc);
+    const yp = parametros.conductoresCargados === 2
+        ? F * r * r * 2.9
+        : F * r * r * (0.312 * r * r + 1.18 / (F + 0.27));
+
+    return { rt, rac: rt * (1 + ys + yp), ys, yp, R20, temperaturaConductor };
+}
+
+/**
+ * Reactancia inductiva (Ω/km): INPACO Tabla 15 a 50 Hz según la disposición,
+ * proporcional a la frecuencia.
+ */
+function obtenerReactanciaAC(seccion, disposicion, frecuencia) {
+    const tabla = window.tabelasNBR.reactanciasINPACO50Hz[disposicion || 'trebol'];
+    if (!tabla) throw new Error(`Disposición ${disposicion} no reconocida`);
+    const x50 = tabla[parseFloat(seccion)];
+    if (x50 === undefined) throw new Error(`Reactancia no disponible para ${seccion} mm²`);
+    return x50 * (parseFloat(frecuencia) || 50) / 50;
+}
+
+/**
+ * ΔV = k · I · L · (Rca·cosφ + X·senφ) / n   (INPACO 4.3, Mamede Ec. 3.18)
  *  k = 2 (mono/bifásico), √3 (trifásico)
- *  R_t = R20 · (1 + α (θ - 20)), θ = 70 °C (PVC) o 90 °C (XLPE/EPR/HEPR)
+ *  Rca: resistencia AC a 70 °C (PVC) o 90 °C (XLPE/EPR/HEPR), ver calcularResistenciaAC
+ *  X: INPACO Tabla 15 según disposición y frecuencia
  *  n = conductores en paralelo por fase
  */
 function calcularCaidaTensionAC(parametros) {
     const { corriente, tension, longitud, seccion, materialCondutor, tipoSistema, factorPotencia } = parametros;
-    const aislamiento = parametros.aislamiento || 'PVC';
     const n = Math.max(1, parseInt(parametros.conductoresPorFase, 10) || 1);
     const limite = parseFloat(parametros.limite) > 0 ? parseFloat(parametros.limite) : 4.0;
+    const frecuencia = parseFloat(parametros.frecuencia) || 50;
+    const disposicion = parametros.disposicion || 'trebol';
 
     if (!corriente || corriente <= 0) throw new Error('Corriente debe ser mayor que 0');
     if (!tension || tension <= 0) throw new Error('Tensión debe ser mayor que 0');
     if (!longitud || longitud <= 0) throw new Error('Longitud debe ser mayor que 0');
     if (!seccion || seccion <= 0) throw new Error('Sección debe ser mayor que 0');
 
-    const material = normalizarMaterial(materialCondutor);
     const seccionNum = parseFloat(seccion);
-    const R20 = window.obtenerResistencia(material, seccionNum);
-    const temperaturaConductor = temperaturaServicioConductor(aislamiento);
-    const resistencia = R20 * (1 + ALFA_RESISTENCIA[material] * (temperaturaConductor - 20));
-    const X = REACTANCIAS_AC[seccionNum] !== undefined ? REACTANCIAS_AC[seccionNum] : 0.08;
+    const rac = calcularResistenciaAC({
+        materialCondutor, seccion: seccionNum, aislamiento: parametros.aislamiento || 'PVC',
+        frecuencia, disposicion, conductoresCargados: tipoSistema === 'trifasico' ? 3 : 2
+    });
+    const X = obtenerReactanciaAC(seccionNum, disposicion, frecuencia);
 
     const L_km = parseFloat(longitud) / 1000;
     const I = parseFloat(corriente);
@@ -345,7 +399,7 @@ function calcularCaidaTensionAC(parametros) {
     const senFi = Math.sqrt(1 - fp * fp);
     const k = tipoSistema === 'trifasico' ? Math.sqrt(3) : 2;
 
-    const caidaV = k * I * L_km * (resistencia * fp + X * senFi) / n;
+    const caidaV = k * I * L_km * (rac.rac * fp + X * senFi) / n;
     const caidaPct = (caidaV / parseFloat(tension)) * 100;
 
     return {
@@ -353,10 +407,12 @@ function calcularCaidaTensionAC(parametros) {
         caidaTensionPct: Math.round(caidaPct * 100) / 100,
         limite,
         cumple: caidaPct <= limite,
-        resistencia: Math.round(resistencia * 10000) / 10000,
-        resistencia20C: R20,
-        temperaturaConductor,
-        reactancia: X
+        resistencia: Math.round(rac.rac * 10000) / 10000,
+        resistencia20C: rac.R20,
+        temperaturaConductor: rac.temperaturaConductor,
+        reactancia: Math.round(X * 10000) / 10000,
+        frecuencia,
+        disposicion
     };
 }
 
@@ -787,6 +843,8 @@ window.calcularCorrienteTransformador = calcularCorrienteTransformador;
 window.obtenerConductoresCargados = obtenerConductoresCargados;
 window.obtenerAmpacidadConductor = obtenerAmpacidadConductor;
 window.dimensionarPorAmpacidadAC = dimensionarPorAmpacidadAC;
+window.calcularResistenciaAC = calcularResistenciaAC;
+window.obtenerReactanciaAC = obtenerReactanciaAC;
 window.calcularCaidaTensionAC = calcularCaidaTensionAC;
 window.calcularSeccionMinimaCaidaAC = calcularSeccionMinimaCaidaAC;
 window.obtenerConstanteK = obtenerConstanteK;
