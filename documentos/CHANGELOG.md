@@ -4,6 +4,16 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.6.0] - 2026-09-23 — Pestaña Historial (backlog #3)
+
+- **Quién:** Marco + Claude (Opus 5.5)
+- **Qué se hizo:**
+  - Pestaña **Historial** (diseño elegido por Marco): últimos 50 cálculos de todas las pestañas con fecha, tipo y resumen. **Abrir** repone el formulario guardado en su pestaña y recalcula con la versión actual (sin duplicar la entrada); **Borrar** una entrada; **Borrar todo** con un segundo clic de confirmación. Armada con nodos y `textContent`.
+  - Cada entrada guarda ahora la foto del formulario de su pestaña. Las entradas anteriores se listan pero no se pueden abrir.
+  - **Error corregido:** si el navegador bloqueaba el almacenamiento local (modo privado, datos bloqueados), el guardado del historial lanzaba un error dentro del cálculo, y desde 5.0.0 eso ocultaba resultados correctos con "Error en cálculo". Ahora el historial nunca rompe un cálculo y se avisa una sola vez.
+  - Drift corregido en el manual ("método de instalación A1 a I" → A1 a G).
+- **Verificación:** probado en Chromium (guardar, abrir con el mismo resultado y sin duplicar, borrar, entradas viejas, almacenamiento bloqueado, pantalla de 375 px sin desborde). Los tests de node no cubren `app.js`; 102 tests siguen en verde.
+
 ## [5.5.0] - 2026-09-23 — Memoria de cálculo imprimible (backlog #4)
 
 - **Quién:** Marco + Claude (Opus 5.5)

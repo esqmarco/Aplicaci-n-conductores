@@ -132,6 +132,9 @@ function onTabSwitch(tabName) {
         case 'resultados-ac':
             actualizarResumenAC();
             break;
+        case 'historial':
+            renderHistorial();
+            break;
     }
 }
 
@@ -1642,16 +1645,185 @@ function configurarValidacionEnTiempoReal() {
 // ===================================================================
 // HISTORIAL DE CALCULOS (localStorage)
 // ===================================================================
+// Cada entrada guarda la foto del formulario de su pestaña: "Abrir" la repone y recalcula
+// con el código actual. El almacenamiento puede no estar disponible (modo privado, datos
+// bloqueados): el historial nunca debe romper un cálculo, por eso todo va en try/catch.
+
+var CLAVE_HISTORIAL = 'historialCalculos';
+var MAX_HISTORIAL = 50;
+
+var TIPOS_HISTORIAL = {
+    'proyecto':         { nombre: 'Ampacidad AC',         calcular: function () { calcularProyecto(); } },
+    'caida-tension':    { nombre: 'Caída de tensión AC',  calcular: function () { calcularCaidaTension(); } },
+    'cortocircuito':    { nombre: 'Cortocircuito AC',     calcular: function () { calcularCortocircuito(); } },
+    'ampacidad-dc':     { nombre: 'Ampacidad DC',         calcular: function () { calcularAmpacidadDC(); } },
+    'caida-tension-dc': { nombre: 'Caída de tensión DC',  calcular: function () { calcularCaidaTensionDC_UI(); } },
+    'cortocircuito-dc': { nombre: 'Cortocircuito DC',     calcular: function () { calcularCortocircuitoDC(); } }
+};
+
+function leerHistorial() {
+    try {
+        var h = JSON.parse(localStorage.getItem(CLAVE_HISTORIAL) || '[]');
+        return Array.isArray(h) ? h : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function escribirHistorial(historial) {
+    try {
+        localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(historial));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/** Foto de los campos (input/select) de una pestaña: { id: valor }. */
+function capturarFormulario(idPestana) {
+    var foto = {};
+    var cont = document.getElementById(idPestana);
+    if (!cont) return foto;
+    cont.querySelectorAll('input[id], select[id]').forEach(function (el) {
+        foto[el.id] = el.value;
+    });
+    return foto;
+}
+
+function resumenCalculo(tipo, p, r) {
+    var n = function (v, d) { return typeof v === 'number' ? (d === undefined ? String(v) : v.toFixed(d)) : String(v); };
+    try {
+        switch (tipo) {
+            case 'proyecto':
+                var entrada = p.modoEntrada === 'corriente' ? p.corrienteDirecta + ' A'
+                    : p.modoEntrada === 'transformador' ? p.potenciaTransformadorKVA + ' kVA'
+                    : p.potencia + ' ' + p.unidadPotencia;
+                return entrada + ' · ' + p.tension + ' V · ' + p.metodoInstalacao + ' → ' +
+                    (r.conductoresPorFase > 1 ? r.conductoresPorFase + ' × ' : '') + r.seccion + ' mm²';
+            case 'caida-tension':
+                return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
+                    n(r.caidaTensionPct, 2) + ' % (' + (r.cumple ? 'cumple' : 'no cumple') + ')';
+            case 'cortocircuito':
+                return p.potenciaCortocircuito + ' MVA · ' + Math.round(p.tensionSistema * 1000) + ' V · ' + p.tiempoDespeje +
+                    ' s → mín. ' + (r.seccionComercial ? r.seccionComercial + ' mm²' : '> 1000 mm²');
+            case 'ampacidad-dc':
+                return n(r.corriente) + ' A · ' + p.metodo + ' → ' + r.seccion + ' mm²';
+            case 'caida-tension-dc':
+                return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
+                    n(r.caida_tension_pct, 2) + ' % (' + (r.cumple_criterio ? 'cumple' : 'no cumple') + ')';
+            case 'cortocircuito-dc':
+                return p.elementosSerie + ' elementos · ' + r.corriente_cortocircuito + ' A → mín. ' +
+                    (r.seccion_comercial ? r.seccion_comercial + ' mm²' : '> 1000 mm²');
+        }
+    } catch (e) { /* resumen incompleto: no rompe el guardado */ }
+    return '--';
+}
 
 function guardarEnHistorial(tipo, parametros, resultado) {
-    var historial = JSON.parse(localStorage.getItem('historialCalculos') || '[]');
+    if (appState.restaurandoHistorial) return; // reabrir no duplica la entrada
+    var historial = leerHistorial();
     historial.unshift({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
         tipo: tipo,
+        fecha: new Date().toISOString(),
+        resumen: resumenCalculo(tipo, parametros, resultado),
+        formulario: capturarFormulario(tipo),
         parametros: parametros,
-        resultado: resultado,
-        fecha: new Date().toISOString()
+        resultado: resultado
     });
-    // Keep last 50
-    if (historial.length > 50) historial.length = 50;
-    localStorage.setItem('historialCalculos', JSON.stringify(historial));
+    if (historial.length > MAX_HISTORIAL) historial.length = MAX_HISTORIAL;
+    if (!escribirHistorial(historial) && !appState.avisoHistorial) {
+        appState.avisoHistorial = true;
+        mostrarMensaje('El navegador no permite guardar el historial (almacenamiento bloqueado). Los cálculos funcionan igual.', 'advertencia');
+    }
+}
+
+function renderHistorial() {
+    var destino = document.getElementById('historial-lista');
+    if (!destino) return;
+    var historial = leerHistorial();
+    if (!historial.length) {
+        destino.replaceChildren(nodo('p', 'historial-vacio', 'Todavía no hay cálculos guardados en este navegador.'));
+        return;
+    }
+    var tabla = nodo('table', 'historial-tabla');
+    var cab = nodo('tr');
+    ['Fecha', 'Tipo', 'Resumen', ''].forEach(function (t) { cab.appendChild(nodo('th', null, t)); });
+    tabla.appendChild(cab);
+    historial.forEach(function (h) {
+        var tr = nodo('tr');
+        var fecha = new Date(h.fecha);
+        tr.appendChild(nodo('td', null, isNaN(fecha) ? '--' : fecha.toLocaleString('es-PY', { dateStyle: 'short', timeStyle: 'short' })));
+        tr.appendChild(nodo('td', null, (TIPOS_HISTORIAL[h.tipo] || {}).nombre || h.tipo));
+        tr.appendChild(nodo('td', null, h.resumen || resumenCalculo(h.tipo, h.parametros || {}, h.resultado || {})));
+        var acciones = nodo('td', 'historial-acciones');
+        var abrir = nodo('button', 'btn btn-primary', 'Abrir');
+        abrir.type = 'button';
+        if (!h.formulario || !TIPOS_HISTORIAL[h.tipo]) {
+            abrir.disabled = true;
+            abrir.title = 'Guardado por una versión anterior, sin los datos del formulario';
+        } else {
+            abrir.addEventListener('click', function () { abrirDelHistorial(h.id); });
+        }
+        var borrar = nodo('button', 'btn btn-warning', 'Borrar');
+        borrar.type = 'button';
+        borrar.addEventListener('click', function () { borrarDelHistorial(h.id); });
+        acciones.appendChild(abrir);
+        acciones.appendChild(borrar);
+        tr.appendChild(acciones);
+        tabla.appendChild(tr);
+    });
+    destino.replaceChildren(tabla);
+}
+
+/** Repone el formulario guardado en su pestaña y recalcula con el código actual. */
+function abrirDelHistorial(id) {
+    var h = leerHistorial().filter(function (x) { return x.id === id; })[0];
+    if (!h || !h.formulario || !TIPOS_HISTORIAL[h.tipo]) return;
+    switchTab(h.tipo);
+    var ids = Object.keys(h.formulario);
+    ids.forEach(function (campo) {
+        var el = document.getElementById(campo);
+        if (el) el.value = h.formulario[campo];
+    });
+    // Disparar los cambios para que se muestren/oculten los campos que dependen de los selectores
+    ids.forEach(function (campo) {
+        var el = document.getElementById(campo);
+        if (el && el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
+    });
+    // Un 'change' puede ajustar un valor (p. ej. aluminio fuerza clase rígida): se repone lo guardado
+    ids.forEach(function (campo) {
+        var el = document.getElementById(campo);
+        if (el && el.value !== h.formulario[campo]) el.value = h.formulario[campo];
+    });
+    appState.restaurandoHistorial = true;
+    try {
+        TIPOS_HISTORIAL[h.tipo].calcular();
+    } finally {
+        appState.restaurandoHistorial = false;
+    }
+    mostrarMensaje('Datos del ' + new Date(h.fecha).toLocaleString('es-PY') + ' cargados y recalculados con la versión actual', 'info');
+}
+
+function borrarDelHistorial(id) {
+    escribirHistorial(leerHistorial().filter(function (x) { return x.id !== id; }));
+    renderHistorial();
+}
+
+/** Borrar todo pide un segundo clic (sin diálogos del navegador). */
+function borrarTodoHistorial() {
+    var btn = document.getElementById('btn-borrar-historial');
+    if (btn && !btn.dataset.confirmar) {
+        btn.dataset.confirmar = '1';
+        btn.textContent = '¿Seguro? Clic de nuevo para borrar todo';
+        setTimeout(function () {
+            delete btn.dataset.confirmar;
+            btn.textContent = 'Borrar todo';
+        }, 4000);
+        return;
+    }
+    if (btn) { delete btn.dataset.confirmar; btn.textContent = 'Borrar todo'; }
+    escribirHistorial([]);
+    renderHistorial();
+    mostrarMensaje('Historial borrado', 'info');
 }

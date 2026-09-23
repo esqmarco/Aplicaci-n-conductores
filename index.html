@@ -572,6 +572,19 @@ body {
 }
 
 /* Print styles */
+/* Historial de cálculos */
+.historial-nota { color: #555; margin-bottom: 12px; }
+.historial-tabla { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.historial-tabla th, .historial-tabla td { border-bottom: 1px solid #e3e6e8; padding: 8px 10px; text-align: left; vertical-align: middle; }
+.historial-tabla th { background: #f5f7f8; font-weight: 600; }
+.historial-tabla td.historial-acciones { white-space: nowrap; text-align: right; }
+.historial-tabla .btn { padding: 6px 12px; font-size: 13px; margin-left: 6px; }
+.historial-vacio { font-style: italic; color: #777; }
+@media (max-width: 700px) {
+    .historial-tabla th:nth-child(2), .historial-tabla td:nth-child(2) { display: none; }
+    .historial-tabla td.historial-acciones { white-space: normal; }
+}
+
 /* Memoria de cálculo: solo existe al imprimir (ver imprimirReporte en app.js) */
 .reporte-impresion { display: none; }
 
@@ -621,7 +634,7 @@ body {
             <h1>🔧 Calculadora de Cables Eléctricos</h1>
             <p>Sistema profesional de dimensionamiento según INPACO + NBR 5410 + Mamede Filho</p>
             <div class="version-info">
-                Versión R5 - Tablas INPACO 2021 (baja tensión) | 8 Pestañas Especializadas
+                Versión R5 - Tablas INPACO 2021 (baja tensión) | Memoria de cálculo e historial
             </div>
         </div>
 
@@ -651,6 +664,9 @@ body {
                 </button>
                 <button class="tab" data-tab="resultados-dc">
                     📊 Resultados DC
+                </button>
+                <button class="tab" data-tab="historial">
+                    🕘 Historial
                 </button>
             </div>
         </div>
@@ -1676,6 +1692,16 @@ body {
                         🔄 Actualizar Resumen
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 9: HISTORIAL -->
+        <div id="historial" class="tab-content">
+            <h2 class="section-title">Historial de c&aacute;lculos</h2>
+            <p class="historial-nota">Los &uacute;ltimos 50 c&aacute;lculos quedan guardados en este navegador. <strong>Abrir</strong> carga los datos en su pesta&ntilde;a y recalcula con la versi&oacute;n actual de la calculadora.</p>
+            <div id="historial-lista"></div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-danger" id="btn-borrar-historial" onclick="borrarTodoHistorial()">Borrar todo</button>
             </div>
         </div>
 
