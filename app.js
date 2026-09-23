@@ -559,18 +559,22 @@ function mostrarResultadosProyecto(resultado) {
         setTexto('factor-resist-ac', enterrado ? resultado.factorResistividad.toFixed(2) : '--');
     }
 
-    // Conductor de protección (NBR 5410 Tabla 58) sobre la sección TOTAL de fase
-    if (window.calcularConductorProteccion && resultado.seccion) {
-        var n = resultado.conductoresPorFase || 1;
-        if (n > 1) {
-            var faseTotal = n * resultado.seccion;
-            var peTotal = faseTotal <= 16 ? faseTotal : (faseTotal <= 35 ? 16 : faseTotal / 2);
-            var pePorTerna = window.redondearSeccionComercial(peTotal / n) || peTotal / n;
-            setTexto('conductor-proteccion', n + ' \u00D7 ' + pePorTerna + ' mm\u00B2 (\u2265 ' + peTotal + ' mm\u00B2 total)');
-        } else {
-            setTexto('conductor-proteccion', window.calcularConductorProteccion(resultado.seccion) + ' mm\u00B2');
-        }
+    setTexto('conductor-proteccion', textoConductorProteccion(resultado));
+}
+
+/**
+ * Conductor de protección (NBR 5410 Tabla 58) sobre la sección TOTAL de fase.
+ */
+function textoConductorProteccion(resultado) {
+    if (!window.calcularConductorProteccion || !resultado || !resultado.seccion) return '--';
+    var n = resultado.conductoresPorFase || 1;
+    if (n > 1) {
+        var faseTotal = n * resultado.seccion;
+        var peTotal = faseTotal <= 16 ? faseTotal : (faseTotal <= 35 ? 16 : faseTotal / 2);
+        var pePorTerna = window.redondearSeccionComercial(peTotal / n) || peTotal / n;
+        return n + ' \u00D7 ' + pePorTerna + ' mm\u00B2 (\u2265 ' + peTotal + ' mm\u00B2 total)';
     }
+    return window.calcularConductorProteccion(resultado.seccion) + ' mm\u00B2';
 }
 
 // ===================================================================
@@ -875,6 +879,17 @@ function actualizarResumenAC() {
 }
 
 function determinarSeccionFinalAC() {
+    var r = calcularSeccionFinalAC();
+    setTexto('seccion-final-ac', r.texto);
+    setTexto('criterio-restrictivo-ac', r.criterio);
+    setTexto('pe-final-ac', r.valor ? textoConductorProteccion({ seccion: r.valor, conductoresPorFase: r.nParalelo }) : '--');
+}
+
+/**
+ * Sección final AC = la mayor entre los criterios calculados. Devuelve
+ * { texto, criterio, criterios: [{valor, criterio}], nParalelo }.
+ */
+function calcularSeccionFinalAC() {
     var proyecto = appState.calculos.proyecto;
     var caida = appState.calculos.caidaTension;
     var cc = appState.calculos.cortocircuito;
@@ -913,19 +928,18 @@ function determinarSeccionFinalAC() {
     }
 
     if (sinSolucion) {
-        setTexto('seccion-final-ac', 'Revisar');
-        setTexto('criterio-restrictivo-ac', sinSolucion);
-    } else if (secciones.length > 0) {
+        return { texto: 'Revisar', criterio: sinSolucion, criterios: secciones, nParalelo: nParalelo };
+    }
+    if (secciones.length > 0) {
         var maxSeccion = secciones.reduce(function (max, cur) {
             return cur.valor > max.valor ? cur : max;
         });
-
-        setTexto('seccion-final-ac', (nParalelo > 1 ? nParalelo + ' \u00D7 ' : '') + maxSeccion.valor + ' mm2');
-        setTexto('criterio-restrictivo-ac', maxSeccion.criterio);
-    } else {
-        setTexto('seccion-final-ac', 'No calculado');
-        setTexto('criterio-restrictivo-ac', '--');
+        return {
+            texto: (nParalelo > 1 ? nParalelo + ' \u00D7 ' : '') + maxSeccion.valor + ' mm\u00B2',
+            criterio: maxSeccion.criterio, criterios: secciones, nParalelo: nParalelo, valor: maxSeccion.valor
+        };
     }
+    return { texto: 'No calculado', criterio: '--', criterios: [], nParalelo: nParalelo };
 }
 
 // ===================================================================
@@ -1155,50 +1169,17 @@ function actualizarResumenDC() {
 }
 
 function determinarSeccionFinalDC() {
-    var amp = appState.calculos.ampacidadDC;
-    var caida = appState.calculos.caidaTensionDC;
-    var cc = appState.calculos.cortocircuitoDC;
+    var r = calcularSeccionFinalDC();
+    setTexto('criterio-restrictivo', r.criterio);
+    setTexto('seccion-final-dc', r.texto);
+}
 
-    var secciones = [];
-
-    if (amp && amp.resultado) {
-        secciones.push({ valor: amp.resultado.seccion, criterio: 'Ampacidad' });
-    }
-
-    var sinSolucion = null;
-
-    if (caida && caida.resultado) {
-        try {
-            var seccionNecesaria = calcularSeccionParaCaidaDC(caida.parametros);
-            if (seccionNecesaria === null) {
-                sinSolucion = 'Ca\u00EDda de tensi\u00F3n: ninguna secci\u00F3n hasta 300 mm\u00B2 cumple; aumentar conductores por polo';
-            } else {
-                secciones.push({ valor: seccionNecesaria, criterio: 'Caida de Tension' });
-            }
-        } catch (e) {
-            console.error('Error al calcular seccion necesaria para caida de tension:', e);
-        }
-    }
-
-    if (cc && cc.resultado) {
-        if (cc.resultado.seccion_comercial) {
-            secciones.push({ valor: cc.resultado.seccion_comercial, criterio: 'Cortocircuito' });
-        } else {
-            sinSolucion = 'Cortocircuito: la secci\u00F3n requerida supera 1000 mm\u00B2';
-        }
-    }
-
-    if (sinSolucion) {
-        setTexto('criterio-restrictivo', sinSolucion);
-        setTexto('seccion-final-dc', 'Revisar');
-    } else if (secciones.length > 0) {
-        var maxSeccion = secciones.reduce(function (max, cur) {
-            return cur.valor > max.valor ? cur : max;
-        });
-
-        setTexto('criterio-restrictivo', maxSeccion.criterio);
-        setTexto('seccion-final-dc', maxSeccion.valor + ' mm2');
-    }
+/**
+ * Sección final DC (lógica en calculations.js, compartida con el reporte).
+ */
+function calcularSeccionFinalDC() {
+    var c = appState.calculos;
+    return calcularSeccionFinalDCDesde({ ampacidad: c.ampacidadDC, caida: c.caidaTensionDC, cortocircuito: c.cortocircuitoDC });
 }
 
 // ===================================================================
@@ -1259,24 +1240,314 @@ function resetearFormulario(pestana) {
     }
 }
 
-function generarReporteDC() {
-    actualizarResumenDC();
-    const contenido = document.getElementById('resultados-dc');
-    if (contenido) {
-        contenido.classList.add('print-active');
-        window.print();
-        setTimeout(() => contenido.classList.remove('print-active'), 1000);
+// ===================================================================
+// REPORTE IMPRIMIBLE (memoria de cálculo)
+// ===================================================================
+// Se arma con los parámetros y resultados GUARDADOS de cada cálculo (appState), no con
+// lo que haya en los formularios: el reporte documenta exactamente lo que se calculó.
+
+function nodo(tag, clase, texto) {
+    var e = document.createElement(tag);
+    if (clase) e.className = clase;
+    if (texto !== undefined && texto !== null) e.textContent = texto;
+    return e;
+}
+
+/** Texto visible de la opción de un <select> (evita duplicar etiquetas). */
+function textoOpcion(idSelect, valor) {
+    var sel = document.getElementById(idSelect);
+    if (sel) {
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === String(valor)) return sel.options[i].textContent.trim();
+        }
     }
+    return valor === undefined || valor === null || valor === '' ? '--' : String(valor);
+}
+
+function fmt(v, dec, unidad) {
+    if (v === undefined || v === null || v === '' || (typeof v === 'number' && isNaN(v))) return '--';
+    var t = typeof v === 'number' && dec !== undefined && dec !== null ? v.toFixed(dec) : String(v);
+    return unidad ? t + ' ' + unidad : t;
+}
+
+/** Tabla de dos columnas; omite filas con valor null. */
+function tablaReporte(filas) {
+    var t = nodo('table', 'reporte-tabla');
+    filas.forEach(function (f) {
+        if (f === null || f[1] === null) return;
+        var tr = nodo('tr');
+        tr.appendChild(nodo('th', null, f[0]));
+        tr.appendChild(nodo('td', null, f[1]));
+        t.appendChild(tr);
+    });
+    return t;
+}
+
+function bloqueReporte(titulo, entradas, resultados, fuente, avisos) {
+    var sec = nodo('section', 'reporte-bloque');
+    sec.appendChild(nodo('h2', null, titulo));
+    if (!entradas) {
+        sec.appendChild(nodo('p', 'reporte-nocalc', 'No calculado.'));
+        return sec;
+    }
+    sec.appendChild(nodo('h3', null, 'Datos de entrada'));
+    sec.appendChild(tablaReporte(entradas));
+    sec.appendChild(nodo('h3', null, 'Resultados'));
+    sec.appendChild(tablaReporte(resultados));
+    if (avisos && avisos.length) {
+        var ul = nodo('ul', 'reporte-avisos');
+        avisos.forEach(function (a) { ul.appendChild(nodo('li', null, a)); });
+        sec.appendChild(ul);
+    }
+    sec.appendChild(nodo('p', 'reporte-fuente', 'Fuente: ' + fuente));
+    return sec;
+}
+
+function encabezadoReporte(titulo) {
+    var h = nodo('header', 'reporte-encabezado');
+    h.appendChild(nodo('h1', null, titulo));
+    h.appendChild(nodo('p', null, 'Calculadora de conductores eléctricos — INPACO 2021 · NBR 5410 · Mamede Filho'));
+    h.appendChild(nodo('p', null, 'Fecha: ' + new Date().toLocaleString('es-PY')));
+    return h;
+}
+
+function pieReporte() {
+    var f = nodo('footer', 'reporte-pie');
+    f.appendChild(nodo('p', null, 'Cálculo de referencia. Verificar con los datos del fabricante del cable y coordinar la protección (Ib ≤ In ≤ Iz).'));
+    f.appendChild(nodo('p', 'reporte-firma', 'Responsable: ______________________________   Firma: ____________________'));
+    return f;
+}
+
+function construirReporteAC() {
+    var cont = nodo('div');
+    cont.appendChild(encabezadoReporte('Memoria de cálculo — Conductores AC'));
+
+    // 1. Ampacidad
+    var pr = appState.calculos.proyecto;
+    var ent = null, res = null, avisos = [];
+    if (pr) {
+        var p = pr.parametros, r = pr.resultado;
+        var entrada = p.modoEntrada === 'corriente' ? ['Corriente de carga', fmt(p.corrienteDirecta, 2, 'A')]
+            : p.modoEntrada === 'transformador' ? ['Potencia del transformador', fmt(p.potenciaTransformadorKVA, null, 'kVA')]
+            : ['Potencia instalada', fmt(p.potencia, null, p.unidadPotencia)];
+        var enterrado = r.metodoUsado === 'D';
+        ent = [
+            ['Modo de entrada', textoOpcion('modo-entrada', p.modoEntrada)],
+            entrada,
+            p.modoEntrada === 'potencia' ? ['Factor de demanda', fmt(r.factorDemanda, 2)] : null,
+            p.modoEntrada === 'potencia' ? ['Factor de potencia / rendimiento', fmt(p.factorPotencia, 2) + ' / ' + fmt(p.rendimiento, 2)] : null,
+            ['Tensión', fmt(p.tension, null, 'V')],
+            ['Sistema', textoOpcion('tipo-sistema', p.tipoSistema)],
+            ['Tipo de circuito', textoOpcion('tipo-circuito', p.tipoCircuito)],
+            ['Aislación / material', textoOpcion('material-isolamento', p.materialAislamento) + ' / ' + textoOpcion('material-condutor', p.materialCondutor)],
+            ['Método de instalación', textoOpcion('metodo-instalacao', p.metodoInstalacao)],
+            [enterrado ? 'Temperatura del suelo' : 'Temperatura ambiente', fmt(p.temperaturaAmbiente, null, '°C')],
+            enterrado ? ['Instalación enterrada', textoOpcion('tipo-enterrado', p.tipoEnterrado)] : null,
+            enterrado ? ['Resistividad térmica del suelo', textoOpcion('resistividad-suelo', p.resistividadSuelo)] : null,
+            ['Circuitos agrupados', fmt(r.circuitosAgrupamiento)],
+            ['Conductores en paralelo por fase', fmt(r.conductoresPorFase)],
+            p.tipoSistema === 'trifasico' ? ['Neutro con armónicos', p.neutroCargado ? 'Sí' : 'No'] : null
+        ];
+        res = [
+            ['Corriente de proyecto Ib', fmt(r.corriente, 2, 'A')],
+            r.conductoresPorFase > 1 ? ['Corriente por conductor', fmt(r.corrientePorConductor, 2, 'A')] : null,
+            ['Conductores cargados', fmt(r.conductoresCargados)],
+            ['Factor de temperatura', fmt(r.factorTemperatura, 3)],
+            ['Factor de agrupamiento', fmt(r.factorAgrupamiento, 3)],
+            enterrado ? ['Factor de resistividad del suelo', fmt(r.factorResistividad, 3)] : null,
+            ['Corriente corregida por conductor', fmt(r.corrienteCorregida, 2, 'A')],
+            ['Sección por ampacidad', (r.conductoresPorFase > 1 ? r.conductoresPorFase + ' × ' : '') + r.seccion + ' mm²'],
+            ['Ampacidad de tabla', fmt(r.ampacidad, null, 'A')],
+            ['Capacidad corregida Iz', fmt(r.capacidadCorregida, 1, 'A')]
+        ];
+        avisos = r.advertencias || [];
+    }
+    var tablaINPACO = pr && window.claveAislacion && window.claveAislacion(pr.parametros.materialAislamento) === 'PVC'
+        ? 'Tablas 2 (A1–D) y 4 (E–G)' : 'Tablas 3 (A1–D) y 5 (E–G)';
+    cont.appendChild(bloqueReporte('1. Capacidad de conducción (ampacidad)', ent, res,
+        'catálogo INPACO 2021, ' + tablaINPACO + ' (cobre, 40 °C aire / 25 °C suelo); temperatura Tabla 6; agrupamiento Tablas 7, 9 y 10; ' +
+        'resistividad del suelo Tabla 11. Corriente según Mamede 3.5.1.1. Conductor de protección: NBR 5410 Tabla 58.', avisos));
+
+    // 2. Caída de tensión
+    var ct = appState.calculos.caidaTension;
+    ent = null; res = null;
+    if (ct) {
+        var pc = ct.parametros, rc = ct.resultado;
+        ent = [
+            ['Corriente', fmt(pc.corriente, 2, 'A')],
+            ['Tensión', fmt(pc.tension, null, 'V')],
+            ['Longitud', fmt(pc.longitud, null, 'm')],
+            ['Sección verificada', (pc.conductoresPorFase > 1 ? pc.conductoresPorFase + ' × ' : '') + pc.seccion + ' mm²'],
+            ['Sistema / factor de potencia', textoOpcion('tipo-sistema-ct', pc.tipoSistema) + ' / ' + fmt(pc.factorPotencia, 2)],
+            ['Material / clase', textoOpcion('material-ct', pc.materialCondutor) + ' / ' + textoOpcion('clase-ct', rc.clase)],
+            ['Aislación', textoOpcion('aislamiento-ct', pc.aislamiento)],
+            ['Disposición / frecuencia', textoOpcion('disposicion-ct', rc.disposicion) + ' / ' + rc.frecuencia + ' Hz'],
+            ['Límite admitido', fmt(rc.limite, null, '%')]
+        ];
+        res = [
+            ['Resistencia AC a ' + rc.temperaturaConductor + ' °C', fmt(rc.resistencia, 4, 'Ω/km')],
+            ['Reactancia', fmt(rc.reactancia, 4, 'Ω/km')],
+            ['Caída de tensión', fmt(rc.caidaTensionV, 2, 'V') + ' (' + fmt(rc.caidaTensionPct, 2, '%') + ')'],
+            ['Estado', rc.cumple ? 'CUMPLE' : 'NO CUMPLE'],
+            ['Sección mínima por caída', rc.seccionMinimaCaida ? rc.seccionMinimaCaida.seccion + ' mm²' : 'ninguna hasta 300 mm²']
+        ];
+    }
+    cont.appendChild(bloqueReporte('2. Caída de tensión', ent, res,
+        'ΔV = k·I·L·(Rca·cosφ + X·senφ)/n (INPACO 4.3, Mamede Ec. 3.18); R20 IEC 60228; Rca a temperatura de servicio con ' +
+        'efecto pelicular y de proximidad (INPACO 4.3.1 / IEC 60287); X de INPACO Tabla 15. Límites: ANDE/INPACO 4 % y 5 %, NBR 5410 4 %, 5 % y 7 %.'));
+
+    // 3. Cortocircuito
+    var cc = appState.calculos.cortocircuito;
+    ent = null; res = null;
+    if (cc) {
+        var pk = cc.parametros, rk = cc.resultado;
+        ent = [
+            ['Potencia de cortocircuito', fmt(pk.potenciaCortocircuito, null, 'MVA')],
+            ['Tensión de línea', fmt(pk.tensionSistema * 1000, 0, 'V')],
+            ['Tiempo de despeje', fmt(pk.tiempoDespeje, null, 's')],
+            ['Sección verificada (por conductor)', pk.seccion + ' mm²'],
+            ['Material / aislación', textoOpcion('material-cc', pk.materialCondutor) + ' / ' + textoOpcion('aislamiento-cc', pk.materialAislamiento)]
+        ];
+        res = [
+            ['Corriente de cortocircuito', fmt(rk.corrienteCortocircuito, 2, 'kA')],
+            ['Constante K', fmt(rk.constanteK)],
+            ['Sección mínima calculada', fmt(rk.seccionMinima, 2, 'mm²')],
+            ['Sección comercial mínima', rk.seccionComercial ? rk.seccionComercial + ' mm²' : 'mayor a 1000 mm²'],
+            ['Estado', rk.cumple ? 'CUMPLE' : 'NO CUMPLE']
+        ];
+    }
+    cont.appendChild(bloqueReporte('3. Cortocircuito', ent, res,
+        'Icc = Scc/(√3·V); S = Icc·√t/K, criterio adiabático válido hasta 5 s; K según NBR 5410. Con conductores en paralelo se exige la Icc completa a cada uno.'));
+
+    // Sección final
+    var fin = calcularSeccionFinalAC();
+    var secFin = nodo('section', 'reporte-bloque reporte-final-bloque');
+    secFin.appendChild(nodo('h2', null, 'Sección final'));
+    secFin.appendChild(tablaReporte(
+        fin.criterios.map(function (c) { return ['Por ' + c.criterio.toLowerCase(), c.valor + ' mm²']; })
+            .concat([['Sección adoptada', fin.texto], ['Criterio más restrictivo', fin.criterio],
+                // El conductor de protección sigue a la sección de fase ADOPTADA, no a la de ampacidad
+                fin.valor ? ['Conductor de protección (sobre la sección adoptada)',
+                    textoConductorProteccion({ seccion: fin.valor, conductoresPorFase: fin.nParalelo })] : null])));
+    // Coherencia entre pestañas: el mismo material en los tres criterios
+    var mats = [pr && pr.parametros.materialCondutor, ct && ct.parametros.materialCondutor, cc && cc.parametros.materialCondutor]
+        .filter(Boolean);
+    if (mats.some(function (m) { return m !== mats[0]; })) {
+        secFin.appendChild(nodo('p', 'reporte-alerta', 'Atención: las pestañas se calcularon con materiales distintos. Recalcular con el mismo material.'));
+    }
+    cont.appendChild(secFin);
+    cont.appendChild(pieReporte());
+    return cont;
+}
+
+function construirReporteDC() {
+    var cont = nodo('div');
+    cont.appendChild(encabezadoReporte('Memoria de cálculo — Conductores DC'));
+
+    var am = appState.calculos.ampacidadDC;
+    var ent = null, res = null;
+    if (am) {
+        var p = am.parametros, r = am.resultado;
+        ent = [
+            ['Modo de entrada', textoOpcion('modo-entrada-dc', p.modoEntrada)],
+            p.modoEntrada === 'corriente' ? ['Corriente', fmt(p.corrienteDirecta, 2, 'A')] : ['Potencia', fmt(p.potencia, null, 'W')],
+            p.modoEntrada === 'corriente' ? null : ['Tensión', p.tensionSelector === 'personalizado' ? fmt(p.tensionPersonalizada, null, 'V') : fmt(p.tensionSelector, null, 'V')],
+            ['Material / aislación', textoOpcion('material-condutor-dc', p.material) + ' / ' + textoOpcion('aislamiento-dc', p.aislamiento)],
+            ['Método de instalación', textoOpcion('metodo-instalacao-dc', p.metodo)],
+            ['Temperatura ambiente', fmt(p.temperatura, null, '°C')],
+            ['Circuitos agrupados', fmt(p.agrupamiento)]
+        ];
+        res = [
+            ['Corriente', fmt(r.corriente, 2, 'A')],
+            ['Factor de temperatura / agrupamiento', fmt(r.factorTemperatura, 3) + ' / ' + fmt(r.factorAgrupamiento, 3)],
+            ['Corriente corregida', fmt(r.corrienteCorregida, 2, 'A')],
+            ['Sección por ampacidad', r.seccion + ' mm²'],
+            ['Ampacidad de tabla', fmt(r.ampacidad, null, 'A')]
+        ];
+    }
+    cont.appendChild(bloqueReporte('1. Capacidad de conducción (ampacidad)', ent, res,
+        'catálogo INPACO 2021, columnas de 2 conductores cargados; temperatura Tabla 6; agrupamiento Tabla 7.'));
+
+    var ct = appState.calculos.caidaTensionDC;
+    ent = null; res = null;
+    if (ct) {
+        var pc = ct.parametros, rc = ct.resultado;
+        ent = [
+            ['Corriente', fmt(pc.corriente, 2, 'A')],
+            ['Tensión', pc.tensionSelector === 'personalizado' ? fmt(pc.tensionPersonalizada, null, 'V') : fmt(pc.tensionSelector, null, 'V')],
+            ['Longitud', fmt(pc.longitud, null, 'm')],
+            ['Sección / conductores por polo', pc.seccion + ' mm² / ' + pc.conductoresPorPolo],
+            ['Material / clase', textoOpcion('material-conductor-ct-dc', pc.material) + ' / ' + textoOpcion('clase-ct-dc', pc.clase)],
+            ['Aislación', textoOpcion('aislamiento-ct-dc', pc.aislamiento)],
+            ['Aplicación', textoOpcion('aplicacion-dc', pc.aplicacionDC)]
+        ];
+        res = [
+            ['Resistencia a ' + rc.temperatura_conductor + ' °C', fmt(rc.resistencia_mostrada, 4, 'Ω/km')],
+            ['Caída de tensión', fmt(rc.caida_tension_V, 2, 'V') + ' (' + fmt(rc.caida_tension_pct, 2, '%') + ')'],
+            ['Límite', fmt(rc.limite_pct, null, '%')],
+            ['Estado', rc.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE']
+        ];
+    }
+    cont.appendChild(bloqueReporte('2. Caída de tensión', ent, res,
+        'ΔV = 2·Rt·I·L/Np; R20 IEC 60228 corregida a la temperatura de servicio (INPACO 4.3.1).'));
+
+    var cc = appState.calculos.cortocircuitoDC;
+    ent = null; res = null;
+    if (cc) {
+        var pk = cc.parametros, rk = cc.resultado;
+        ent = [
+            ['Batería', textoOpcion('tipo-bateria', pk.tipoBateria)],
+            ['Elementos en serie / capacidad', pk.elementosSerie + ' / ' + fmt(pk.capacidad, null, 'Ah')],
+            ['Resistencia interna por elemento', fmt(pk.resistenciaInterna, 3, 'mΩ')],
+            ['Tiempo de despeje', fmt(pk.tiempoDespeje, null, 's')],
+            ['Sección verificada', pk.seccion + ' mm²'],
+            ['Material / aislación', textoOpcion('material-cc-dc', pk.material) + ' / ' + textoOpcion('aislamiento-cc-dc', pk.aislamiento)]
+        ];
+        res = [
+            ['Tensión del banco', fmt(rk.tension_banco, null, 'V')],
+            ['Resistencia del banco', fmt(rk.resistencia_banco_mohm, 3, 'mΩ')],
+            ['Corriente de cortocircuito', fmt(rk.corriente_cortocircuito, null, 'A')],
+            ['Constante K', fmt(rk.constante_K)],
+            ['Sección mínima', fmt(rk.seccion_minima, 2, 'mm²') + ' (comercial ' + (rk.seccion_comercial ? rk.seccion_comercial + ' mm²' : '> 1000 mm²') + ')'],
+            ['Estado', rk.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE']
+        ];
+    }
+    cont.appendChild(bloqueReporte('3. Cortocircuito del banco de baterías', ent, res,
+        'Icc = V_banco/(N·R_elemento), en bornes y sin resistencia del cable (conservador); S = Icc·√t/K según NBR 5410.'));
+
+    var fin = calcularSeccionFinalDC();
+    var secFin = nodo('section', 'reporte-bloque reporte-final-bloque');
+    secFin.appendChild(nodo('h2', null, 'Sección final'));
+    secFin.appendChild(tablaReporte(
+        fin.criterios.map(function (c) { return ['Por ' + c.criterio.toLowerCase(), c.valor + ' mm²']; })
+            .concat([['Sección adoptada', fin.texto], ['Criterio más restrictivo', fin.criterio]])));
+    cont.appendChild(secFin);
+    cont.appendChild(pieReporte());
+    return cont;
+}
+
+/** Arma el reporte, lo imprime (o guarda como PDF desde el diálogo) y lo retira. */
+function imprimirReporte(constructor, actualizarResumen) {
+    actualizarResumen();
+    var destino = document.getElementById('reporte-impresion');
+    if (!destino) return;
+    destino.replaceChildren(constructor());
+    document.body.classList.add('imprimiendo-reporte');
+    var limpiar = function () {
+        document.body.classList.remove('imprimiendo-reporte');
+        destino.replaceChildren();
+        window.removeEventListener('afterprint', limpiar);
+    };
+    window.addEventListener('afterprint', limpiar);
+    window.print();
 }
 
 function generarReporteAC() {
-    actualizarResumenAC();
-    const contenido = document.getElementById('resultados-ac');
-    if (contenido) {
-        contenido.classList.add('print-active');
-        window.print();
-        setTimeout(() => contenido.classList.remove('print-active'), 1000);
-    }
+    imprimirReporte(construirReporteAC, actualizarResumenAC);
+}
+
+function generarReporteDC() {
+    imprimirReporte(construirReporteDC, actualizarResumenDC);
 }
 
 // ===================================================================

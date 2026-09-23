@@ -1,10 +1,10 @@
 # Plan de mejoras — Calculadora de conductores eléctricos
 
 ## Estado actual
-- **Último avance:** 2026-09-23 — v5.4.0: clase del conductor (flexible clase 5 / rígido clase 2) en caída de tensión AC y DC; una sola tabla de resistencias. Antes, v5.3.0: resistencia AC (IEC 60287) y reactancia INPACO Tabla 15 por disposición y frecuencia.
+- **Último avance:** 2026-09-23 — v5.5.0: memoria de cálculo imprimible/PDF (AC y DC) con datos de entrada, resultados, fuentes y sección final; conductor de protección sobre la sección adoptada; sección final DC con conductores por polo.
 - **Bloqueado:** fila #1 (aluminio) — falta la fuente: la red de la sesión en la nube bloquea `guiadaengenharia.com` y `br.prysmian.com`, y no hay PDF con tablas de aluminio en `documentos/`.
 - **Sin verificar:** los hooks en la PC de Marco (Windows, `$CLAUDE_PROJECT_DIR` con espacios en la ruta).
-- **Siguiente paso recomendado:** conseguir la fuente de la fila #1 (habilitar esos dominios o subir el PDF de NBR 5410 Tablas 36–39). Sin eso, las filas #3 y #4 (historial y reporte) no dependen de fuentes.
+- **Siguiente paso recomendado:** conseguir la fuente de la fila #1 (habilitar esos dominios o subir el PDF de NBR 5410 Tablas 36–39). Sin eso, la fila #3 (historial) no depende de fuentes.
 
 ## Backlog
 
@@ -13,7 +13,6 @@
 | 1 | Tablas reales de ampacidad de aluminio (NBR 5410 Tablas 36–39) en lugar del factor √(R_Cu/R_Al) | `calculations.js` `obtenerAmpacidadConductor`; INPACO solo publica cobre | Media | Claude (necesita la fuente en `documentos/`) |
 | 2 | Módulo de media tensión (NBR 14039, Mamede Tablas 3.28/3.29) si se necesita dimensionar cables de MT | Retirado en 5.0.0; el selector AC llega a 1000 V | Baja | Marco |
 | 3 | Mostrar el historial de cálculos (hoy se guarda en localStorage pero no hay pantalla) | `app.js` `guardarEnHistorial` | Baja | Claude |
-| 4 | Reporte imprimible con datos de entrada y fuentes (hoy imprime solo el resumen) | `app.js` `generarReporteAC/DC` | Baja | Claude |
 | 7 | Separar el CSS inline de `index.html` a `styles.css` | `index.html` | Baja | Claude |
 | 8 | Ideas a futuro: exportar PDF, modo oscuro, cálculo de canalización, comparar 2–3 secciones, catálogo de cables comerciales | — | Baja | Marco |
 

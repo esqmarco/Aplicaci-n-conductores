@@ -913,6 +913,32 @@ test('verificarCaidaTensionDC applies application limit', function() {
     assertTrue(!r.cumple_criterio);
 });
 
+test('DC final section with 2 conductors per pole: ampacity recalculated per conductor', function() {
+    const pAmp = { modoEntrada: 'corriente', corrienteDirecta: 80, material: 'cobre', temperatura: 30,
+        metodo: 'A1', aislamiento: 'PVC', agrupamiento: 1 };
+    const amp = { parametros: pAmp, resultado: dimensionarPorAmpacidadDC(pAmp) };
+    const pCaida = { corriente: 80, tensionSelector: '48', longitud: 20, conductoresPorPolo: 2, seccion: 16,
+        material: 'cobre', aislamiento: 'PVC' };
+    const caida = { parametros: pCaida, resultado: verificarCaidaTensionDC(pCaida) };
+    // Un conductor: 80 A / 1.15 = 69.6 A -> PVC A1 2c: 25 mm2 (70 A)
+    assertEqual(amp.resultado.seccion, 25);
+    const fin = calcularSeccionFinalDCDesde({ ampacidad: amp, caida: caida, cortocircuito: null });
+    // Por conductor: 40 A, 2 circuitos (fa 0.80) -> 40/(1.15*0.8) = 43.5 A -> 16 mm2 (53 A)
+    const porAmp = fin.criterios.filter(function(c) { return /Ampacidad/.test(c.criterio); })[0];
+    assertEqual(porAmp.valor, 16, 'ampacidad por conductor');
+    assertEqual(fin.np, 2);
+    assertTrue(/^2 × \d+ mm² por polo$/.test(fin.texto), fin.texto);
+});
+
+test('DC final section with 1 conductor per pole keeps the ampacity section', function() {
+    const pAmp = { modoEntrada: 'corriente', corrienteDirecta: 80, material: 'cobre', temperatura: 30,
+        metodo: 'A1', aislamiento: 'PVC', agrupamiento: 1 };
+    const fin = calcularSeccionFinalDCDesde({ ampacidad: { parametros: pAmp, resultado: dimensionarPorAmpacidadDC(pAmp) },
+        caida: null, cortocircuito: null });
+    assertEqual(fin.valor, 25);
+    assertEqual(fin.texto, '25 mm²');
+});
+
 test('calcularSeccionParaCaidaDC returns null when 300mm2 is not enough', function() {
     const s = calcularSeccionParaCaidaDC({ corriente: 500, tensionSelector: '12', longitud: 200, conductoresPorPolo: 1,
         material: 'cobre', aislamiento: 'PVC' });

@@ -2,6 +2,14 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Memoria de calculo (2026-09-23)
+
+### Un resultado derivado se calcula sobre el valor final, no sobre uno intermedio
+- **Que paso:** el conductor de proteccion se mostraba sobre la seccion por ampacidad (16 mm2) aunque la seccion adoptada, por cortocircuito, era 95 mm2 (PE correcto: 50 mm2). En DC, la seccion final combinaba la ampacidad de un conductor con la caida calculada para 2 por polo.
+- **Por que:** cada valor derivado se calculaba en la pestana donde nacio, sin mirar el resultado final.
+- **Como aplicarlo:** lo que depende de la seccion (PE, verificaciones) se calcula despues de decidir la seccion final, con las mismas condiciones (paralelo, conductores por polo).
+- **Destino ejecutable:** tests de `calcularSeccionFinalDCDesde`; `/verificar` paso 1 (consecuencias). El PE final no tiene test de node porque vive en app.js (se verifico en el navegador).
+
 ## Clase del conductor (2026-09-23)
 
 ### Un dato cargado dos veces termina con dos valores
