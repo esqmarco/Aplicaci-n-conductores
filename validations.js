@@ -231,6 +231,12 @@ function validarParametrosCaidaTensionDC(params) {
             errores.push('Aluminio: sección mínima 16 mm²');
         }
 
+        if (params.clase && !['rigido', 'flexible'].includes(params.clase)) {
+            errores.push('Clase del conductor debe ser rígido o flexible');
+        } else if (params.clase === 'flexible' && params.material && params.material.toLowerCase() === 'aluminio') {
+            errores.push('No existe conductor de aluminio flexible: elegir rígido (clase 2)');
+        }
+
         return {
             valido: errores.length === 0,
             errores: errores,
@@ -748,6 +754,14 @@ function validarParametrosCaidaTensionAC(params) {
             errores.push('Material del conductor es requerido');
         } else if (!['cobre', 'aluminio'].includes(params.material.toLowerCase())) {
             errores.push('Material debe ser cobre o aluminio');
+        } else if (params.material.toLowerCase() === 'aluminio' && parseFloat(params.seccion) < 16) {
+            errores.push('Aluminio: sección mínima 16 mm²');
+        }
+
+        if (params.clase && !['rigido', 'flexible'].includes(params.clase)) {
+            errores.push('Clase del conductor debe ser rígido o flexible');
+        } else if (params.clase === 'flexible' && params.material && params.material.toLowerCase() === 'aluminio') {
+            errores.push('No existe conductor de aluminio flexible: elegir rígido (clase 2)');
         }
 
         return {

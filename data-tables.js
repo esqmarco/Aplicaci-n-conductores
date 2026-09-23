@@ -91,15 +91,23 @@ const metodosInstalacion = {
 // ===================================================================
 
 const tabelasNBR = {
-    // Resistencias eléctricas en corriente continua a 20 °C (Ω/km)
-    // IEC 60228 / NBR NM 280, clase 2. Para caída de tensión se corrigen a la
-    // temperatura de servicio del conductor (ver calcularCaidaTensionAC).
+    // Resistencias eléctricas en corriente continua a 20 °C (Ω/km) - IEC 60228 / NBR NM 280.
+    // Se corrigen a la temperatura de servicio y a corriente alterna en calculations.js.
+    //  - cobre: clase 2 (rígido/cableado)
+    //  - cobre_flexible: clase 5 (flexible: Multifilar, Inpavinil, Inpatox). Multiplicada por
+    //    (1 + 0,00393·70) reproduce la Rca 90 °C de INPACO Tabla 15 (±1 % de 1,5 a 70 mm²).
+    //  - aluminio: clase 2 (IEC 60228 no define aluminio flexible)
     resistencias: {
         cobre: {
             0.5: 36.0, 0.75: 24.5, 1: 18.1, 1.5: 12.1, 2.5: 7.41, 4: 4.61, 6: 3.08,
             10: 1.83, 16: 1.15, 25: 0.727, 35: 0.524, 50: 0.387, 70: 0.268, 95: 0.193,
             120: 0.153, 150: 0.124, 185: 0.0991, 240: 0.0754, 300: 0.0601,
             400: 0.0470, 500: 0.0366, 630: 0.0283, 800: 0.0221, 1000: 0.0176
+        },
+        cobre_flexible: {
+            1.5: 13.3, 2.5: 7.98, 4: 4.95, 6: 3.30, 10: 1.91, 16: 1.21, 25: 0.780, 35: 0.554,
+            50: 0.386, 70: 0.272, 95: 0.206, 120: 0.161, 150: 0.129, 185: 0.106, 240: 0.0801,
+            300: 0.0641
         },
         aluminio: {
             16: 1.91, 25: 1.20, 35: 0.868, 50: 0.641, 70: 0.443,
@@ -616,14 +624,29 @@ function obtenerFactorAluminio(seccion) {
 }
 
 /**
- * Resistencia en corriente continua a 20 °C (Ω/km) por sección y material.
+ * Clase de conductor por defecto: flexible (clase 5) para cobre, rígido (clase 2) para aluminio.
  */
-function obtenerResistencia(material, seccion) {
-    const materialKey = material.toLowerCase() === 'aluminio' ? 'aluminio' : 'cobre';
-    const resistencia = tabelasNBR.resistencias[materialKey][seccion];
+function claseConductorPorDefecto(material) {
+    return String(material).toLowerCase() === 'aluminio' ? 'rigido' : 'flexible';
+}
+
+/**
+ * Resistencia en corriente continua a 20 °C (Ω/km) por material, sección y clase
+ * ('rigido' = clase 2, 'flexible' = clase 5).
+ */
+function obtenerResistencia(material, seccion, clase) {
+    const mat = String(material).toLowerCase();
+    if (mat !== 'cobre' && mat !== 'aluminio') throw new Error(`Material ${material} no soportado`);
+    const c = clase || claseConductorPorDefecto(mat);
+    if (c !== 'rigido' && c !== 'flexible') throw new Error(`Clase de conductor ${clase} no reconocida`);
+    if (mat === 'aluminio' && c === 'flexible') {
+        throw new Error('No existe conductor de aluminio flexible (IEC 60228 clase 5 es solo cobre)');
+    }
+    const clave = mat === 'aluminio' ? 'aluminio' : (c === 'flexible' ? 'cobre_flexible' : 'cobre');
+    const resistencia = tabelasNBR.resistencias[clave][seccion];
 
     if (resistencia === undefined) {
-        throw new Error(`Resistencia no disponible para ${materialKey} sección ${seccion} mm²`);
+        throw new Error(`Resistencia no disponible para ${mat} ${c} sección ${seccion} mm²`);
     }
 
     return resistencia;
@@ -641,6 +664,7 @@ window.obtenerFactorTemperatura = obtenerFactorTemperatura;
 window.obtenerFactorAgrupamento = obtenerFactorAgrupamento;
 window.obtenerFactorResistividadSuelo = obtenerFactorResistividadSuelo;
 window.obtenerFactorAluminio = obtenerFactorAluminio;
+window.claseConductorPorDefecto = claseConductorPorDefecto;
 window.obtenerResistencia = obtenerResistencia;
 
 
@@ -720,21 +744,13 @@ window.fatoresEspeciais = fatoresEspeciais;
 // ===================================================================
 
 const tabelasDC = {
-    // Resistencias DC a 20°C (Ω/km) - Fuente: Catálogos técnicos INPACO/Prysmian
+    // Resistencias DC a 20 °C (Ω/km): mismas tablas que AC (un dato, un dueño).
+    // Cobre: clase 5 (flexible, habitual en DC y baterías); aluminio: clase 2.
     resistenciasDC: {
-        cobre: {
-            1.5: 13.3,   2.5: 7.98,   4: 4.95,    6: 3.30,    10: 1.91,
-            16: 1.21,    25: 0.780,   35: 0.554,  50: 0.386,  70: 0.272,
-            95: 0.206,   120: 0.161,  150: 0.129, 185: 0.106, 240: 0.0801,
-            300: 0.0641, 400: 0.0505, 500: 0.0406, 630: 0.0324, 800: 0.0253
-        },
-        aluminio: {
-            16: 1.91,    25: 1.20,    35: 0.868,  50: 0.641,  70: 0.443,
-            95: 0.320,   120: 0.253,  150: 0.206, 185: 0.164, 240: 0.125,
-            300: 0.100,  400: 0.0778, 500: 0.0618, 630: 0.0490, 800: 0.0386
-        }
+        cobre: tabelasNBR.resistencias.cobre_flexible,
+        aluminio: tabelasNBR.resistencias.aluminio
     },
-    
+
     // Parámetros técnicos de baterías
     parametrosBaterias: {
         plomo_acido: {

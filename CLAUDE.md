@@ -21,6 +21,7 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Helpers: `obtenerAmpacidadBase()`, `obtenerFactorTemperatura()`, `obtenerFactorAgrupamento()`, `obtenerFactorResistividadSuelo()`, `obtenerFactorAluminio()`, `obtenerResistencia()`.
 - Aislaciones AC: PVC (70 °C); EPR_90 y HEPR (90 °C, misma tabla INPACO XLPE/HEPR). DC: PVC, EPR.
 - Conductores: cobre, aluminio (mínimo 16 mm²). Ampacidad de aluminio = cobre × √(R_Cu/R_Al).
+- Clase del conductor (IEC 60228) para resistencias: cobre flexible clase 5 (por defecto) o rígido clase 2; aluminio solo rígido. Una sola tabla de resistencias (`tabelasNBR.resistencias`) para AC y DC.
 - Métodos de instalación: A1, A2, B1, B2, C, D, E, F, G (INPACO Tabla 1 / NBR 5410). D es el único enterrado.
 - Tablas de ampacidad: INPACO 2021, cobre, 40 °C aire / 25 °C suelo, 1,0 K·m/W, 2 y 3 conductores cargados, hasta 300 mm². Corrientes mayores: conductores en paralelo.
 - Ampacidad AC solo para baja tensión (≤ 1000 V). Las tablas de media tensión (NBR 14039) no están en la app.

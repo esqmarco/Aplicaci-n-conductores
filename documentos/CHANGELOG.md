@@ -4,6 +4,17 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.4.0] - 2026-09-23 — Clase del conductor en caída de tensión (backlog #9)
+
+- **Quién:** Marco + Claude (Opus 5.5)
+- **Qué se hizo:**
+  - Selector de clase del conductor (IEC 60228) en Caída de Tensión AC y DC: flexible clase 5 (Multifilar, Inpavinil, Inpatox; por defecto en cobre) o rígido clase 2. El aluminio solo existe rígido: la opción flexible se deshabilita y la validación la rechaza.
+  - Fuente de la clase 5: multiplicada por el factor de 90 °C reproduce la Rca de INPACO Tabla 15 con ±1 % entre 1,5 y 70 mm² (test).
+  - Una sola tabla de resistencias para AC y DC (`tabelasNBR.resistencias`). Antes el aluminio estaba cargado dos veces con valores distintos desde 500 mm², y la clase 5 vivía solo en DC. Se retiraron los valores de clase 5 por encima de 300 mm², que ningún cálculo usa y no tenían contraste.
+  - La resistencia fuera de tabla ahora da error (antes DC calculaba con ρ/S sin avisar).
+- **Efecto en resultados:** caída AC con cobre, por defecto flexible: sube entre 0 % y ~10 % según la sección respecto de 5.3.0 (clase 2; en 50 mm² las dos clases casi coinciden). Eligiendo rígido se obtiene el valor anterior. DC no cambia por defecto.
+- **Tests:** 100.
+
 ## [5.3.0] - 2026-09-23 — Resistencia y reactancia AC con fuente (backlog #5 y #6)
 
 - **Quién:** Marco + Claude (Opus 5.5)

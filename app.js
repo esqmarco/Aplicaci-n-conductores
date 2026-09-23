@@ -47,7 +47,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Mostrar datos del suelo solo para el método enterrado (D)
     configurarFilaResistividad();
+
+    // Aluminio solo existe rígido: la clase acompaña al material
+    configurarClaseConductor('material-ct', 'clase-ct');
+    configurarClaseConductor('material-conductor-ct-dc', 'clase-ct-dc');
 });
+
+/**
+ * Con aluminio, la clase queda en rígido y la opción flexible se deshabilita.
+ * Se llama también después de propagar datos desde ampacidad.
+ */
+function ajustarClaseConductor(idMaterial, idClase) {
+    var mat = document.getElementById(idMaterial);
+    var clase = document.getElementById(idClase);
+    if (!mat || !clase) return;
+    var esAluminio = mat.value === 'aluminio';
+    var optFlex = clase.querySelector('option[value="flexible"]');
+    if (optFlex) optFlex.disabled = esAluminio;
+    if (esAluminio) clase.value = 'rigido';
+}
+
+function configurarClaseConductor(idMaterial, idClase) {
+    var mat = document.getElementById(idMaterial);
+    if (!mat) return;
+    mat.addEventListener('change', function () { ajustarClaseConductor(idMaterial, idClase); });
+    ajustarClaseConductor(idMaterial, idClase);
+}
 
 function configurarFilaResistividad() {
     var metodo = document.getElementById('metodo-instalacao');
@@ -300,6 +325,7 @@ function obtenerParametrosCaidaTensionAC() {
         conductoresPorFase: parseInt(document.getElementById('paralelo-ct')?.value) || 1,
         limite: parseFloat(document.getElementById('limite-ct')?.value) || 4,
         disposicion: document.getElementById('disposicion-ct')?.value || 'trebol',
+        clase: document.getElementById('clase-ct')?.value || undefined,
         frecuencia: parseFloat(document.getElementById('frecuencia-ct')?.value) || 50
     };
 }
@@ -362,6 +388,7 @@ function obtenerParametrosCaidaTensionDC() {
         seccion: parseFloat(document.getElementById('seccion-ct-dc').value),
         material: document.getElementById('material-conductor-ct-dc') ? document.getElementById('material-conductor-ct-dc').value : 'cobre',
         aislamiento: document.getElementById('aislamiento-ct-dc') ? document.getElementById('aislamiento-ct-dc').value : 'PVC',
+        clase: document.getElementById('clase-ct-dc')?.value || undefined,
         aplicacionDC: document.getElementById('aplicacion-dc')?.value || 'general',
     };
 }
@@ -406,7 +433,10 @@ function propagarDatosAmpacidadDC(parametros, resultado) {
 
     // Material
     var matCTDC = document.getElementById('material-conductor-ct-dc');
-    if (matCTDC && parametros.material) matCTDC.value = parametros.material;
+    if (matCTDC && parametros.material) {
+        matCTDC.value = parametros.material;
+        ajustarClaseConductor('material-conductor-ct-dc', 'clase-ct-dc');
+    }
 
     // Aislamiento
     var aisCTDC = document.getElementById('aislamiento-ct-dc');
@@ -597,6 +627,7 @@ function propagarDatosAmpacidadAC(parametros, resultado) {
     var matCT = document.getElementById('material-ct');
     if (matCT && parametros.materialCondutor) {
         matCT.value = parametros.materialCondutor;
+        ajustarClaseConductor('material-ct', 'clase-ct');
     }
 
     // Aislamiento (define la temperatura de servicio para la resistencia)
@@ -706,6 +737,7 @@ function mostrarResultadosCaidaTensionAC(resultado) {
     if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '% (l\u00EDmite ' + resultado.limite + '%)';
     setTexto('caida-tension-volts', resultado.caidaTensionV.toFixed(2) + ' V');
     setTexto('resistencia-ct', 'R ' + resultado.resistencia + ' / X ' + resultado.reactancia + ' \u03A9/km (' +
+        (resultado.clase === 'flexible' ? 'flexible' : 'r\u00EDgido') + ', ' +
         resultado.temperaturaConductor + ' \u00B0C, ' + resultado.frecuencia + ' Hz)');
     setTexto('seccion-minima-ct', resultado.seccionMinimaCaida
         ? resultado.seccionMinimaCaida.seccion + ' mm\u00B2'
