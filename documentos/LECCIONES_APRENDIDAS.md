@@ -2,6 +2,14 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Aluminio (2026-09-23)
+
+### "Del lado seguro" es una afirmacion que se mide
+- **Que paso:** el factor de aluminio √(R_Cu/R_Al) tenia un comentario que decia quedar del lado seguro frente a NBR. Con la tabla real, en los metodos C, E y F con 2 conductores sobrestimaba la ampacidad hasta 7 %.
+- **Por que:** se comparo contra un valor tipico recordado (~0,78), no contra la tabla por metodo.
+- **Como aplicarlo:** toda afirmacion de conservadurismo se prueba contra la fuente en todos los casos, no en uno.
+- **Destino ejecutable:** tests de aluminio por metodo y el test que contrasta la tabla NBR de cobre contra INPACO.
+
 ## Historial (2026-09-23)
 
 ### Un efecto secundario no puede tumbar el resultado principal

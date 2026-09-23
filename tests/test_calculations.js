@@ -789,12 +789,49 @@ test('Bifasico is sized with 3 loaded conductors (conservative)', function() {
     assertEqual(r.conductoresCargados, 3);
 });
 
-test('Aluminio ampacity = cobre x sqrt(RCu/RAl), min 16mm2', function() {
+test('Aluminio ampacity = INPACO cobre x Al/Cu of NBR 5410 (same method, insulation, conductors)', function() {
     const r = dimensionarPorAmpacidadAC(Object.assign({}, baseAC, { corrienteDirecta: 40, tipoSistema: 'trifasico', materialCondutor: 'aluminio' }));
-    // B1 3c 16mm2 cobre = 59 A -> Al = 59 * sqrt(1.15/1.91) = 45.8 A
+    // INPACO B1 3c PVC 16 mm2 = 59 A; NBR Tabla 36 B1 3c 16 mm2: Cu 68 / Al 53 -> 59 * 53/68 = 46.0 A
     assertEqual(r.seccion, 16);
-    assertClose(r.ampacidad, 45.8, 0.05, 'Al ampacity');
-    assertTrue(r.advertencias.length > 0, 'Warn about aluminium estimate');
+    assertClose(r.ampacidad, 46.0, 0.05, 'Al ampacity');
+    assertTrue(r.advertencias.length > 0, 'Aviso de origen del dato de aluminio');
+});
+
+test('Aluminio: NBR ratio replaces the old estimate where it was non-conservative (XLPE C 2c 25 mm2)', function() {
+    // INPACO C 2c XLPE 25 mm2 = 125 A; NBR Tabla 37 C 2c 25: Cu 138 / Al 101 -> 91.5 A
+    // (el factor viejo sqrt(R_Cu/R_Al) daba ~97 A: 6 % de más)
+    assertClose(obtenerAmpacidadConductor('EPR_90', 'C', 25, 2, 'aluminio'), 91.5, 0.05);
+});
+
+test('Aluminio: methods E/F/G use the same columns as copper (G = vertical spaced)', function() {
+    // INPACO G PVC 300 mm2 = 573 A; NBR Tabla 38 G vertical 300: Cu 659 / Al 519 -> 451.3 A
+    assertClose(obtenerAmpacidadConductor('PVC', 'G', 300, 3, 'aluminio'), 451.3, 0.05);
+    assertClose(obtenerFactorAluminio(300, 'PVC', 'G', 2), 519 / 659, 1e-9, 'G sin columna de 2 conductores: usa la de 3');
+});
+
+test('Aluminio in DC uses the 2-conductor ratio', function() {
+    // INPACO B1 2c PVC 16 = 66 A; NBR Tabla 36 B1 2c 16: Cu 76 / Al 60 -> 52.1 A
+    assertClose(obtenerAmpacidadBaseDC('aluminio', 'B1', 16, 'PVC'), 52.1, 0.05);
+});
+
+test('NBR copper columns x 40 C factor match INPACO within 2% (transcription check)', function() {
+    // NBR 5410 a 30 C x 0.87 (PVC) / 0.91 (XLPE) = INPACO a 40 C, salvo redondeo del catálogo
+    const t = window.tabelasNBR.ampacidadesNBR_CuAl;
+    let n = 0, max = 0;
+    [['PVC', 0.87], ['XLPE_HEPR', 0.91]].forEach(function(par) {
+        Object.keys(t[par[0]]).forEach(function(met) {
+            if (met === 'D') return; // suelo: referencias distintas (20 C y 2,5 K.m/W vs 25 C y 1,0)
+            Object.keys(t[par[0]][met]).forEach(function(nc) {
+                Object.keys(t[par[0]][met][nc]).forEach(function(s) {
+                    const cuNBR = t[par[0]][met][nc][s][0];
+                    const cuINPACO = obtenerAmpacidadBase(par[0], met, parseFloat(s), parseInt(nc, 10));
+                    max = Math.max(max, Math.abs(cuNBR * par[1] / cuINPACO - 1)); n++;
+                });
+            });
+        });
+    });
+    assertTrue(n >= 180, 'celdas comparadas: ' + n);
+    assertTrue(max <= 0.02, 'desvio max ' + (100 * max).toFixed(2) + ' %');
 });
 
 test('Demand factor is applied in power mode', function() {

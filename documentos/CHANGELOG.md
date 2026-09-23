@@ -4,6 +4,17 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.7.0] - 2026-09-23 — Ampacidad de aluminio con NBR 5410 (backlog #1)
+
+- **Quién:** Marco + Claude (Opus 5.5)
+- **Qué se hizo:**
+  - Fuente nueva en el repo: `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv` (NBR 5410:2004 comentada, Tablas 36 a 39, pp. 101–104), aportada por Marco. El Excel de origen no se versiona: el CSV es la fuente.
+  - Validación antes de usarla: CSV = Excel en las 418 celdas; las 38 series son crecientes con Al < Cu y 3c ≤ 2c; la columna de cobre, llevada a 40 °C (×0,87 PVC / ×0,91 XLPE), coincide con INPACO con desvío máx. 1,5 % (medio 0,03 %). Esta última comparación quedó como test.
+  - Ampacidad de aluminio = cobre INPACO × (I_Al/I_Cu) de NBR para el mismo método, aislación y conductores cargados (E/F/G con las mismas columnas que el cobre). Reemplaza la estimación √(R_Cu/R_Al), cuyo comentario decía que quedaba del lado seguro sin haberse verificado.
+  - AC y DC usan la misma relación (DC con la columna de 2 conductores).
+- **Efecto en resultados:** la ampacidad de aluminio cambia entre −6,9 % (XLPE E 2c) y +4,6 % (XLPE B2 3c) respecto de 5.6.0. Los métodos C, E y F con 2 conductores eran los más sobrestimados (−5 a −7 %).
+- **Tests:** 106.
+
 ## [5.6.0] - 2026-09-23 — Pestaña Historial (backlog #3)
 
 - **Quién:** Marco + Claude (Opus 5.5)
