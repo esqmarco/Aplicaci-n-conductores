@@ -145,15 +145,23 @@ function calcularCorrienteTransformador(parametros) {
 // DIMENSIONAMIENTO AC COMPLETO POR AMPACIDAD
 // ===================================================================
 
+/**
+ * Sección mínima de cobre por tipo de circuito — NBR 5410 §6.2.6.1.1, Tabla 47 ("seções mínimas
+ * ditadas por razões mecânicas"): iluminación 1,5 mm²; fuerza 2,5 mm² (nota 2: las tomas son
+ * circuitos de fuerza). Los alimentadores son circuitos de fuerza: la Tabla 47 no los distingue y
+ * ninguna fuente del corpus (NBR 5410, Mamede, criterios de Itaipu R1A y 2023) fija un mínimo propio.
+ * Aluminio: 16 mm² (se aplica aparte).
+ */
 function obtenerSeccionMinimaNBR(tipoCircuito) {
     const minimos = {
         'iluminacion': 1.5,
         'tomadas': 2.5,
         'fuerza': 2.5,
-        'alimentador': 6,
+        'alimentador': 2.5,
         'general': 1.5
     };
-    return minimos[tipoCircuito] || 1.5;
+    if (!(tipoCircuito in minimos)) throw new Error(`Tipo de circuito "${tipoCircuito}" no reconocido`);
+    return minimos[tipoCircuito];
 }
 
 /**

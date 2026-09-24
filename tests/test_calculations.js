@@ -648,12 +648,13 @@ test('obtenerSeccionMinimaNBR returns 2.5 for tomadas', function() {
     assertEqual(obtenerSeccionMinimaNBR('tomadas'), 2.5, 'Tomadas min');
 });
 
-test('obtenerSeccionMinimaNBR returns 6 for alimentador', function() {
-    assertEqual(obtenerSeccionMinimaNBR('alimentador'), 6, 'Alimentador min');
+test('obtenerSeccionMinimaNBR: feeder is a power circuit, 2.5 mm2 (NBR 5410 Table 47)', function() {
+    assertEqual(obtenerSeccionMinimaNBR('alimentador'), 2.5, 'Alimentador min');
 });
 
-test('obtenerSeccionMinimaNBR returns 1.5 for unknown type', function() {
-    assertEqual(obtenerSeccionMinimaNBR('desconocido'), 1.5, 'Unknown defaults to 1.5');
+test('obtenerSeccionMinimaNBR: unknown circuit type is an error, not 1.5', function() {
+    let lanzo = false; try { obtenerSeccionMinimaNBR('desconocido'); } catch (e) { lanzo = true; }
+    assertTrue(lanzo);
 });
 
 // ===================================================================
@@ -1226,6 +1227,17 @@ test('Battery type without table value is an error, not 2.0 V', function() {
 test('Verdict colors never overwrite the base class (ponerEstado keeps result-value / reporte-valor)', function() {
     const pisa = appJs.match(/className\s*=[^;]*resultado-(ok|error)/g);
     assertTrue(!pisa, 'className pisa la clase base: ' + (pisa || []).join(' | '));
+});
+
+test('Minimum copper section by circuit type follows NBR 5410 Table 47 (feeder = power circuit, 2.5 mm2)', function() {
+    assertEqual(obtenerSeccionMinimaNBR('iluminacion'), 1.5);
+    assertEqual(obtenerSeccionMinimaNBR('tomadas'), 2.5);
+    assertEqual(obtenerSeccionMinimaNBR('fuerza'), 2.5);
+    // 10 A trifásico en B1: por ampacidad basta 1,5 mm²; como alimentador sube a 2,5 mm² (ya no 6)
+    const r = dimensionarPorAmpacidadAC({ modoEntrada: 'corriente', corrienteDirecta: 10, tension: 380, factorPotencia: 0.85,
+        tipoSistema: 'trifasico', materialAislamento: 'PVC', materialCondutor: 'cobre', temperaturaAmbiente: 40,
+        metodoInstalacao: 'B1', agrupamento: 1, tipoCircuito: 'alimentador' });
+    assertEqual(r.seccion, 2.5);
 });
 
 test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {

@@ -4,6 +4,24 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.13.0] - 2026-09-24 — Sección mínima de alimentadores 2,5 mm² (backlog #11)
+
+- **Quién:** Marco + Claude
+- **Decisión de Marco (2026-09-24):** bajar el mínimo de 6 mm² a 2,5 mm².
+- **Fuente:** NBR 5410 §6.2.6.1.1, Tabla 47: un alimentador es un circuito de fuerza, con mínimo de 2,5 mm² Cu y 16 mm² Al.
+- **Búsqueda en el corpus de Marco:**
+  - NBR 5410, Mamede y los criterios de Itaipu R1A y 2023 no fijan un mínimo propio para alimentadores.
+  - La AEA 90364-7-770 (Argentina) pide 4 mm², pero no se usa.
+  - El único 6 mm² que aparece (REBT ITC-BT-07) es para redes subterráneas de distribución pública.
+- **Qué se hizo:**
+  - `obtenerSeccionMinimaNBR('alimentador')` devuelve 2,5, con la cita en el comentario.
+  - Un tipo de circuito desconocido ahora da error; antes caía en 1,5 mm² en silencio.
+  - La etiqueta del selector dice "min 2.5mm²".
+  - Se reemplazaron los dos tests que fijaban los valores viejos.
+- **Efecto en resultados:** solo cambia si se elige "Alimentador" y la ampacidad pedía menos de 6 mm². Ejemplo: 10 A en B1 pasa de 6 a 2,5 mm².
+- **Al backlog:** #17, el cableado interno de tableros según Itaipu (control 1,5 mm², TC 4 mm²), y #18, la puesta a tierra de 35 mm² según Itaipu.
+- **Tests:** 136.
+
 ## [5.12.0] - 2026-09-24 — Lote: motor DC, cables de control, métodos DC, limpieza y CSS (backlog #15, #16, #10, #13, #7)
 
 - **Quién:** Marco + Claude
