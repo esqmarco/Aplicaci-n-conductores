@@ -3,6 +3,7 @@
 ## Estado actual
 - **Último avance:** 2026-09-24 — v5.10.0: los límites de caída DC salen de los criterios de Itaipu #ITA0&EEC010-01 R1A (GE, 2026) §10.3.2: batería → carga 5 %, cargador → batería 3 %. Reemplazan los seis valores por aplicación y el criterio por tensión, que no tenían fuente. En AC se sumó la opción 10 % (fuente → primario de trafo con TAPs, R1A §10.3.1).
 - **Sin verificar:** qué revisión de los criterios de Itaipu está aprobada. La R1A 2026 cambia valores respecto de la versión 2023; si el informe es formal, confirmarlo con Ingeniería. También quedan sin verificar los hooks en la PC de Marco (Windows), la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión y Safari/Firefox.
+- **Pendiente de fusión:** el PR con la v5.10.0 (límites R1A).
 - **Siguiente paso recomendado:** que Marco decida la fila #14 (caída en la partida de motores): es el criterio de la R1A que la app todavía no verifica.
 
 ## Backlog
@@ -16,6 +17,7 @@
 | 13 | Quitar código y datos sin uso: `validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`; la sincronización DC (`rellenarSiVacio` sobre selects, no hace nada); `seccionesNominalesDC` (incluye 400–800 sin tabla), `tensionesNominalesDC`, `parametrosBaterias` | Auditoría 2026-09-23 | Baja | Claude |
 | 14 | Caída de tensión en la partida de motores (Itaipu R1A §10.3.1.3): 10 % en bornes del motor. Considera todo el sistema de BT, desde el motor hasta el primario del trafo reductor. Sin datos del fabricante: Ip = 6·In, cosφ = 0,3. Es interfaz nueva: se propone antes de hacerla | Criterios R1A, pp. 35–37 | Media | Marco |
 | 15 | Alimentadores de motores DC dimensionados al 125 % de la corriente (Itaipu R1A §10.3.2) | Criterios R1A | Baja | Marco |
+| 16 | Cables de control (Itaipu R1A §10.3.3): la caída solo se verifica en cables que accionan solenoides (válvulas, bobinas de interruptores) con recorrido mayor que 400 m. Hoy la app no distingue cables de control | Criterios R1A | Baja | Marco |
 | 8 | Ideas a futuro: exportar PDF, modo oscuro, cálculo de canalización, comparar 2–3 secciones, catálogo de cables comerciales | — | Baja | Marco |
 
 ## Decisiones vigentes
