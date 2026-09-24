@@ -1068,7 +1068,7 @@ function calcularConductorProteccion(seccionFase, parametrosCC) {
 // EXPORTACIONES
 // ===================================================================
 
-console.log('✅ Calculations.js R5 cargado - AC + DC con tablas INPACO');
+console.log('✅ Calculations.js cargado');
 
 window.SECCIONES_COMERCIALES = SECCIONES_COMERCIALES;
 window.SECCIONES_TABLA = SECCIONES_TABLA;

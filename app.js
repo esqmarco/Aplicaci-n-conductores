@@ -39,8 +39,6 @@ document.addEventListener('DOMContentLoaded', function () {
         tipoEl.addEventListener('change', actualizarResistenciaInterna);
     }
 
-    // Sincronizacion silenciosa de pestanas DC
-
     // Validacion en tiempo real
     configurarValidacionEnTiempoReal();
 
@@ -771,7 +769,7 @@ function mostrarResultadosCaidaTensionAC(resultado) {
     var elStatus = document.getElementById('caida-tension-status');
     if (elStatus) {
         elStatus.textContent = textoEstadoCaida(resultado.cumple, resultado.exigida);
-        elStatus.className = resultado.exigida === false ? '' : (resultado.cumple ? 'resultado-ok' : 'resultado-error');
+        ponerEstado(elStatus, resultado.exigida === false ? null : !!resultado.cumple);
     }
     mostrarResultadosPartida(resultado.partida);
 }
@@ -798,7 +796,7 @@ function mostrarResultadosPartida(rp) {
     setTexto('partida-caida-valor', textoPct(rp.caidaTotalPct, rp.limite, rp.cumple) + ' (l\u00EDmite ' + rp.limite + '%)');
     var st = document.getElementById('partida-status');
     st.textContent = rp.cumple ? 'CUMPLE' : 'NO CUMPLE';
-    st.className = rp.cumple ? 'resultado-ok' : 'resultado-error';
+    ponerEstado(st, !!rp.cumple);
     setTexto('partida-corriente', rp.corrientePartida.toFixed(1) + ' A');
     setTexto('partida-seccion-minima', rp.seccionMinima ? rp.seccionMinima.seccion + ' mm\u00B2'
         : 'Ninguna \u2264 300 mm\u00B2 (revisar alimentador / trafo)');
@@ -884,13 +882,30 @@ function mostrarResultadosCortocircuitoAC(resultado) {
     var elStatus = document.getElementById('cortocircuito-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
-        elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
+        ponerEstado(elStatus, !!resultado.cumple);
     }
 }
 
 // ===================================================================
 // RESUMEN CONSOLIDADO AC
 // ===================================================================
+
+/**
+ * Color de un estado sin tocar la clase base del elemento (result-value / reporte-valor).
+ * ok: true → verde, false → rojo, null → neutro.
+ */
+function ponerEstado(el, ok) {
+    if (!el) return;
+    el.classList.remove('resultado-ok', 'resultado-error');
+    if (ok === true) el.classList.add('resultado-ok');
+    else if (ok === false) el.classList.add('resultado-error');
+}
+
+/** Estado de un criterio sin cálculo vigente: texto y color neutros (AC y DC). */
+function limpiarEstadoResumen(id) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = '--'; ponerEstado(el, null); }
+}
 
 function actualizarResumenAC() {
     var proyecto = appState.calculos.proyecto;
@@ -914,17 +929,17 @@ function actualizarResumenAC() {
         var elEstadoCaida = document.getElementById('resumen-estado-caida-ac');
         if (elEstadoCaida) {
             elEstadoCaida.textContent = textoEstadoCaida(caida.resultado.cumple, caida.resultado.exigida);
-            elEstadoCaida.className = caida.resultado.exigida === false ? '' : (caida.resultado.cumple ? 'resultado-ok' : 'resultado-error');
+            ponerEstado(elEstadoCaida, caida.resultado.exigida === false ? null : !!caida.resultado.cumple);
         }
     } else {
         setTexto('resumen-caida-ac', 'No calculado');
-        setTexto('resumen-estado-caida-ac', '--');
+        limpiarEstadoResumen('resumen-estado-caida-ac');
     }
     var rpart = caida && caida.resultado && caida.resultado.partida;
     var elPart = document.getElementById('resumen-partida-ac');
     if (elPart) {
         elPart.textContent = rpart ? textoPct(rpart.caidaTotalPct, rpart.limite, rpart.cumple) + ' \u2014 ' + (rpart.cumple ? 'CUMPLE' : 'NO CUMPLE') : 'No verificada';
-        elPart.className = rpart ? (rpart.cumple ? 'resultado-ok' : 'resultado-error') : '';
+        ponerEstado(elPart, rpart ? !!rpart.cumple : null);
     }
 
     // Cortocircuito
@@ -933,11 +948,11 @@ function actualizarResumenAC() {
         var elEstadoCC = document.getElementById('resumen-estado-cc-ac');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
-            elEstadoCC.className = cc.resultado.cumple ? 'resultado-ok' : 'resultado-error';
+            ponerEstado(elEstadoCC, !!cc.resultado.cumple);
         }
     } else {
         setTexto('resumen-cc-ac', 'No calculado');
-        setTexto('resumen-estado-cc-ac', '--');
+        limpiarEstadoResumen('resumen-estado-cc-ac');
     }
 
     // Determinar seccion final (criterio mas restrictivo)
@@ -1156,7 +1171,7 @@ function mostrarResultadosCaidaTensionDC(resultado) {
     var elStatus = document.getElementById('caida-tension-dc-status');
     if (elStatus) {
         elStatus.textContent = textoEstadoCaida(resultado.cumple_criterio, resultado.exigida);
-        elStatus.className = resultado.exigida === false ? '' : (resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error');
+        ponerEstado(elStatus, resultado.exigida === false ? null : !!resultado.cumple_criterio);
     }
 
     var elRes = document.getElementById('resistencia-real-dc');
@@ -1225,7 +1240,7 @@ function mostrarResultadosCortocircuitoDC(resultado) {
     var elStatus = document.getElementById('cortocircuito-dc-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
-        elStatus.className = resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
+        ponerEstado(elStatus, !!resultado.cumple_criterio);
     }
 }
 
@@ -1255,11 +1270,11 @@ function actualizarResumenDC() {
         setTexto('resumen-caida-tension', textoPct(caida.resultado.caida_tension_pct, caida.resultado.limite_pct, caida.resultado.cumple_criterio));
         if (elEstado) {
             elEstado.textContent = textoEstadoCaida(caida.resultado.cumple_criterio, caida.resultado.exigida);
-            elEstado.className = caida.resultado.exigida === false ? '' : (caida.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error');
+            ponerEstado(elEstado, caida.resultado.exigida === false ? null : !!caida.resultado.cumple_criterio);
         }
     } else {
         setTexto('resumen-caida-tension', 'No calculado');
-        if (elEstado) { elEstado.textContent = '--'; elEstado.className = ''; }
+        limpiarEstadoResumen('resumen-estado-caida');
     }
 
     var elEstadoCC = document.getElementById('resumen-estado-cc');
@@ -1267,11 +1282,11 @@ function actualizarResumenDC() {
         setTexto('resumen-corriente-cc', cc.resultado.corriente_cortocircuito + ' A');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
-            elEstadoCC.className = cc.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
+            ponerEstado(elEstadoCC, !!cc.resultado.cumple_criterio);
         }
     } else {
         setTexto('resumen-corriente-cc', 'No calculado');
-        if (elEstadoCC) { elEstadoCC.textContent = '--'; elEstadoCC.className = ''; }
+        limpiarEstadoResumen('resumen-estado-cc');
     }
 
     determinarSeccionFinalDC();
@@ -1335,7 +1350,7 @@ function resetearFormulario(pestana) {
         'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
         'caida-tension': ['corriente-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
         'cortocircuito': ['potencia-cc', 'tension-cc', 'tiempo-despeje', 'seccion-cc'],
-        'ampacidad-dc': ['potencia-dc', 'tension-dc', 'tension-personalizada'],
+        'ampacidad-dc': ['potencia-dc', 'corriente-directa-dc', 'rendimiento-dc', 'tension-dc', 'tension-personalizada'],
         'caida-tension-dc': ['corriente-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
         'cortocircuito-dc': ['elementos-serie', 'capacidad-bateria', 'resistencia-interna']
     };
@@ -1564,8 +1579,11 @@ function construirReporteAC() {
                 fin.valor ? ['Conductor de protección (sobre la sección adoptada)',
                     textoConductorProteccion({ seccion: fin.valor, conductoresPorFase: fin.nParalelo })] : null])));
     // Caída y partida se recalculan con el paralelo de la ampacidad si la pestaña usó otro
-    if (pr && ct && pr.resultado && (pr.resultado.conductoresPorFase || 1) !== ct.parametros.conductoresPorFase) {
-        secFin.appendChild(nodo('p', 'reporte-alerta', 'La caída de tensión' + (ct.resultado.partida ? ' y la partida' : '') +
+    var caidaCuenta = ct && ct.resultado && ct.resultado.exigida !== false;
+    if (pr && ct && pr.resultado && (caidaCuenta || ct.resultado.partida) &&
+        (pr.resultado.conductoresPorFase || 1) !== ct.parametros.conductoresPorFase) {
+        var recalculadas = [caidaCuenta ? 'la caída de tensión' : null, ct.resultado.partida ? 'la partida' : null].filter(Boolean);
+        secFin.appendChild(nodo('p', 'reporte-alerta', recalculadas.join(' y ').replace(/^./, function (c) { return c.toUpperCase(); }) +
             ' se recalcularon con ' + (pr.resultado.conductoresPorFase || 1) + ' conductor(es) por fase (los de la ampacidad); ' +
             'la pestaña Caída usó ' + ct.parametros.conductoresPorFase + '.'));
     }

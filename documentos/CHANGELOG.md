@@ -25,7 +25,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Se quitaron las funciones de validación sin uso (`validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`), la sincronización DC que no hacía nada y los datos sin uso (`parametrosBaterias`, `tensionesNominalesDC`, `seccionesNominalesDC`).
   - `obtenerTensionElementoBateria` caía en 2,0 V con un tipo desconocido; ahora da error.
 - **#7:** el CSS pasa de `index.html` a `styles.css`. `metodo.json` cuenta `.css` como código.
-- **Tests:** 134. Pasan todos en Chromium: estilos, motor DC con y sin rendimiento, método D en DC, cables de control en AC y DC, reporte e historial. A 360 px no hay scroll y no hay errores de consola.
+- **Auditoría** (`documentos/auditorias/AUDITORIA_2026-09-24.md`), corregido:
+  - Los estados CUMPLE/NO CUMPLE pisaban la clase base; ahora usan `ponerEstado` y hay un chequeo estático.
+  - El resumen AC dejaba el color del estado anterior cuando no había cálculo.
+  - El reporte hablaba de recalcular una caída no exigida.
+  - Limpiar en Ampacidad DC no borraba la corriente ni el rendimiento.
+  - El historial no mostraba "no exigida".
+  - El pie de la página y el log tenían "R5".
+- **Tests:** 135. Pasan todos en Chromium: estilos, motor DC con y sin rendimiento, método D en DC, cables de control en AC y DC, reporte e historial. A 360 px no hay scroll y no hay errores de consola.
 
 ## [5.11.0] - 2026-09-24 — Caída de tensión en la partida de motores (backlog #14)
 

@@ -1223,6 +1223,11 @@ test('Battery type without table value is an error, not 2.0 V', function() {
     assertEqual(obtenerTensionElementoBateria('litio'), 3.2);
 });
 
+test('Verdict colors never overwrite the base class (ponerEstado keeps result-value / reporte-valor)', function() {
+    const pisa = appJs.match(/className\s*=[^;]*resultado-(ok|error)/g);
+    assertTrue(!pisa, 'className pisa la clase base: ' + (pisa || []).join(' | '));
+});
+
 test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {
     const r = dimensionarPorAmpacidadAC({ modoEntrada: 'potencia', potencia: 50, unidadPotencia: 'CV', tension: 380,
         factorPotencia: 0.85, rendimiento: 0.92, factorDemanda: 1, tipoSistema: 'trifasico', materialAislamento: 'PVC',
