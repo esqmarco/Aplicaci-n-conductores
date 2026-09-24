@@ -2,6 +2,19 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Partida de motores (2026-09-24)
+
+### Una "cota superior" se comprueba en cada sistema, no en el caso tipico
+- **Que paso:** la caida del trafo (I/In × Z) se presento como cota superior. En bifasico (carga F-F) la corriente pasa por dos devanados y la caida real es 2/√3 veces mayor; la app subestimaba un 13 %. La revision independiente lo encontro.
+- **Por que:** la formula se verifico en trifasico y se extendio a mono y bifasico sin rehacer la deduccion.
+- **Como aplicarlo:** una formula que depende del sistema se deduce y se testea en monofasico, bifasico y trifasico.
+- **Destino ejecutable:** tests del trafo en monofasico y bifasico; el caso trifasico esta en el test de los tres tramos.
+
+### El numero que se muestra tiene que coincidir con el veredicto
+- **Que paso:** el veredicto usaba el valor exacto (leccion de la auditoria) y la pantalla el redondeado: "10,00 % NO CUMPLE".
+- **Como aplicarlo:** todo porcentaje junto a CUMPLE / NO CUMPLE pasa por `textoPct`.
+- **Destino ejecutable:** test estatico "Drop percentages shown next to a verdict go through textoPct".
+
 ## Auditoria general (2026-09-23)
 
 ### Un calculo guardado vale solo mientras sus entradas no cambian

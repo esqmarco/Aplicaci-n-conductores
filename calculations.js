@@ -500,17 +500,20 @@ function calcularCaidaPartidaMotor(parametros) {
         tramos.push({ tramo: 'Alimentador', corriente: Iarriba, factorPotencia: fpArriba, caidaPct: rAl.caidaTensionPctExacta });
     }
 
-    // 3. Transformador (trifásico): ΔV% = (I / In_trafo) × Z%
+    // 3. Transformador (trifásico): ΔV% = f × (I / In_trafo) × Z%
     //    In_trafo = S / (√3·V) con V entre fases (tri y bifásico); en monofásico V es
     //    fase-neutro de un trafo trifásico: In_trafo = S / (3·V).
+    //    f = 1 en tri y monofásico. En bifásico (carga F-F) la corriente pasa por dos
+    //    impedancias de fase: ΔV = 2·I·Zfase / Vff → f = 2/√3.
     if (parametros.trafo) {
         const S = parseFloat(parametros.trafo.potenciaKVA), Z = parseFloat(parametros.trafo.impedanciaPct);
         if (!(S > 0)) throw new Error('Potencia del transformador debe ser mayor que 0');
         if (!(Z > 0 && Z < 30)) throw new Error('Impedancia del transformador debe estar entre 0 y 30 %');
         const V = parseFloat(c.tension);
         const InT = c.tipoSistema === 'monofasico' ? S * 1000 / (3 * V) : S * 1000 / (Math.sqrt(3) * V);
+        const f = c.tipoSistema === 'bifasico' ? 2 / Math.sqrt(3) : 1;
         tramos.push({ tramo: 'Transformador', corriente: Iarriba, factorPotencia: fpArriba,
-            caidaPct: Iarriba / InT * Z, corrienteNominalTrafo: Math.round(InT * 10) / 10 });
+            caidaPct: f * Iarriba / InT * Z, corrienteNominalTrafo: Math.round(InT * 10) / 10 });
     }
 
     // Se decide con la suma exacta; se muestran valores redondeados

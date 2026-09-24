@@ -745,6 +745,13 @@ function calcularCaidaTension() {
             var pp = parametrosPartidaDesdeCaida(parametros);
             resultado.partida = calcularCaidaPartidaMotor(pp);
             resultado.partida.seccionMinima = calcularSeccionMinimaPartida(pp);
+            // La corriente de la pestaña es la In del motor: si vino de Ampacidad con factor de
+            // demanda < 1, la Ip queda reducida en la misma proporción (del lado inseguro)
+            var pr = appState.calculos.proyecto;
+            if (pr && pr.resultado && pr.resultado.factorDemanda < 1 && Math.abs(pr.resultado.corriente - parametros.corriente) < 0.01) {
+                mostrarMensaje('Partida: la corriente viene de Ampacidad con factor de demanda ' + pr.resultado.factorDemanda +
+                    '. Para la partida ingresá la corriente nominal del motor (sin factor de demanda).', 'advertencia');
+            }
         }
 
         // Mostrar resultados
@@ -781,7 +788,7 @@ function mostrarResultadosCaidaTensionAC(resultado) {
     }
 
     var elPct = document.getElementById('caida-tension-valor');
-    if (elPct) elPct.textContent = resultado.caidaTensionPct.toFixed(2) + '% (l\u00EDmite ' + resultado.limite + '%)';
+    if (elPct) elPct.textContent = textoPct(resultado.caidaTensionPct, resultado.limite, resultado.cumple) + ' (l\u00EDmite ' + resultado.limite + '%)';
     setTexto('caida-tension-volts', resultado.caidaTensionV.toFixed(2) + ' V');
     setTexto('resistencia-ct', 'R ' + resultado.resistencia + ' / X ' + resultado.reactancia + ' \u03A9/km (' +
         (resultado.clase === 'flexible' ? 'flexible' : 'r\u00EDgido') + ', ' +
@@ -798,12 +805,20 @@ function mostrarResultadosCaidaTensionAC(resultado) {
     mostrarResultadosPartida(resultado.partida);
 }
 
+/**
+ * Porcentaje para mostrar junto a CUMPLE / NO CUMPLE. El veredicto se decide con el valor
+ * exacto: si el redondeo lo deja en el límite pero no cumple, se muestra "> límite".
+ */
+function textoPct(pct, limite, cumple) {
+    return (!cumple && pct <= limite ? '> ' + Number(limite).toFixed(2) : Number(pct).toFixed(2)) + '%';
+}
+
 function mostrarResultadosPartida(rp) {
     var bloque = document.getElementById('resultados-partida-ct');
     if (!bloque) return;
     bloque.style.display = rp ? 'block' : 'none';
     if (!rp) return;
-    setTexto('partida-caida-valor', rp.caidaTotalPct.toFixed(2) + '% (l\u00EDmite ' + rp.limite + '%)');
+    setTexto('partida-caida-valor', textoPct(rp.caidaTotalPct, rp.limite, rp.cumple) + ' (l\u00EDmite ' + rp.limite + '%)');
     var st = document.getElementById('partida-status');
     st.textContent = rp.cumple ? 'CUMPLE' : 'NO CUMPLE';
     st.className = rp.cumple ? 'resultado-ok' : 'resultado-error';
@@ -918,7 +933,7 @@ function actualizarResumenAC() {
 
     // Caida de tension
     if (caida && caida.resultado) {
-        setTexto('resumen-caida-ac', caida.resultado.caidaTensionPct.toFixed(2) + '%');
+        setTexto('resumen-caida-ac', textoPct(caida.resultado.caidaTensionPct, caida.resultado.limite, caida.resultado.cumple));
         var elEstadoCaida = document.getElementById('resumen-estado-caida-ac');
         if (elEstadoCaida) {
             elEstadoCaida.textContent = caida.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
@@ -931,7 +946,7 @@ function actualizarResumenAC() {
     var rpart = caida && caida.resultado && caida.resultado.partida;
     var elPart = document.getElementById('resumen-partida-ac');
     if (elPart) {
-        elPart.textContent = rpart ? rpart.caidaTotalPct.toFixed(2) + '% \u2014 ' + (rpart.cumple ? 'CUMPLE' : 'NO CUMPLE') : 'No verificada';
+        elPart.textContent = rpart ? textoPct(rpart.caidaTotalPct, rpart.limite, rpart.cumple) + ' \u2014 ' + (rpart.cumple ? 'CUMPLE' : 'NO CUMPLE') : 'No verificada';
         elPart.className = rpart ? (rpart.cumple ? 'resultado-ok' : 'resultado-error') : '';
     }
 
@@ -1148,7 +1163,7 @@ function mostrarResultadosCaidaTensionDC(resultado) {
     }
 
     var elValor = document.getElementById('caida-tension-dc-valor');
-    if (elValor) elValor.textContent = resultado.caida_tension_pct + '% (l\u00EDmite ' + resultado.limite_pct + '%)';
+    if (elValor) elValor.textContent = textoPct(resultado.caida_tension_pct, resultado.limite_pct, resultado.cumple_criterio) + ' (l\u00EDmite ' + resultado.limite_pct + '%)';
 
     var elStatus = document.getElementById('caida-tension-dc-status');
     if (elStatus) {
@@ -1249,7 +1264,7 @@ function actualizarResumenDC() {
 
     var elEstado = document.getElementById('resumen-estado-caida');
     if (caida && caida.resultado) {
-        setTexto('resumen-caida-tension', caida.resultado.caida_tension_pct + '%');
+        setTexto('resumen-caida-tension', textoPct(caida.resultado.caida_tension_pct, caida.resultado.limite_pct, caida.resultado.cumple_criterio));
         if (elEstado) {
             elEstado.textContent = caida.resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
             elEstado.className = caida.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
@@ -1314,6 +1329,19 @@ function actualizarResistenciaInterna() {
 // RESETEO Y REPORTE
 // ===================================================================
 
+/** Vuelve un campo al valor inicial del HTML (no a la primera opción ni a vacío). */
+function restaurarValorInicial(campo) {
+    if (campo.tagName === 'SELECT') {
+        var inicial = 0;
+        for (var i = 0; i < campo.options.length; i++) {
+            if (campo.options[i].defaultSelected) { inicial = i; break; }
+        }
+        campo.selectedIndex = inicial;
+    } else {
+        campo.value = campo.defaultValue;
+    }
+}
+
 function resetearFormulario(pestana) {
     var formularios = {
         'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
@@ -1329,17 +1357,8 @@ function resetearFormulario(pestana) {
         campos.forEach(function (campoId) {
             var campo = document.getElementById(campoId);
             if (campo) {
-                // Vuelve al valor inicial del HTML (no a la primera opción ni a vacío)
-                if (campo.type === 'select-one') {
-                    var inicial = 0;
-                    for (var i = 0; i < campo.options.length; i++) {
-                        if (campo.options[i].defaultSelected) { inicial = i; break; }
-                    }
-                    campo.selectedIndex = inicial;
-                    campo.dispatchEvent(new Event('change'));
-                } else {
-                    campo.value = campo.defaultValue;
-                }
+                restaurarValorInicial(campo);
+                if (campo.tagName === 'SELECT') campo.dispatchEvent(new Event('change'));
             }
         });
 
@@ -1496,22 +1515,23 @@ function construirReporteAC() {
         res = [
             ['Resistencia AC a ' + rc.temperaturaConductor + ' °C', fmt(rc.resistencia, 4, 'Ω/km')],
             ['Reactancia', fmt(rc.reactancia, 4, 'Ω/km')],
-            ['Caída de tensión', fmt(rc.caidaTensionV, 2, 'V') + ' (' + fmt(rc.caidaTensionPct, 2, '%') + ')'],
+            ['Caída de tensión', fmt(rc.caidaTensionV, 2, 'V') + ' (' + textoPct(rc.caidaTensionPct, rc.limite, rc.cumple) + ')'],
             ['Estado', rc.cumple ? 'CUMPLE' : 'NO CUMPLE'],
-            ['Sección mínima por caída', rc.seccionMinimaCaida ? rc.seccionMinimaCaida.seccion + ' mm²' : 'ninguna hasta 300 mm²']
+            ['Sección mínima por caída (' + pc.conductoresPorFase + ' por fase)', rc.seccionMinimaCaida ? rc.seccionMinimaCaida.seccion + ' mm²' : 'ninguna hasta 300 mm²']
         ];
         var rpa = rc.partida, ppa = pc.partida;
         if (rpa) {
             ent.push(['Partida: Ip/In / cosφ de partida', fmt(ppa.relacionIp, null) + ' / ' + fmt(ppa.fpPartida, 2)]);
-            ent.push(['Partida: otras cargas en marcha', fmt(ppa.otrasCargas.corriente, null, 'A') + ' (cosφ ' + fmt(ppa.otrasCargas.factorPotencia, 2) + ')']);
+            if (!rpa.soloCircuito) ent.push(['Partida: otras cargas en marcha (alimentador y trafo)', fmt(ppa.otrasCargas.corriente, null, 'A') +
+                (ppa.otrasCargas.corriente > 0 ? ' (cosφ ' + fmt(ppa.otrasCargas.factorPotencia, 2) + ')' : '')]);
             if (ppa.alimentador) ent.push(['Partida: alimentador', (ppa.alimentador.conductoresPorFase > 1 ? ppa.alimentador.conductoresPorFase + ' × ' : '') +
                 ppa.alimentador.seccion + ' mm² · ' + fmt(ppa.alimentador.longitud, null, 'm')]);
             if (ppa.trafo) ent.push(['Partida: transformador', fmt(ppa.trafo.potenciaKVA, null, 'kVA') + ' · Z ' + fmt(ppa.trafo.impedanciaPct, null, '%')]);
             rpa.tramos.forEach(function (tr) {
                 res.push(['Partida — ' + tr.tramo, fmt(tr.caidaPct, 2, '%') + ' (' + fmt(tr.corriente, 1, 'A') + ', cosφ ' + fmt(tr.factorPotencia, 2) + ')']);
             });
-            res.push(['Caída en la partida', fmt(rpa.caidaTotalPct, 2, '%') + ' — límite ' + rpa.limite + ' % — ' + (rpa.cumple ? 'CUMPLE' : 'NO CUMPLE')]);
-            res.push(['Sección mínima del circuito por partida', rpa.seccionMinima ? rpa.seccionMinima.seccion + ' mm²' : 'ninguna hasta 300 mm²']);
+            res.push(['Caída en la partida', textoPct(rpa.caidaTotalPct, rpa.limite, rpa.cumple) + ' — límite ' + rpa.limite + ' % — ' + (rpa.cumple ? 'CUMPLE' : 'NO CUMPLE')]);
+            res.push(['Sección mínima del circuito por partida (' + pc.conductoresPorFase + ' por fase)', rpa.seccionMinima ? rpa.seccionMinima.seccion + ' mm²' : 'ninguna hasta 300 mm²']);
             if (rpa.soloCircuito) res.push(['Nota', 'Solo el circuito del motor; la R1A pide todo el sistema de BT hasta el primario del trafo']);
         }
     }
@@ -1554,6 +1574,12 @@ function construirReporteAC() {
                 // El conductor de protección sigue a la sección de fase ADOPTADA, no a la de ampacidad
                 fin.valor ? ['Conductor de protección (sobre la sección adoptada)',
                     textoConductorProteccion({ seccion: fin.valor, conductoresPorFase: fin.nParalelo })] : null])));
+    // Caída y partida se recalculan con el paralelo de la ampacidad si la pestaña usó otro
+    if (pr && ct && pr.resultado && (pr.resultado.conductoresPorFase || 1) !== ct.parametros.conductoresPorFase) {
+        secFin.appendChild(nodo('p', 'reporte-alerta', 'La caída de tensión' + (ct.resultado.partida ? ' y la partida' : '') +
+            ' se recalcularon con ' + (pr.resultado.conductoresPorFase || 1) + ' conductor(es) por fase (los de la ampacidad); ' +
+            'la pestaña Caída usó ' + ct.parametros.conductoresPorFase + '.'));
+    }
     // Coherencia entre pestañas: el mismo material en los tres criterios
     var mats = [pr && pr.parametros.materialCondutor, ct && ct.parametros.materialCondutor, cc && cc.parametros.materialCondutor]
         .filter(Boolean);
@@ -1608,7 +1634,7 @@ function construirReporteDC() {
         ];
         res = [
             ['Resistencia a ' + rc.temperatura_conductor + ' °C', fmt(rc.resistencia_mostrada, 4, 'Ω/km')],
-            ['Caída de tensión', fmt(rc.caida_tension_V, 2, 'V') + ' (' + fmt(rc.caida_tension_pct, 2, '%') + ')'],
+            ['Caída de tensión', fmt(rc.caida_tension_V, 2, 'V') + ' (' + textoPct(rc.caida_tension_pct, rc.limite_pct, rc.cumple_criterio) + ')'],
             ['Límite', fmt(rc.limite_pct, null, '%')],
             ['Estado', rc.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE']
         ];
@@ -1854,8 +1880,9 @@ function resumenCalculo(tipo, p, r) {
                     (r.conductoresPorFase > 1 ? r.conductoresPorFase + ' × ' : '') + r.seccion + ' mm²';
             case 'caida-tension':
                 return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
-                    n(r.caidaTensionPct, 2) + ' % (' + (r.cumple ? 'cumple' : 'no cumple') + ')' +
-                    (r.partida ? ' · partida ' + n(r.partida.caidaTotalPct, 2) + ' % (' + (r.partida.cumple ? 'cumple' : 'no cumple') + ')' : '');
+                    textoPct(r.caidaTensionPct, r.limite, r.cumple) + ' (' + (r.cumple ? 'cumple' : 'no cumple') + ')' +
+                    (r.partida ? ' · partida ' + textoPct(r.partida.caidaTotalPct, r.partida.limite, r.partida.cumple) +
+                        ' (' + (r.partida.cumple ? 'cumple' : 'no cumple') + ')' : '');
             case 'cortocircuito':
                 return p.potenciaCortocircuito + ' MVA · ' + Math.round(p.tensionSistema * 1000) + ' V · ' + p.tiempoDespeje +
                     ' s → mín. ' + (r.seccionComercial ? r.seccionComercial + ' mm²' : '> 1000 mm²');
@@ -1863,7 +1890,7 @@ function resumenCalculo(tipo, p, r) {
                 return n(r.corriente) + ' A · ' + p.metodo + ' → ' + r.seccion + ' mm²';
             case 'caida-tension-dc':
                 return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
-                    n(r.caida_tension_pct, 2) + ' % (' + (r.cumple_criterio ? 'cumple' : 'no cumple') + ')';
+                    textoPct(r.caida_tension_pct, r.limite_pct, r.cumple_criterio) + ' (' + (r.cumple_criterio ? 'cumple' : 'no cumple') + ')';
             case 'cortocircuito-dc':
                 return p.elementosSerie + ' elementos · ' + r.corriente_cortocircuito + ' A → mín. ' +
                     (r.seccion_comercial ? r.seccion_comercial + ' mm²' : '> 1000 mm²');
@@ -1935,14 +1962,20 @@ function abrirDelHistorial(id) {
     if (!h || !h.formulario || !TIPOS_HISTORIAL[h.tipo]) return;
     switchTab(h.tipo);
     var ids = Object.keys(h.formulario);
+    var cont = document.getElementById(h.tipo);
+    var campos = cont ? cont.querySelectorAll('input[id], select[id]') : [];
+    // Los campos que la entrada no trae (guardada antes de que existieran, p. ej. la partida
+    // de motor) vuelven a su valor inicial: no se hereda lo que esté cargado en pantalla
+    Array.prototype.forEach.call(campos, function (el) {
+        if (!Object.prototype.hasOwnProperty.call(h.formulario, el.id)) restaurarValorInicial(el);
+    });
     ids.forEach(function (campo) {
         var el = document.getElementById(campo);
         if (el) el.value = h.formulario[campo];
     });
     // Disparar los cambios para que se muestren/oculten los campos que dependen de los selectores
-    ids.forEach(function (campo) {
-        var el = document.getElementById(campo);
-        if (el && el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
+    Array.prototype.forEach.call(campos, function (el) {
+        if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
     });
     // Un 'change' puede ajustar un valor (p. ej. aluminio fuerza clase rígida): se repone lo guardado
     ids.forEach(function (campo) {

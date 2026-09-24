@@ -1100,6 +1100,15 @@ test('Motor start transformer current: three-phase trafo, single-phase circuit u
     assertClose(tr.caidaPct, 428.7 / (150000 / 660) * 4, 0.01);
 });
 
+test('Motor start transformer, two-phase (F-F) load: 2/sqrt(3) factor (current through two windings)', function() {
+    // Zfase = Z%·Vff²/S; ΔV = 2·I·Zfase/Vff = (2/√3)·(I/In)·Z%. 400 A, 500 kVA, 5 %, 380 V:
+    // In = 759,7 A → (2/√3)·(400/759,7)·5 = 3,040 %
+    const c = Object.assign({}, circPartida, { tipoSistema: 'bifasico', corriente: 400 / 6 });
+    const r = calcularCaidaPartidaMotor({ circuito: c, relacionIp: 6, fpPartida: 0.3, limite: 10,
+        otrasCargas: null, alimentador: null, trafo: { potenciaKVA: 500, impedanciaPct: 5 } });
+    assertClose(r.tramos[1].caidaPct, 3.04, 0.005);
+});
+
 test('parametrosPartidaDesdeCaida maps the AC drop tab and applies the parallel count', function() {
     const pc = Object.assign({}, circPartida, { partida: { relacionIp: 6, fpPartida: 0.3, limite: 10,
         otrasCargas: { corriente: 200, factorPotencia: 0.85 }, alimentador: { longitud: 30, seccion: 150, conductoresPorFase: 1 },
@@ -1126,6 +1135,11 @@ test('Motor start switches are selects (history stores el.value; a checkbox woul
     ['partida-ct', 'alim-partida-ct', 'trafo-partida-ct'].forEach(function (id) {
         assertTrue(new RegExp('<select id="' + id + '"').test(indexHtml), id + ' debe ser select');
     });
+});
+
+test('Drop percentages shown next to a verdict go through textoPct (never "10.00 % NO CUMPLE")', function() {
+    const directos = appJs.match(/caida(?:TensionPct|_tension_pct|TotalPct)\.toFixed|caida_tension_pct \+ '%'|fmt\(r[a-z]*\.caida(?:TensionPct|_tension_pct|TotalPct)/g);
+    assertTrue(!directos, 'porcentaje mostrado sin textoPct: ' + (directos || []).join(', '));
 });
 
 test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {

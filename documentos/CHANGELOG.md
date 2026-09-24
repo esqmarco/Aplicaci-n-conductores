@@ -25,10 +25,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Verificado:**
   - Caso a mano: 50 CV, 80 m de 25 mm², 30 m de 150 mm², 200 A de otras cargas y trafo de 500 kVA / 5 %. Los tramos dan 5,42 % + 1,17 % + 3,91 % = 10,51 %, así que no cumple; la sección mínima del circuito es 35 mm².
   - En Chromium, con 150 m de circuito, la partida gobierna la sección final: 95 mm².
+- **Revisión independiente (subagente), hallazgos corregidos antes del PR:**
+  - Trafo con carga bifásica (F-F): la corriente pasa por dos impedancias de fase, así que ΔV = (2/√3)·(I/In)·Z %. La versión inicial subestimaba ese tramo un 13 %.
+  - Abrir un cálculo viejo del historial heredaba la partida que estuviera en pantalla. Ahora los campos que la entrada no trae vuelven a su valor inicial.
+  - Un valor exacto apenas sobre el límite se mostraba redondeado como "10,00 % NO CUMPLE". Ahora se muestra "> 10,00 %", con el helper `textoPct` en AC, DC, resumen, reporte e historial.
+  - El reporte aclara con cuántos conductores por fase se calculó cada sección mínima, y avisa cuando la sección final usa otro paralelo. Ya no lista otras cargas que no entraron al cálculo.
+  - Aviso cuando la corriente viene de Ampacidad con factor de demanda < 1, porque reduce la Ip.
 - **Pendiente:**
   - El calentamiento del cable en partidas de más de 5 s: fuera de alcance.
   - La revisión aprobada de los criterios de Itaipu.
-- **Tests:** 125.
+- **Tests:** 127.
 
 ## [5.10.0] - 2026-09-24 — Límites de caída con los criterios de Itaipu R1A (backlog #11, parte DC)
 
