@@ -3,7 +3,6 @@
 ## Estado actual
 - **Último avance:** 2026-09-24 — v5.10.0: los límites de caída DC salen de los criterios de Itaipu #ITA0&EEC010-01 R1A (GE, 2026) §10.3.2: batería → carga 5 %, cargador → batería 3 %. Reemplazan los seis valores por aplicación y el criterio por tensión, que no tenían fuente. En AC se sumó la opción 10 % (fuente → primario de trafo con TAPs, R1A §10.3.1).
 - **Sin verificar:** qué revisión de los criterios de Itaipu está aprobada. La R1A 2026 cambia valores respecto de la versión 2023; si el informe es formal, confirmarlo con Ingeniería. También quedan sin verificar los hooks en la PC de Marco (Windows), la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión y Safari/Firefox.
-- **Pendiente de fusión:** el PR con la v5.10.0 (límites R1A).
 - **Siguiente paso recomendado:** que Marco decida la fila #14 (caída en la partida de motores): es el criterio de la R1A que la app todavía no verifica.
 
 ## Backlog
