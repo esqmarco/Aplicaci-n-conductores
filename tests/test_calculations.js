@@ -937,8 +937,139 @@ test('DC voltage drop validation works with current (no power field)', function(
 
 test('DC ampacity validation in current mode does not ask for power', function() {
     const v = validarParametrosAmpacidadDC({ modoEntrada: 'corriente', corrienteDirecta: 20, material: 'cobre',
-        temperatura: 30, metodo: 'B1' });
+        temperatura: 30, metodo: 'B1', agrupamiento: 1 });
     assertTrue(v.valido, 'Should be valid: ' + v.errores.join('; '));
+});
+
+test('Empty grouping is an error in AC and DC, never 1 circuit (auditoria 2026-09-23)', function() {
+    // parseFloat('') del campo vacío llega como NaN: tomarlo como 1 circuito daba 50 mm² en vez de 70 mm²
+    const baseAC = { modoEntrada: 'potencia', potencia: 50, tension: 380, factorPotencia: 0.85, rendimiento: 1,
+        factorDemanda: 1, temperaturaAmbiente: 40 };
+    assertTrue(validarParametrosAmpacidadAC(Object.assign({}, baseAC, { agrupamento: 3 })).valido, 'AC con 3 circuitos');
+    [NaN, 0, 2.5, -1].forEach(function (n) {
+        assertTrue(!validarParametrosAmpacidadAC(Object.assign({}, baseAC, { agrupamento: n })).valido, 'AC agrupamento ' + n);
+        assertTrue(!validarParametrosAmpacidadDC({ modoEntrada: 'corriente', corrienteDirecta: 20, material: 'cobre',
+            temperatura: 30, metodo: 'B1', agrupamiento: n }).valido, 'DC agrupamiento ' + n);
+    });
+});
+
+test('Empty efficiency or demand factor is an error in AC power mode', function() {
+    const base = { modoEntrada: 'potencia', potencia: 50, tension: 380, factorPotencia: 0.85, rendimiento: 0.9,
+        factorDemanda: 1, temperaturaAmbiente: 40, agrupamento: 1 };
+    assertTrue(validarParametrosAmpacidadAC(base).valido, 'base válida');
+    assertTrue(!validarParametrosAmpacidadAC(Object.assign({}, base, { rendimiento: NaN })).valido, 'rendimiento vacío');
+    assertTrue(!validarParametrosAmpacidadAC(Object.assign({}, base, { factorDemanda: NaN })).valido, 'FD vacío');
+    // En modo corriente no se piden
+    assertTrue(validarParametrosAmpacidadAC({ modoEntrada: 'corriente', corrienteDirecta: 100, tension: 380,
+        temperaturaAmbiente: 40, agrupamento: 1 }).valido, 'modo corriente');
+});
+
+test('DC short-circuit commercial section uses its own K above 300 mm2 (twin of AC)', function() {
+    // 60 kA, 0,5 s, Cu PVC: con K=115 da 369 mm² -> 400; pero 400 mm² tiene K=103 -> necesita 412 mm² -> 500
+    const r = analizarCortocircuitoDC({ tipoBateria: 'plomo-acido', elementosSerie: 55, resistenciaInterna: 0.03333,
+        tiempoDespeje: 0.5, seccion: 300, material: 'cobre', aislamiento: 'PVC' });
+    assertEqual(r.seccion_comercial, 500);
+    assertEqual(seccionComercialCortocircuito(60006, 0.5, 'cobre', 'EPR'), 300); // EPR: K=143 en todo el rango
+});
+
+test('DC voltage drop "cumple" uses the unrounded percentage (twin of AC)', function() {
+    // 48 V, 10 A, 82,95 m, Cu flexible PVC 16 mm²: 5,0038 % se muestra 5,00 % pero NO cumple el 5 %
+    const p = { corriente: 10, tensionSelector: '48', longitud: 82.95, conductoresPorPolo: 1, seccion: 16,
+        material: 'cobre', aislamiento: 'PVC', clase: 'flexible', aplicacionDC: 'iluminacion_emergencia' };
+    const r = verificarCaidaTensionDC(p);
+    assertEqual(r.limite_pct, 5.0);
+    assertTrue(!r.cumple_criterio, 'no cumple con 5,0038 %');
+    assertEqual(calcularSeccionParaCaidaDC(p), 25, 'la sección final coincide con la pestaña');
+});
+
+test('Aluminium short-circuit commercial section is at least 16 mm2 (AC and DC)', function() {
+    const ac = calcularCortocircuitoAC({ potenciaCortocircuito: 1, tensionSistema: 0.38, tiempoDespeje: 0.1,
+        seccion: 16, materialCondutor: 'aluminio', materialAislamiento: 'PVC' });
+    assertEqual(ac.seccionComercial, 16);
+    const dc = analizarCortocircuitoDC({ tipoBateria: 'plomo-acido', elementosSerie: 24, resistenciaInterna: 1,
+        tiempoDespeje: 0.1, seccion: 16, material: 'aluminio', aislamiento: 'PVC' });
+    assertEqual(dc.seccion_comercial, 16);
+});
+
+test('Short-circuit S_min does not depend on the chosen section (K of > 300 mm2 when needed)', function() {
+    // Icc 20 kA, 4,8 s, Cu PVC: 20000·√4,8/115 = 381 > 300 -> con K=103: 425,4 mm²
+    const Icc = 20000, t = 4.8;
+    assertClose(seccionMinimaCortocircuito(Icc, t, 'cobre', 'PVC'), Icc * Math.sqrt(t) / 103, 0.01);
+    const dc = analizarCortocircuitoDC({ tipoBateria: 'plomo-acido', elementosSerie: 55, resistenciaInterna: 0.1,
+        tiempoDespeje: t, seccion: 240, material: 'cobre', aislamiento: 'PVC' });
+    assertClose(dc.seccion_minima, 425.4, 0.1);
+    assertEqual(dc.constante_K, 115);          // K de la sección elegida (240 mm²)
+    assertEqual(dc.constante_K_minima, 103);   // K con que se calculó la S mín.
+    assertEqual(dc.seccion_comercial, 500);
+    assertTrue(!dc.cumple_criterio);
+    // Por debajo de 300 mm² no cambia nada
+    assertClose(seccionMinimaCortocircuito(10000, 0.1, 'cobre', 'PVC'), 10000 * Math.sqrt(0.1) / 115, 0.001);
+});
+
+test('PE by short circuit uses the K of the conductor material', function() {
+    // 20 kA, 0,5 s, EPR: cobre K=143 -> 98,9 -> 120; aluminio K=94 -> 150,4 -> 185
+    assertEqual(calcularConductorProteccion(16, { corrienteCC: 20000, tiempoDespeje: 0.5, aislamiento: 'EPR' }), 120);
+    assertEqual(calcularConductorProteccion(16, { corrienteCC: 20000, tiempoDespeje: 0.5, aislamiento: 'EPR', material: 'aluminio' }), 185);
+});
+
+test('Empty conductor temperature falls back to service temperature, never NaN', function() {
+    const r = calcularResistenciaCorregida({ material: 'cobre', seccion: 16, aislamiento: 'PVC', temperatura: '' });
+    assertEqual(r.temperatura, 70);
+    assertTrue(!isNaN(r.R_temp));
+});
+
+// Chequeos estáticos de app.js (lecciones de la auditoría 2026-09-23)
+const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+test('Every failed validation in app.js discards that tab result (no stale results)', function() {
+    const bloques = appJs.split('if (!validacion.valido) {').slice(1);
+    assertTrue(bloques.length >= 6, 'se esperaban 6 validaciones, hay ' + bloques.length);
+    bloques.forEach(function (b, i) {
+        const cuerpo = b.slice(0, b.indexOf('return;'));
+        assertTrue(cuerpo.indexOf('descartarResultados(') !== -1, 'validación #' + (i + 1) + ' no descarta el resultado');
+    });
+});
+
+test('No user-typed field gets a silent numeric default in app.js (only selects may)', function() {
+    // parseX(document.getElementById('id')...) || N  solo se admite si 'id' es un <select> (nunca vacío)
+    const re = /parse(?:Int|Float)\(document\.getElementById\('([\w-]+)'\)[^)]*\)\s*\|\|\s*[\d.]+/g;
+    let m, encontrados = 0;
+    while ((m = re.exec(appJs)) !== null) {
+        encontrados++;
+        const esSelect = new RegExp('<select[^>]*id="' + m[1] + '"').test(indexHtml);
+        assertTrue(esSelect, 'el campo ' + m[1] + ' se puede dejar vacío y recibe un valor por defecto');
+    }
+    assertTrue(encontrados > 0, 'el patrón no encontró nada: revisar la expresión');
+});
+
+test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {
+    const r = dimensionarPorAmpacidadAC({ modoEntrada: 'potencia', potencia: 50, unidadPotencia: 'CV', tension: 380,
+        factorPotencia: 0.85, rendimiento: 0.92, factorDemanda: 1, tipoSistema: 'trifasico', materialAislamento: 'PVC',
+        materialCondutor: 'cobre', temperaturaAmbiente: 40, metodoInstalacao: 'B1', agrupamento: 1, tipoCircuito: 'fuerza' });
+    assertClose(r.corriente, 71.45, 0.01);
+    assertEqual(r.seccion, 25);
+    assertEqual(r.ampacidad, 78);
+    const c = calcularCaidaTensionAC({ corriente: r.corriente, tension: 380, longitud: 80, seccion: 25,
+        materialCondutor: 'cobre', tipoSistema: 'trifasico', factorPotencia: 0.85, aislamiento: 'PVC', limite: 5,
+        frecuencia: 50, disposicion: 'trebol' });
+    assertClose(c.caidaTensionPct, 2.19, 0.005);
+    const cc = calcularCortocircuitoAC({ potenciaCortocircuito: 10, tensionSistema: 0.38, tiempoDespeje: 0.1,
+        seccion: 25, materialCondutor: 'cobre', materialAislamiento: 'PVC' });
+    assertClose(cc.seccionMinima, 41.78, 0.01);
+    assertEqual(cc.seccionComercial, 50);
+});
+
+test('Manual example 2: shower 7500 W 220 V -> 6 mm2, 3.67 % at 30 m', function() {
+    const r = dimensionarPorAmpacidadAC({ modoEntrada: 'potencia', potencia: 7500, unidadPotencia: 'W', tension: 220,
+        factorPotencia: 1, rendimiento: 1, factorDemanda: 1, tipoSistema: 'monofasico', materialAislamento: 'PVC',
+        materialCondutor: 'cobre', temperaturaAmbiente: 40, metodoInstalacao: 'B1', agrupamento: 1, tipoCircuito: 'tomadas' });
+    assertClose(r.corriente, 34.09, 0.01);
+    assertEqual(r.seccion, 6);
+    const c = calcularCaidaTensionAC({ corriente: r.corriente, tension: 220, longitud: 30, seccion: 6,
+        materialCondutor: 'cobre', tipoSistema: 'monofasico', factorPotencia: 1, aislamiento: 'PVC', limite: 4,
+        frecuencia: 50, disposicion: 'trebol' });
+    assertClose(c.caidaTensionPct, 3.67, 0.005);
 });
 
 test('verificarCaidaTensionDC applies application limit', function() {

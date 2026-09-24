@@ -153,6 +153,8 @@ function validarParametrosAmpacidadDC(params) {
             errores.push('Método de instalación no válido para DC');
         }
 
+        validarCircuitosAgrupados(params.agrupamiento, errores);
+
         return {
             valido: errores.length === 0,
             errores: errores,
@@ -309,7 +311,7 @@ function validarParametrosCortocircuitoDC(params) {
             errores.push('Tiempo de despeje es requerido');
         } else {
             const tiempo = parseFloat(params.tiempoDespeje);
-            if (tiempo <= 0 || tiempo > 5) {
+            if (tiempo < 0.01 || tiempo > 5) {
                 errores.push('Tiempo de despeje debe estar entre 0.01 s y 5 s (validez del criterio adiabático)');
             }
         }
@@ -677,6 +679,47 @@ function validarPorPestaña(pestaña, parametros) {
 // ===================================================================
 
 /**
+ * Número de circuitos agrupados: entero ≥ 1. Un campo vacío es un error:
+ * tomarlo como 1 circuito daría el factor más alto (del lado inseguro).
+ */
+function validarCircuitosAgrupados(valor, errores) {
+    const n = Number(valor);
+    if (valor === '' || valor === null || valor === undefined || !Number.isInteger(n) || n < 1) {
+        errores.push('Circuitos agrupados es requerido y debe ser un entero mayor o igual a 1');
+    }
+}
+
+/**
+ * Valida parámetros de la pestaña Proyecto AC (ampacidad)
+ */
+function validarParametrosAmpacidadAC(params) {
+    const errores = [];
+    const advertencias = [];
+    const positivo = (v) => typeof v === 'number' && !isNaN(v) && v > 0;
+    const fraccion = (v) => positivo(v) && v <= 1.0;
+
+    if (params.modoEntrada === 'corriente') {
+        if (!positivo(params.corrienteDirecta)) errores.push('Corriente es requerida y debe ser mayor que 0');
+    } else if (params.modoEntrada === 'transformador') {
+        if (!positivo(params.potenciaTransformadorKVA)) errores.push('Potencia del transformador (kVA) es requerida y debe ser mayor que 0');
+    } else {
+        if (!positivo(params.potencia)) errores.push('Potencia es requerida y debe ser mayor que 0');
+        if (!(positivo(params.factorPotencia) && params.factorPotencia >= 0.1 && params.factorPotencia <= 1.0)) {
+            errores.push('Factor de potencia es requerido y debe estar entre 0,1 y 1,0');
+        }
+        if (!fraccion(params.rendimiento)) errores.push('Rendimiento es requerido: mayor que 0 y como máximo 1,0');
+        if (!fraccion(params.factorDemanda)) errores.push('Factor de demanda es requerido: mayor que 0 y como máximo 1,0');
+    }
+    if (!positivo(params.tension)) errores.push('Tensión es requerida');
+    if (typeof params.temperaturaAmbiente !== 'number' || isNaN(params.temperaturaAmbiente)) {
+        errores.push('Temperatura ambiente es requerida y debe ser numérica');
+    }
+    validarCircuitosAgrupados(params.agrupamento, errores);
+
+    return { valido: errores.length === 0, errores, advertencias };
+}
+
+/**
  * Valida parámetros de caída de tensión AC
  */
 function validarParametrosCaidaTensionAC(params) {
@@ -873,6 +916,8 @@ console.log('✅ Validations.js R2 Corregido cargado - Validaciones específicas
 
 // Exportar todas las funciones de validación al objeto window
 window.validarParametrosBasicos = validarParametrosBasicos;
+window.validarParametrosAmpacidadAC = validarParametrosAmpacidadAC;
+window.validarCircuitosAgrupados = validarCircuitosAgrupados;
 window.validarParametrosAmpacidadDC = validarParametrosAmpacidadDC;
 window.validarParametrosCaidaTensionDC = validarParametrosCaidaTensionDC;
 window.validarParametrosCortocircuitoDC = validarParametrosCortocircuitoDC;

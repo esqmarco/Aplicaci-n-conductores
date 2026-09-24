@@ -1,591 +1,120 @@
-# MANUAL DE FUNCIONAMIENTO - CALCULADORA DE CABLES ELÉCTRICOS
+# Manual de funcionamiento — Calculadora de conductores eléctricos
 
-## Versión 2.0 - Estructura Modular
-### Sistema Profesional de Dimensionamiento según INPACO + NBR 5410 + Mamede Filho
+Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están en `CLAUDE.md` (sección *Fórmulas*); la memoria de cálculo imprimible muestra cada valor usado. Los pendientes están en `documentos/PLAN_DE_MEJORAS.md`.
 
----
+## Alcance
 
-## ÍNDICE
+- Dimensiona conductores de **baja tensión** (hasta 1000 V) en corriente alterna y continua, por tres criterios: ampacidad, caída de tensión y cortocircuito. La sección final es la mayor de las tres.
+- **Ampacidad:** catálogo INPACO 2021 (cobre, 40 °C aire / 25 °C suelo, 1,0 K·m/W), 2 y 3 conductores cargados, secciones de 1,5 a 300 mm². Corrientes mayores se resuelven con conductores en paralelo (hasta 6 por fase).
+- **Aluminio:** sección mínima 16 mm². Ampacidad = cobre INPACO × relación I_Al/I_Cu de NBR 5410 Tablas 36–39 (mismo método, aislación y conductores cargados). La app muestra un aviso para contrastar con el catálogo del fabricante.
+- **Aislaciones:** PVC (70 °C); EPR/XLPE y HEPR (90 °C, misma tabla INPACO).
+- **Métodos de instalación (INPACO Tabla 1 / NBR 5410):** en AC A1, A2, B1, B2, C, D, E, F, G (D es el único enterrado). En DC A1, B1, C, E.
+- **Media tensión:** no se dimensiona. La pestaña de cortocircuito AC acepta tensiones de MT solo para calcular Icc.
 
-1. [Descripción General](#descripción-general)
-2. [Objetivos Funcionales](#objetivos-funcionales)
-3. [Flujo de Trabajo Principal](#flujo-de-trabajo-principal)
-4. [Funcionalidades por Pestaña](#funcionalidades-por-pestaña)
-5. [Sistema de Validaciones](#sistema-de-validaciones)
-6. [Cálculos y Algoritmos](#cálculos-y-algoritmos)
-7. [Manejo de Errores](#manejo-de-errores)
-8. [Interfaz de Usuario](#interfaz-de-usuario)
-9. [Casos de Uso Típicos](#casos-de-uso-típicos)
-10. [Criterios de Aceptación](#criterios-de-aceptación)
+## Pestañas AC
 
----
+### 1. Proyecto (ampacidad)
+- **Corriente de proyecto**, según el modo de entrada:
+  - Potencia (W, kW, CV, HP), con factor de potencia, rendimiento y factor de demanda.
+  - Corriente conocida.
+  - Transformador (kVA, trifásico).
+- **Sistema:** monofásico, bifásico (V entre fases) o trifásico. Conductores cargados:
+  - Monofásico: 2.
+  - Bifásico: 3 (criterio del lado seguro).
+  - Trifásico: 3; con el neutro cargado, 4 (0,86 × columna de 3).
+- **Factores de corrección:**
+  - Temperatura: INPACO Tabla 6, interpolada.
+  - Agrupamiento: INPACO Tablas 7, 9 y 10. Cada terna en paralelo cuenta como un circuito.
+  - Resistividad del suelo, solo en el método D: INPACO Tabla 11. Se elige si es en ducto o directamente enterrado.
+  - Un valor fuera de tabla da error. Nunca se usa 1,0 en silencio.
+- **Sección:** la menor sección de tabla cuya ampacidad cubre la corriente corregida por conductor. Se respeta la sección mínima por tipo de circuito: 1,5 mm² en iluminación y 2,5 mm² en tomas y fuerza (NBR 5410); 6 mm² en alimentadores (criterio de la app, sin tabla citada).
+- Al calcular, la corriente, la sección y los datos del sistema se copian a Caída de Tensión y Cortocircuito AC.
 
-## DESCRIPCIÓN GENERAL
+### 2. Caída de tensión AC
+- **Entradas:** corriente, tensión, longitud, sección, sistema y factor de potencia. Además: material, aislación, clase del conductor, conductores en paralelo, disposición y frecuencia.
+- **Clase del conductor:** en cobre, flexible (clase 5, por defecto) o rígido (clase 2); el aluminio es solo rígido.
+- **Disposición:** trébol, tripolar, plano 2D o plano a 20 cm.
+- **Frecuencia:** 50 Hz (ANDE) o 60 Hz (Brasil).
+- **Cálculo:**
+  - La resistencia se toma a la temperatura de servicio: 70 °C en PVC y 90 °C en EPR/XLPE/HEPR.
+  - Incluye los efectos pelicular y de proximidad.
+  - La reactancia sale de INPACO Tabla 15.
+- **Límites a elegir:**
+  - 4 %: iluminación / circuito terminal.
+  - 5 %: fuerza motriz / desde la red de BT.
+  - 7 %: total desde transformador propio.
+- Si no cumple, la app indica la menor sección que cumple el límite.
 
-### Propósito
-La calculadora debe dimensionar correctamente cables eléctricos para instalaciones industriales y residenciales, siguiendo las normativas técnicas brasileñas (NBR 5410) y utilizando datos de fabricantes reconocidos (INPACO) complementados con metodologías académicas (Mamede Filho).
+### 3. Cortocircuito AC
+- **Corriente de cortocircuito:** Icc = Scc / (√3 · V). Scc se ingresa en MVA y V es la tensión entre fases.
+- **Sección mínima:** S = Icc · √t / K, con t ≤ 5 s.
+- **Constante K (NBR 5410 Tabla 30):**
+  - Cu PVC 115 (103 por encima de 300 mm²); Cu EPR 143.
+  - Al PVC 76 (68 por encima de 300 mm²); Al EPR 94.
+- La sección comercial se verifica con su propio K. Con conductores en paralelo, cada conductor debe soportar la Icc completa (criterio conservador).
 
-### Alcance Técnico
-- **Tensiones:** baja tensión, 127 V hasta 1000 V (las tablas INPACO son para cables 450/750 V y 0,6/1 kV). Cortocircuito AC acepta también media tensión.
-- **Potencias:** Desde 100W hasta 1000kW
-- **Métodos de instalación:** A1, A2, B1, B2, C, D, E, F, G (INPACO Tabla 1 / NBR 5410). D es el único enterrado.
-- **Materiales de aislamiento:** PVC (70 °C), EPR/XLPE (90 °C), HEPR (90 °C)
-- **Tipos de sistema:** Monofásico, bifásico, trifásico
-- **Conductores:** Cobre y aluminio
+### 4. Resultados AC
+- **Sección final:** la mayor entre ampacidad, caída y cortocircuito, con el criterio que la definió.
+- **Conductor de protección:** NBR 5410 Tabla 58, calculado sobre la sección de fase adoptada.
+- **Botón "Imprimir memoria de cálculo (PDF)":**
+  - Abre el diálogo de impresión; para obtener el PDF elegir "Guardar como PDF".
+  - Usa los datos con que se calculó cada pestaña, no lo que haya quedado escrito sin calcular.
+  - Incluye espacio para responsable y firma.
 
-### Usuarios Objetivo
-- Ingenieros eléctricos
-- Técnicos en instalaciones eléctricas
-- Estudiantes de ingeniería eléctrica
-- Proyectistas de instalaciones industriales
+## Pestañas DC
 
----
+### 5. Ampacidad DC
+- **Entradas:**
+  - Corriente conocida, o potencia con tensión. La tensión puede ser estándar (12 a 500 V) o personalizada.
+  - Material, aislación (PVC o EPR), temperatura ambiente, método (A1, B1, C, E) y circuitos agrupados.
+- **Cálculo:** las mismas tablas INPACO que en AC, con 2 conductores cargados, y los mismos factores de temperatura y agrupamiento.
 
-## OBJETIVOS FUNCIONALES
+### 6. Caída de tensión DC
+- **Fórmula:** ΔV = 2 · Rt · I · L / Np, con Rt a 70 °C (PVC) o 90 °C (EPR) y Np conductores en paralelo por polo.
+- **Clase del conductor:** igual que en AC.
+- **Límite:** por aplicación (servicios auxiliares, UPS, control, iluminación de emergencia, telecomunicaciones, fotovoltaico) o, en "General", según la tensión. Estos límites son orientativos: no tienen fuente normativa citada en el repo.
 
-### Objetivo Principal
-**Determinar la sección mínima de conductor** que satisfaga simultáneamente todos los criterios técnicos:
-1. **Capacidad de corriente** (ampacidad corregida)
-2. **Límites de caída de tensión** (NBR 5410)
-3. **Resistencia a cortocircuito** (tiempo de actuación de protecciones)
+### 7. Cortocircuito DC
+- **Corriente de cortocircuito del banco:** Icc = V_banco / (N_serie · R_elemento).
+- **Tipos de batería:** plomo-ácido (2,0 V), litio (3,2 V) y níquel-cadmio (1,2 V). La resistencia interna sugerida es orientativa: usar el dato del fabricante.
+- **Sección mínima:** S = Icc · √t / K, con los mismos K que en AC.
 
-### Objetivos Secundarios
-- Proporcionar factores de corrección precisos
-- Validar cumplimiento normativo
-- Generar reportes técnicos
-- Educar sobre criterios de dimensionamiento
-- Facilitar comparación de alternativas
+### 8. Resultados DC
+- **Sección final:** la mayor de los tres criterios, recalculada por conductor cuando hay conductores en paralelo.
+- **Memoria de cálculo imprimible:** igual que en AC.
 
----
-
-## FLUJO DE TRABAJO PRINCIPAL
-
-### Secuencia Ideal de Uso
-
-1. **ENTRADA DE DATOS BÁSICOS**
-   - Usuario ingresa potencia y unidad (W, kW, CV, HP)
-   - Selecciona tensión nominal del sistema
-   - Define factor de potencia y rendimiento
-   - Especifica tipo de sistema eléctrico
-
-2. **CONFIGURACIÓN DE INSTALACIÓN**
-   - Selecciona material de aislamiento del cable
-   - Define método de instalación (A1 a G)
-   - Especifica temperatura ambiente
-   - Indica número de circuitos agrupados
-
-3. **CÁLCULO DE PROYECTO**
-   - Sistema calcula corriente de proyecto
-   - Aplica factores de corrección (temperatura y agrupamiento)
-   - Determina corriente corregida
-   - Selecciona sección mínima por ampacidad
-
-4. **VERIFICACIÓN DE CAÍDA DE TENSIÓN**
-   - Usuario especifica longitud del circuito
-   - Sistema calcula caída de tensión
-   - Verifica cumplimiento con límites NBR 5410
-   - Sugiere sección mayor si es necesario
-
-5. **VERIFICACIÓN DE CORTOCIRCUITO**
-   - Usuario ingresa corriente de cortocircuito esperada
-   - Define tiempo de actuación de protecciones
-   - Sistema verifica resistencia térmica del conductor
-   - Confirma o sugiere sección mayor
-
-6. **DIMENSIONAMIENTO FINAL**
-   - Sistema integra todos los criterios
-   - Selecciona la mayor sección requerida
-   - Genera reporte técnico completo
-   - Presenta recomendaciones finales
-
----
-
-## FUNCIONALIDADES POR PESTAÑA
-
-### PESTAÑA 1: PROYECTO
-
-#### Funcionalidades Principales
-- **Conversión automática de unidades** de potencia (W ↔ kW ↔ CV ↔ HP)
-- **Cálculo de corriente de proyecto** según tipo de sistema
-- **Aplicación de factores de corrección** por temperatura y agrupamiento
-- **Selección automática de sección mínima** basada en ampacidad
-
-#### Entradas Requeridas
-- Potencia nominal de la carga
-- Unidad de potencia
-- Tensión nominal del sistema
-- Factor de potencia (0.3 a 1.0)
-- Tipo de sistema (mono/bi/trifásico)
-- Rendimiento del equipo (0.5 a 1.0)
-- Material de aislamiento
-- Método de instalación
-- Temperatura ambiente (-10°C a 80°C)
-- Número de circuitos agrupados (1 a 50)
-
-#### Salidas Esperadas
-- Corriente de proyecto (A)
-- Factor de temperatura aplicado
-- Factor de agrupamiento aplicado
-- Corriente corregida (A)
-- Sección mínima recomendada (mm²)
-- Ampacidad del conductor seleccionado (A)
-
-#### Validaciones Críticas
-- Potencia > 0 y < 1000kW
-- Factor de potencia entre 0.3 y 1.0
-- Temperatura dentro de rangos del material
-- Método compatible con material de aislamiento
-
-### PESTAÑA 2: CAÍDA DE TENSIÓN
-
-#### Funcionalidades Principales
-- **Cálculo de caída de tensión** en conductores de cobre y aluminio
-- **Verificación automática** contra límites NBR 5410
-- **Sugerencia de sección mayor** si no cumple criterios
-- **Cálculo de porcentaje de caída** respecto a tensión nominal
-
-#### Entradas Requeridas
-- Corriente del circuito (de pestaña anterior o manual)
-- Longitud del cable (metros)
-- Sección del conductor (mm²)
-- Material del conductor (cobre/aluminio)
-- Tensión nominal (heredada de pestaña anterior)
-- Tipo de sistema (heredado de pestaña anterior)
-
-#### Salidas Esperadas
-- Caída de tensión absoluta (V)
-- Porcentaje de caída (%)
-- Límite NBR 5410 aplicable (%)
-- Estado de cumplimiento (SÍ/NO)
-- Sección mínima recomendada si no cumple
-
-#### Criterios NBR 5410
-- **Instalaciones residenciales:** 4% máximo
-- **Instalaciones industriales:** 5% máximo
-- **Motores:** 10% máximo en arranque
-- **Iluminación:** 3% máximo
-
-### PESTAÑA 3: CORTOCIRCUITO
-
-#### Funcionalidades Principales
-- **Cálculo de sección mínima** para resistir cortocircuito
-- **Verificación térmica** del conductor durante falla
-- **Comparación con sección elegida** en pestañas anteriores
-- **Validación de tiempo de actuación** de protecciones
-
-#### Entradas Requeridas
-- Corriente de cortocircuito (kA)
-- Tiempo de actuación de protecciones (s)
-- Sección del conductor elegida (mm²)
-- Material del conductor (cobre/aluminio)
-- Material de aislamiento (para temperatura máxima)
-
-#### Salidas Esperadas
-- Sección mínima para cortocircuito (mm²)
-- Sección elegida en proyecto (mm²)
-- Estado de cumplimiento (SÍ/NO)
-- Temperatura máxima alcanzada durante falla (°C)
-
-#### Criterios de Verificación
-- Temperatura del conductor no debe exceder límites del aislamiento
-- Tiempo de actuación debe ser realista (0.01s a 5s)
-- Corriente de cortocircuito debe ser coherente con instalación
-
-### PESTAÑA 4: RESULTADOS
-
-#### Funcionalidades Principales
-- **Integración de todos los cálculos** anteriores
-- **Selección de sección final** (la mayor de todos los criterios)
-- **Generación de reporte técnico** completo
-- **Presentación de recomendaciones** adicionales
-
-#### Contenido del Reporte
-Botón **"Imprimir memoria de cálculo (PDF)"** en Resultados AC y Resultados DC: abre el diálogo de impresión del navegador; para obtener el PDF elegir "Guardar como PDF". El reporte usa los datos con que se calculó cada pestaña (no lo que haya quedado escrito sin calcular) e incluye espacio para responsable y firma. El conductor de protección se informa sobre la sección de fase **adoptada**.
-- Resumen de parámetros de entrada
-- Resultados de cada criterio de dimensionamiento
-- Sección final recomendada
-- Justificación técnica de la selección
-- Advertencias y consideraciones especiales
-- Referencias normativas aplicadas
-
-#### Advertencias Automáticas
-- Factores de corrección muy bajos (< 0.5)
-- Caída de tensión cercana al límite (> 90% del máximo)
-- Temperatura ambiente extrema
-- Agrupamiento excesivo de circuitos
-- Corriente de cortocircuito muy alta
-
-### PESTAÑA HISTORIAL
+## Historial
 - Guarda en el navegador los últimos 50 cálculos de todas las pestañas (fecha, tipo y resumen).
 - **Abrir** carga los datos en su pestaña y recalcula con la versión actual de la calculadora, así que el resultado puede diferir del original si hubo correcciones posteriores.
 - **Borrar** quita una entrada; **Borrar todo** pide un segundo clic.
 - Los cálculos guardados antes de la versión 5.6.0 no tienen los datos del formulario: se listan pero no se pueden abrir.
 - Si el navegador bloquea el almacenamiento (modo privado), los cálculos funcionan igual y se avisa una sola vez.
 
----
-
-## SISTEMA DE VALIDACIONES
-
-### Validaciones de Entrada
-
-#### Datos Numéricos
-- **Potencia:** Debe ser positiva y menor a 1000kW
-- **Tensión:** Debe estar en lista predefinida de valores estándar
-- **Factor de potencia:** Entre 0.3 y 1.0
-- **Temperatura:** Dentro de rangos del material seleccionado
-- **Longitud:** Positiva y menor a 10km
-- **Corriente de cortocircuito:** Coherente con nivel de tensión
-
-#### Compatibilidad de Parámetros
-- **Material vs Temperatura:** conductor PVC 70 °C, EPR/XLPE/HEPR 90 °C; temperatura ambiente máxima PVC 60 °C
-- **Método vs Material:** Algunos métodos no aplican a ciertos materiales
-- **Tensión vs Potencia:** Coherencia en rangos típicos
-- **Sistema vs Tensión:** Monofásico solo hasta 440V
-
-### Validaciones de Proceso
-
-#### Cálculos Intermedios
-- **Factores de corrección:** No pueden ser menores a 0.1
-- **Corriente corregida:** Debe tener conductor disponible
-- **Sección calculada:** Debe existir en tabla de conductores estándar
-- **Caída de tensión:** No puede ser negativa
-
-#### Coherencia de Resultados
-- **Ampacidad vs Corriente:** Ampacidad debe ser mayor que corriente corregida
-- **Sección por criterios:** Cortocircuito no puede requerir sección menor que ampacidad
-- **Límites físicos:** Resultados dentro de rangos técnicamente posibles
-
-### Validaciones de Salida
-
-#### Resultados Finales
-- **Sección recomendada:** Debe existir comercialmente
-- **Cumplimiento normativo:** Todos los criterios deben estar satisfechos
-- **Factibilidad técnica:** Instalación debe ser prácticamente posible
-- **Coherencia económica:** Sección no debe ser excesivamente sobredimensionada
-
----
-
-## CÁLCULOS Y ALGORITMOS
-
-### Cálculo de Corriente de Proyecto
-
-#### Sistemas Monofásicos
-```
-I = P / (V × cos φ × η)
-```
-
-#### Sistemas Bifásicos
-```
-I = P / (V × cos φ × η)
-```
-V = tensión entre las dos fases. Carga entre fases: resultado exacto (Mamede 3.5.1.1).
-Cargas repartidas entre cada fase y neutro: resultado del lado seguro.
-
-#### Sistemas Trifásicos
-```
-I = P / (V × cos φ × η × √3)
-```
-
-### Factores de Corrección
-
-#### Factor de Temperatura
-- Basado en tablas NBR 5410
-- Depende del material de aislamiento
-- Temperatura de referencia: 30°C para PVC, 40°C para EPR/HEPR
-- Interpolación lineal entre valores tabulados
-
-#### Factor de Agrupamiento
-- Según número de circuitos agrupados
-- Diferente para cada método de instalación
-- Valores tabulados en NBR 5410
-- Aplicación de factor más restrictivo
-
-### Selección de Sección por Ampacidad
-
-#### Proceso de Selección
-1. Calcular corriente corregida: `I_corr = I_projeto / (f_temp × f_agrup)`
-2. Buscar en tabla de ampacidades del material/método
-3. Seleccionar primera sección con ampacidad ≥ I_corr
-4. Verificar disponibilidad comercial
-
-### Cálculo de Caída de Tensión
-
-#### Sistemas Monofásicos
-```
-ΔV = 2 × I × L × R / 1000
-```
-
-#### Sistemas Trifásicos
-```
-ΔV = √3 × I × L × R / 1000
-```
-
-#### Resistencia del Conductor
-- Valores tabulados por material y sección
-- Corrección por temperatura si necesario
-- Consideración de resistencia AC vs DC para grandes secciones
-
-### Verificación de Cortocircuito
-
-#### Sección Mínima por Cortocircuito
-```
-S_min = I_cc × √t / K
-```
-
-Donde:
-- I_cc: Corriente de cortocircuito (A)
-- t: Tiempo de actuación (s)
-- K: Constante del material y aislamiento
-
-#### Constantes K
-- **Cobre PVC:** K = 115
-- **Cobre EPR/HEPR:** K = 143
-- **Aluminio PVC:** K = 76
-- **Aluminio EPR/HEPR:** K = 94
-
----
-
-## MANEJO DE ERRORES
-
-### Tipos de Errores
-
-#### Errores de Entrada
-- **Campos vacíos:** Mostrar mensaje específico del campo requerido
-- **Valores fuera de rango:** Indicar rango válido
-- **Formato incorrecto:** Sugerir formato correcto
-- **Incompatibilidades:** Explicar por qué la combinación no es válida
-
-#### Errores de Cálculo
-- **División por cero:** Verificar denominadores antes del cálculo
-- **Valores indefinidos:** Manejar casos límite
-- **Desbordamiento numérico:** Limitar rangos de entrada
-- **Precisión insuficiente:** Usar número adecuado de decimales
-
-#### Errores de Sistema
-- **Tablas no encontradas:** Verificar integridad de datos
-- **Funciones no disponibles:** Degradación elegante
-- **Memoria insuficiente:** Optimizar cálculos complejos
-
-### Estrategias de Recuperación
-
-#### Valores por Defecto
-- Proporcionar valores típicos para campos opcionales
-- Sugerir valores comunes basados en selecciones anteriores
-- Mantener última configuración válida
-
-#### Mensajes de Usuario
-- **Informativos:** Explicar qué está calculando el sistema
-- **Advertencias:** Alertar sobre condiciones límite
-- **Errores:** Indicar claramente qué corregir y cómo
-
-#### Validación Progresiva
-- Validar campos mientras el usuario escribe
-- Mostrar estado de validación en tiempo real
-- Permitir corrección antes de proceder
-
----
-
-## INTERFAZ DE USUARIO
-
-### Principios de Diseño
-
-#### Usabilidad
-- **Flujo intuitivo:** Seguir secuencia lógica de dimensionamiento
-- **Feedback inmediato:** Mostrar resultados tan pronto como sea posible
-- **Prevención de errores:** Validar entradas antes de permitir avance
-- **Recuperación fácil:** Permitir corrección sin perder trabajo
-
-#### Accesibilidad
-- **Responsive design:** Funcionar en desktop, tablet y móvil
-- **Contraste adecuado:** Textos legibles en todas las condiciones
-- **Navegación por teclado:** Accesible sin mouse
-- **Mensajes claros:** Lenguaje técnico pero comprensible
-
-### Elementos de Interfaz
-
-#### Sistema de Pestañas
-- **Indicadores de estado:** Mostrar qué pestañas están completas
-- **Navegación libre:** Permitir saltar entre pestañas
-- **Persistencia de datos:** Mantener información al cambiar pestañas
-- **Indicadores visuales:** Resaltar errores o advertencias
-
-#### Formularios
-- **Agrupación lógica:** Campos relacionados juntos
-- **Etiquetas descriptivas:** Incluir unidades y rangos
-- **Ayuda contextual:** Tooltips con información adicional
-- **Validación en tiempo real:** Feedback inmediato
-
-#### Resultados
-- **Presentación clara:** Valores destacados con unidades
-- **Código de colores:** Verde para OK, amarillo para advertencia, rojo para error
-- **Explicaciones:** Justificar por qué se seleccionó cada valor
-- **Exportación:** Permitir guardar o imprimir resultados
-
----
-
-## CASOS DE USO TÍPICOS
-
-### Caso 1: Motor Industrial Trifásico
-
-#### Escenario
-Dimensionar alimentación para motor de 50CV, 380V, instalado en electroducto enterrado, distancia 80m.
-
-#### Flujo Esperado
-1. **Proyecto:** Ingresar 50CV, 380V, trifásico, método F
-2. **Resultado:** Corriente ≈ 76A, sección mínima por ampacidad
-3. **Caída:** Verificar con 80m, ajustar sección si necesario
-4. **Cortocircuito:** Verificar con Icc típica de 10kA
-5. **Final:** Sección que cumpla todos los criterios
-
-#### Resultados Esperados
-- Corriente de proyecto: ~76A
-- Factor de temperatura: ~0.9 (método F, 40°C)
-- Factor de agrupamiento: 1.0 (circuito único)
-- Sección mínima: 25mm² o mayor
-- Verificación de caída: Puede requerir 35mm²
-- Sección final: 35mm² (la mayor de todos los criterios)
-
-### Caso 2: Circuito Residencial Monofásico
-
-#### Escenario
-Alimentación para chuveiro 7500W, 220V, instalado en electroducto embutido, distancia 15m.
-
-#### Flujo Esperado
-1. **Proyecto:** 7500W, 220V, monofásico, método A1
-2. **Resultado:** Corriente ≈ 34A, sección por ampacidad
-3. **Caída:** Verificar límite 4% residencial
-4. **Cortocircuito:** Verificar con Icc residencial típica
-5. **Final:** Sección que cumpla criterios residenciales
-
-#### Resultados Esperados
-- Corriente de proyecto: ~34A
-- Sección mínima por ampacidad: 6mm²
-- Caída de tensión: Dentro de 4% con 6mm²
-- Sección final: 6mm²
-
-### Caso 3: Instalación de Alta Tensión
-
-#### Escenario
-Alimentador para transformador 500kVA, 13.8kV, cabo subterráneo, distancia 200m.
-
-#### Flujo Esperado
-1. **Proyecto:** 500kVA, 13.8kV, trifásico, método D
-2. **Resultado:** Corriente ≈ 21A, sección por ampacidad
-3. **Caída:** Crítica por distancia y tensión
-4. **Cortocircuito:** Verificar con alta corriente de falla
-5. **Final:** Sección determinada por cortocircuito
-
-#### Resultados Esperados
-- Corriente de proyecto: ~21A
-- Sección mínima por ampacidad: 4mm²
-- Sección por caída: 16mm² (por distancia)
-- Sección por cortocircuito: 50mm² (por alta Icc)
-- Sección final: 50mm²
-
----
-
-## CRITERIOS DE ACEPTACIÓN
-
-### Funcionalidad Básica
-
-#### Cálculos Correctos
-- ✅ Corriente de proyecto con error < 1%
-- ✅ Factores de corrección según NBR 5410
-- ✅ Selección de sección por ampacidad correcta
-- ✅ Caída de tensión con precisión de 0.01V
-- ✅ Verificación de cortocircuito según norma
-
-#### Validaciones
-- ✅ Rechazar entradas inválidas con mensaje claro
-- ✅ Detectar incompatibilidades de parámetros
-- ✅ Validar rangos de todos los campos numéricos
-- ✅ Verificar coherencia entre pestañas
-
-### Usabilidad
-
-#### Interfaz
-- ✅ Navegación intuitiva entre pestañas
-- ✅ Formularios organizados lógicamente
-- ✅ Resultados presentados claramente
-- ✅ Mensajes de error comprensibles
-
-#### Rendimiento
-- ✅ Cálculos instantáneos (< 100ms)
-- ✅ Interfaz responsiva en móviles
-- ✅ Carga inicial rápida (< 2s)
-- ✅ Sin bloqueos durante cálculos
-
-### Precisión Técnica
-
-#### Conformidad Normativa
-- ✅ Tablas NBR 5410 implementadas correctamente
-- ✅ Datos INPACO actualizados y precisos
-- ✅ Fórmulas de corriente y caída de tensión según Mamede Filho (Ec. 3.8 y 3.18)
-- ✅ Factores de corrección según norma
-
-#### Casos de Prueba
-- ✅ Motor 10CV/380V → Corriente 15.3A ± 0.1A
-- ✅ Chuveiro 7500W/220V → Sección 6mm² mínima
-- ✅ Cabo 50m/25mm²/50A → Caída < 2%
-- ✅ Cortocircuito 10kA/0.1s → Sección mínima correcta
-
-### Robustez
-
-#### Manejo de Errores
-- ✅ No crashes con entradas inválidas
-- ✅ Recuperación elegante de errores
-- ✅ Mensajes informativos, no técnicos
-- ✅ Preservación de datos válidos
-
-#### Casos Límite
-- ✅ Potencias muy pequeñas (< 100W)
-- ✅ Potencias muy grandes (> 500kW)
-- ✅ Temperaturas extremas (-10°C, 80°C)
-- ✅ Distancias largas (> 1km)
-
----
-
-## CONSIDERACIONES ESPECIALES
-
-### Actualizaciones Futuras
-
-#### Expansión de Normas
-- Preparar para inclusión de normas internacionales (IEC, NEC)
-- Estructura modular para agregar nuevos métodos
-- Flexibilidad para diferentes países/regiones
-
-#### Nuevos Materiales
-- Soporte para cables de media tensión
-- Materiales de aislamiento emergentes
-- Conductores de aleaciones especiales
-
-### Integración
-
-#### Exportación de Datos
-- Formato PDF para reportes técnicos
-- Excel para análisis adicionales
-- Integración con software CAD
-
-#### API Futura
-- Endpoints para cálculos automatizados
-- Integración con sistemas de gestión
-- Batch processing para múltiples circuitos
-
----
-
-## CONCLUSIÓN
-
-Esta calculadora debe ser una herramienta profesional que combine precisión técnica con facilidad de uso. Debe educar al usuario sobre los criterios de dimensionamiento mientras proporciona resultados confiables para uso en proyectos reales.
-
-El éxito se medirá por:
-- **Precisión:** Resultados técnicamente correctos
-- **Usabilidad:** Interfaz intuitiva y eficiente
-- **Confiabilidad:** Funcionamiento robusto sin errores
-- **Utilidad:** Valor real para profesionales del sector
-
----
-
-*Manual de Funcionamiento v2.0*  
-*Calculadora de Cables Eléctricos - INPACO + NBR + Mamede Filho*  
-*Estructura Modular | Métodos A1 a G | PVC 70 °C, EPR/XLPE/HEPR 90 °C*
-
+## Validaciones
+- Cada pestaña valida sus entradas antes de calcular. Un campo vacío o fuera de rango se informa como error; no se reemplaza por un valor por defecto.
+- **Rangos principales:**
+  - Factor de potencia de 0,1 a 1,0.
+  - Rendimiento y factor de demanda mayores que 0 y hasta 1,0.
+  - Circuitos agrupados: entero ≥ 1.
+  - Temperatura ambiente: la que cubre INPACO Tabla 6 para la aislación elegida.
+  - Tiempo de despeje hasta 5 s.
+  - Tensión AC hasta 1000 V para ampacidad.
+- **Avisos que no bloquean el cálculo:**
+  - Ampacidad de aluminio.
+  - Más de 6 circuitos enterrados, fuera de la tabla INPACO.
+  - Icc poco usual para el nivel de tensión.
+  - Ternas en paralelo que suben el número de circuitos agrupados.
+
+## Casos de ejemplo (verificados con la app; son tests en `tests/test_calculations.js`)
+
+**Caso 1: motor trifásico.**
+- Entradas: 50 CV, 380 V, cosφ 0,85, η 0,92, cobre PVC, método B1, 40 °C, un circuito.
+- Ampacidad: la corriente es 71,4 A y da 25 mm² (78 A).
+- Caída con 80 m, en trébol a 50 Hz: 2,19 %, cumple el 5 %.
+- Cortocircuito de 10 MVA a 380 V (15,2 kA, 0,1 s): la sección mínima es 41,8 mm² y la comercial 50 mm².
+- Sección final: 50 mm², definida por cortocircuito.
+
+**Caso 2: ducha monofásica.**
+- Entradas: 7500 W, 220 V, cosφ 1, cobre PVC, método B1, 40 °C.
+- Ampacidad: la corriente es 34,1 A y da 6 mm² (36 A).
+- Caída con 30 m: 3,67 %, cumple el 4 %.

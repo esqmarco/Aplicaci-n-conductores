@@ -288,7 +288,7 @@ function obtenerParametrosProyecto() {
         materialCondutor: document.getElementById('material-condutor').value,
         temperaturaAmbiente: parseFloat(document.getElementById('temperatura-ambiente').value),
         metodoInstalacao: document.getElementById('metodo-instalacao').value,
-        agrupamento: parseInt(document.getElementById('agrupamento').value),
+        agrupamento: parseFloat(document.getElementById('agrupamento').value),
         factorDemanda: parseFloat(document.getElementById('factor-demanda')?.value),
         tipoCircuito: document.getElementById('tipo-circuito')?.value || 'general',
         resistividadSuelo: parseFloat(document.getElementById('resistividad-suelo')?.value) || 1.0,
@@ -366,7 +366,7 @@ function obtenerParametrosAmpacidadDC() {
         temperatura: parseFloat(document.getElementById('temperatura-ambiente-dc').value),
         metodo: document.getElementById('metodo-instalacao-dc').value,
         aislamiento: document.getElementById('aislamiento-dc') ? document.getElementById('aislamiento-dc').value : 'PVC',
-        agrupamiento: parseInt(document.getElementById('agrupamiento-dc')?.value) || 1,
+        agrupamiento: parseFloat(document.getElementById('agrupamiento-dc')?.value),
     };
 
     if (modo === 'potencia') {
@@ -428,6 +428,8 @@ function propagarDatosAmpacidadDC(parametros, resultado) {
         if (parametros.tensionSelector === 'personalizado' && filaPers && inputPers) {
             filaPers.style.display = 'block';
             inputPers.value = parametros.tensionPersonalizada;
+        } else if (filaPers) {
+            filaPers.style.display = 'none';
         }
     }
 
@@ -470,26 +472,10 @@ function calcularProyecto() {
 
         var parametros = obtenerParametrosProyecto();
 
-        // Validar segun modo de entrada
-        var errores = [];
-        if (parametros.modoEntrada === 'potencia') {
-            if (!parametros.potencia || isNaN(parametros.potencia) || parametros.potencia <= 0) {
-                errores.push('Potencia es requerida y debe ser mayor que 0');
-            }
-        } else if (parametros.modoEntrada === 'corriente') {
-            if (!parametros.corrienteDirecta || isNaN(parametros.corrienteDirecta) || parametros.corrienteDirecta <= 0) {
-                errores.push('Corriente es requerida y debe ser mayor que 0');
-            }
-        } else if (parametros.modoEntrada === 'transformador') {
-            if (!parametros.potenciaTransformadorKVA || isNaN(parametros.potenciaTransformadorKVA) || parametros.potenciaTransformadorKVA <= 0) {
-                errores.push('Potencia del transformador (kVA) es requerida y debe ser mayor que 0');
-            }
-        }
-        if (!parametros.tension || isNaN(parametros.tension)) {
-            errores.push('Tensión es requerida');
-        }
-        if (errores.length > 0) {
-            mostrarErroresValidacion(errores);
+        var validacion = validarParametrosAmpacidadAC(parametros);
+        if (!validacion.valido) {
+            descartarResultados('proyecto', 'resultados-proyecto');
+            mostrarErroresValidacion(validacion.errores);
             return;
         }
 
@@ -512,6 +498,7 @@ function calcularProyecto() {
         });
 
         // Propagar datos a pestañas de Caída de Tensión y Cortocircuito AC
+        invalidarDependientes([['caidaTension', 'resultados-caida-tension'], ['cortocircuito', 'resultados-cortocircuito']]);
         propagarDatosAmpacidadAC(parametros, resultado);
 
         // Mark tab as completed
@@ -696,6 +683,7 @@ function calcularCaidaTension() {
 
         var validacion = validarParametrosCaidaTensionAC(parametros);
         if (!validacion.valido) {
+            descartarResultados('caidaTension', 'resultados-caida-tension');
             mostrarErroresValidacion(validacion.errores);
             return;
         }
@@ -769,6 +757,7 @@ function calcularCortocircuito() {
 
         var validacion = validarParametrosCortocircuitoAC(parametros);
         if (!validacion.valido) {
+            descartarResultados('cortocircuito', 'resultados-cortocircuito');
             mostrarErroresValidacion(validacion.errores);
             return;
         }
@@ -845,7 +834,8 @@ function actualizarResumenAC() {
     if (proyecto && proyecto.resultado) {
         var r = proyecto.resultado;
         setTexto('resumen-corriente-ac', r.corriente !== undefined ? r.corriente.toFixed(2) + ' A' : '--');
-        setTexto('resumen-seccion-ampacidad-ac', r.seccion !== undefined ? r.seccion + ' mm2' : '--');
+        var nAmp = r.conductoresPorFase > 1 ? r.conductoresPorFase + ' \u00D7 ' : '';
+        setTexto('resumen-seccion-ampacidad-ac', r.seccion !== undefined ? nAmp + r.seccion + ' mm\u00B2' : '--');
     } else {
         setTexto('resumen-corriente-ac', 'No calculado');
         setTexto('resumen-seccion-ampacidad-ac', 'No calculado');
@@ -904,7 +894,10 @@ function calcularSeccionFinalAC() {
         secciones.push({ valor: proyecto.resultado.seccion, criterio: 'Ampacidad' });
     }
 
-    var nParalelo = (proyecto && proyecto.resultado && proyecto.resultado.conductoresPorFase) || 1;
+    // Conductores en paralelo: los de la ampacidad; sin ampacidad, los de la caída de tensión
+    var nParalelo = (proyecto && proyecto.resultado)
+        ? (proyecto.resultado.conductoresPorFase || 1)
+        : ((caida && parseInt(caida.parametros.conductoresPorFase, 10)) || 1);
 
     // Menor sección que cumple la caída de tensión, con el mismo número de
     // conductores en paralelo que el dimensionamiento por ampacidad
@@ -957,6 +950,7 @@ function calcularAmpacidadDC() {
 
         var validacion = validarParametrosAmpacidadDC(parametros);
         if (!validacion.valido) {
+            descartarResultados('ampacidadDC', 'resultados-ampacidad-dc');
             mostrarErroresValidacion(validacion.errores);
             return;
         }
@@ -973,6 +967,7 @@ function calcularAmpacidadDC() {
         mostrarMensaje('Ampacidad DC calculada correctamente', 'exito');
 
         // Propagar datos a pestañas de Caída de Tensión DC y Cortocircuito DC
+        invalidarDependientes([['caidaTensionDC', 'resultados-caida-tension-dc'], ['cortocircuitoDC', 'resultados-cortocircuito-dc']]);
         propagarDatosAmpacidadDC(parametros, resultado);
 
         // Mark tab as completed
@@ -1021,6 +1016,7 @@ function calcularCaidaTensionDC_UI() {
 
         var validacion = validarParametrosCaidaTensionDC(parametros);
         if (!validacion.valido) {
+            descartarResultados('caidaTensionDC', 'resultados-caida-tension-dc');
             mostrarErroresValidacion(validacion.errores);
             return;
         }
@@ -1086,6 +1082,7 @@ function calcularCortocircuitoDC() {
 
         var validacion = validarParametrosCortocircuitoDC(parametros);
         if (!validacion.valido) {
+            descartarResultados('cortocircuitoDC', 'resultados-cortocircuito-dc');
             mostrarErroresValidacion(validacion.errores);
             return;
         }
@@ -1146,26 +1143,39 @@ function actualizarResumenDC() {
     var cc = appState.calculos.cortocircuitoDC;
 
     if (amp && amp.resultado) {
+        // Con conductores por polo, la sección por ampacidad es la de cada conductor (igual que la final)
+        var final = calcularSeccionFinalDC();
+        var porAmp = (final.criterios || []).filter(function (c) { return c.criterio.indexOf('Ampacidad') === 0; })[0];
+        var np = final.np > 1 ? final.np + ' \u00D7 ' : '';
         setTexto('resumen-corriente-dc', amp.resultado.corriente + ' A');
-        setTexto('resumen-seccion-ampacidad', amp.resultado.seccion + ' mm2');
+        setTexto('resumen-seccion-ampacidad', porAmp ? np + porAmp.valor + ' mm\u00B2' : amp.resultado.seccion + ' mm\u00B2');
+    } else {
+        setTexto('resumen-corriente-dc', 'No calculado');
+        setTexto('resumen-seccion-ampacidad', 'No calculado');
     }
 
+    var elEstado = document.getElementById('resumen-estado-caida');
     if (caida && caida.resultado) {
         setTexto('resumen-caida-tension', caida.resultado.caida_tension_pct + '%');
-        var elEstado = document.getElementById('resumen-estado-caida');
         if (elEstado) {
             elEstado.textContent = caida.resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
             elEstado.className = caida.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
         }
+    } else {
+        setTexto('resumen-caida-tension', 'No calculado');
+        if (elEstado) { elEstado.textContent = '--'; elEstado.className = ''; }
     }
 
+    var elEstadoCC = document.getElementById('resumen-estado-cc');
     if (cc && cc.resultado) {
         setTexto('resumen-corriente-cc', cc.resultado.corriente_cortocircuito + ' A');
-        var elEstadoCC = document.getElementById('resumen-estado-cc');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
             elEstadoCC.className = cc.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
         }
+    } else {
+        setTexto('resumen-corriente-cc', 'No calculado');
+        if (elEstadoCC) { elEstadoCC.textContent = '--'; elEstadoCC.className = ''; }
     }
 
     determinarSeccionFinalDC();
@@ -1226,18 +1236,21 @@ function resetearFormulario(pestana) {
         campos.forEach(function (campoId) {
             var campo = document.getElementById(campoId);
             if (campo) {
+                // Vuelve al valor inicial del HTML (no a la primera opción ni a vacío)
                 if (campo.type === 'select-one') {
-                    campo.selectedIndex = 0;
+                    var inicial = 0;
+                    for (var i = 0; i < campo.options.length; i++) {
+                        if (campo.options[i].defaultSelected) { inicial = i; break; }
+                    }
+                    campo.selectedIndex = inicial;
+                    campo.dispatchEvent(new Event('change'));
                 } else {
-                    campo.value = '';
+                    campo.value = campo.defaultValue;
                 }
             }
         });
 
-        var resultados = document.getElementById('resultados-' + pestana);
-        if (resultados) {
-            resultados.style.display = 'none';
-        }
+        descartarResultados(CALCULOS_POR_PESTANA[pestana], 'resultados-' + pestana);
 
         mostrarMensaje('Formulario limpiado', 'info');
     }
@@ -1414,7 +1427,8 @@ function construirReporteAC() {
         res = [
             ['Corriente de cortocircuito', fmt(rk.corrienteCortocircuito, 2, 'kA')],
             ['Constante K', fmt(rk.constanteK)],
-            ['Sección mínima calculada', fmt(rk.seccionMinima, 2, 'mm²')],
+            ['Sección mínima calculada', fmt(rk.seccionMinima, 2, 'mm²') +
+                (rk.constanteKMinima !== rk.constanteK ? ' (con K = ' + rk.constanteKMinima + ', por superar 300 mm²)' : '')],
             ['Sección comercial mínima', rk.seccionComercial ? rk.seccionComercial + ' mm²' : 'mayor a 1000 mm²'],
             ['Estado', rk.cumple ? 'CUMPLE' : 'NO CUMPLE']
         ];
@@ -1511,7 +1525,9 @@ function construirReporteDC() {
             ['Resistencia del banco', fmt(rk.resistencia_banco_mohm, 3, 'mΩ')],
             ['Corriente de cortocircuito', fmt(rk.corriente_cortocircuito, null, 'A')],
             ['Constante K', fmt(rk.constante_K)],
-            ['Sección mínima', fmt(rk.seccion_minima, 2, 'mm²') + ' (comercial ' + (rk.seccion_comercial ? rk.seccion_comercial + ' mm²' : '> 1000 mm²') + ')'],
+            ['Sección mínima', fmt(rk.seccion_minima, 2, 'mm²') +
+                (rk.constante_K_minima !== rk.constante_K ? ' con K = ' + rk.constante_K_minima + ' (> 300 mm²)' : '') +
+                ' (comercial ' + (rk.seccion_comercial ? rk.seccion_comercial + ' mm²' : '> 1000 mm²') + ')'],
             ['Estado', rk.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE']
         ];
     }
@@ -1602,10 +1618,38 @@ function mostrarMensaje(texto, tipo) {
  * Oculta resultados y borra el estado de un cálculo que falló, para no dejar
  * en pantalla (ni en el resumen) valores de un cálculo anterior.
  */
+// Pestaña ↔ clave del cálculo en appState ↔ tarjeta de resultados
+var CALCULOS_POR_PESTANA = {
+    'proyecto': 'proyecto', 'caida-tension': 'caidaTension', 'cortocircuito': 'cortocircuito',
+    'ampacidad-dc': 'ampacidadDC', 'caida-tension-dc': 'caidaTensionDC', 'cortocircuito-dc': 'cortocircuitoDC'
+};
+
+/**
+ * Invalida un cálculo: lo borra del estado (resumen y reporte dejan de usarlo),
+ * oculta su tarjeta y quita la marca ✓ de su pestaña.
+ */
 function descartarResultados(clave, idResultados) {
+    var hadCalc = !!appState.calculos[clave];
     appState.calculos[clave] = null;
     var el = document.getElementById(idResultados);
     if (el) el.style.display = 'none';
+    Object.keys(CALCULOS_POR_PESTANA).forEach(function (pestana) {
+        if (CALCULOS_POR_PESTANA[pestana] !== clave) return;
+        var tab = document.querySelector('[data-tab="' + pestana + '"]');
+        if (tab) tab.textContent = tab.textContent.replace(/\s*\u2713/g, '').trim();
+    });
+    return hadCalc;
+}
+
+/**
+ * Al recalcular la ampacidad cambian la corriente y la sección que usan caída y
+ * cortocircuito: esos cálculos quedan viejos y se invalidan (hay que re-verificarlos).
+ */
+function invalidarDependientes(pares) {
+    var invalidados = pares.filter(function (par) { return descartarResultados(par[0], par[1]); });
+    if (invalidados.length) {
+        mostrarMensaje('Cambió la ampacidad: volvé a verificar caída de tensión y cortocircuito con los datos nuevos', 'advertencia');
+    }
 }
 
 function setTexto(id, texto) {

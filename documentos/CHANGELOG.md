@@ -4,6 +4,32 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.8.0] - 2026-09-23 — Auditoría general
+
+- **Quién:** Marco + Claude
+- **Informe:** `documentos/auditorias/AUDITORIA_2026-09-23.md`, con 16 hallazgos reproducidos y corregidos.
+- **Resultados que podían salir menores que lo necesario:**
+  - Al recalcular la ampacidad, la caída y el cortocircuito viejos seguían entrando en la sección final y el reporte. Ahora se invalidan y se avisa.
+  - Tampoco quedan vigentes después de una validación fallida ni de Limpiar.
+  - Circuitos agrupados vacío o 0 se tomaba como 1 circuito: ahora es un error. Lo mismo con el rendimiento y el factor de demanda vacíos.
+  - Cortocircuito DC: ahora usa el K de más de 300 mm² (103 Cu / 68 Al en PVC), igual que AC, con una función compartida. Se quitó `constantesK_DC`, que duplicaba los K.
+  - Caída DC: "cumple" se decide con el porcentaje sin redondear, como en AC.
+  - Aluminio: la sección comercial de cortocircuito es de 16 mm² como mínimo.
+- **Presentación:**
+  - La S mín. de cortocircuito ya no depende de la sección elegida.
+  - El resumen muestra "n ×" en AC; en DC muestra la sección por conductor.
+  - La sección final AC toma el paralelo de la caída cuando no hay ampacidad.
+  - El resumen DC muestra "No calculado".
+  - El tiempo de despeje DC ahora tiene mínimo de 0,01 s.
+  - La fila de tensión personalizada DC se oculta cuando corresponde.
+  - Tooltip de agrupamiento DC.
+- **Latentes:** el conductor de protección por cortocircuito ahora usa el K del material; una temperatura de conductor vacía ya no da NaN.
+- **Documentos:**
+  - El manual se reescribió según el código (antes era la especificación v2.0, con fórmulas y casos viejos).
+  - PRD al día; sus pendientes apuntan al plan.
+  - CLAUDE.md con los métodos DC y las reglas de invalidación y de campo vacío.
+- **Tests:** 118, incluidos 2 chequeos estáticos de `app.js`: validación fallida → descarte, y ningún campo que el usuario puede dejar vacío recibe `|| número`. Los ejemplos del manual también son tests.
+
 ## [5.7.0] - 2026-09-23 — Ampacidad de aluminio con NBR 5410 (backlog #1)
 
 - **Quién:** Marco + Claude (Opus 5.5)
