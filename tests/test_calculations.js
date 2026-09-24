@@ -934,14 +934,14 @@ test('DC resistance is taken at service temperature (PVC 70 C)', function() {
 });
 
 test('DC voltage drop validation works with current (no power field)', function() {
-    const v = validarParametrosCaidaTensionDC({ corriente: 80, aplicacionDC: 'bateria_carga', tensionSelector: '48', longitud: 20,
+    const v = validarParametrosCaidaTensionDC({ corriente: 80, aplicacionDC: 'bateria_carga', tipoCable: 'potencia', tensionSelector: '48', longitud: 20,
         conductoresPorPolo: 1, seccion: 25, material: 'cobre', aislamiento: 'PVC' });
     assertTrue(v.valido, 'Should be valid: ' + v.errores.join('; '));
 });
 
 test('DC ampacity validation in current mode does not ask for power', function() {
     const v = validarParametrosAmpacidadDC({ modoEntrada: 'corriente', corrienteDirecta: 20, material: 'cobre',
-        temperatura: 30, metodo: 'B1', agrupamiento: 1 });
+        temperatura: 30, metodo: 'B1', agrupamiento: 1, tipoCarga: 'general' });
     assertTrue(v.valido, 'Should be valid: ' + v.errores.join('; '));
 });
 
@@ -1140,6 +1140,87 @@ test('Motor start switches are selects (history stores el.value; a checkbox woul
 test('Drop percentages shown next to a verdict go through textoPct (never "10.00 % NO CUMPLE")', function() {
     const directos = appJs.match(/caida(?:TensionPct|_tension_pct|TotalPct)\.toFixed|caida_tension_pct \+ '%'|fmt\(r[a-z]*\.caida(?:TensionPct|_tension_pct|TotalPct)/g);
     assertTrue(!directos, 'porcentaje mostrado sin textoPct: ' + (directos || []).join(', '));
+});
+
+// Lote 2026-09-24: motor DC al 125 % (#15), métodos DC A2/B2/D/F (#10), cables de control (#16)
+const baseDC = { modoEntrada: 'corriente', corrienteDirecta: 80, material: 'cobre', temperatura: 40, metodo: 'B1',
+    aislamiento: 'PVC', agrupamiento: 1, tipoCarga: 'general' };
+
+test('DC motor load: ampacity sized at 125 % of the current (Itaipu R1A 10.3.2), real current kept', function() {
+    const g = dimensionarPorAmpacidadDC(baseDC);
+    const m = dimensionarPorAmpacidadDC(Object.assign({}, baseDC, { tipoCarga: 'motor' }));
+    assertEqual(m.corriente, 80, 'la corriente real no cambia');
+    assertEqual(m.corrienteDimensionamiento, 100, '1,25 × 80');
+    assertEqual(m.factorCarga, 1.25);
+    // INPACO Tabla 2, B1 PVC 2 conductores: 25 mm² = 88 A, 35 mm² = 108 A → general 80 A: 25 mm²; motor 100 A: 35 mm²
+    assertEqual(g.seccion, 25);
+    assertEqual(m.seccion, 35);
+});
+
+test('DC motor in power mode uses In = P / (V x eta) and requires eta', function() {
+    const p = Object.assign({}, baseDC, { modoEntrada: 'potencia', potencia: 4250, tensionSelector: '125', tipoCarga: 'motor', rendimiento: 0.85 });
+    const r = dimensionarPorAmpacidadDC(p);
+    assertClose(r.corriente, 40, 0.01);            // 4250 / 125 / 0,85
+    assertClose(r.corrienteDimensionamiento, 50, 0.01);
+    let lanzo = false;
+    try { dimensionarPorAmpacidadDC(Object.assign({}, p, { rendimiento: NaN })); } catch (e) { lanzo = true; }
+    assertTrue(lanzo, 'sin rendimiento debe dar error');
+    assertTrue(!validarParametrosAmpacidadDC(Object.assign({}, p, { rendimiento: NaN })).valido, 'la validación lo pide');
+});
+
+test('DC final section with conductors per pole keeps the 125 % motor factor', function() {
+    const pa = Object.assign({}, baseDC, { tipoCarga: 'motor', corrienteDirecta: 160 });
+    const amp = { parametros: pa, resultado: dimensionarPorAmpacidadDC(pa) };
+    const caida = { parametros: { corriente: 160, tensionSelector: '125', longitud: 5, conductoresPorPolo: 2, seccion: 25,
+        material: 'cobre', aislamiento: 'PVC', aplicacionDC: 'bateria_carga', tipoCable: 'potencia' } };
+    caida.resultado = verificarCaidaTensionDC(caida.parametros);
+    const fin = calcularSeccionFinalDCDesde({ ampacidad: amp, caida: caida, cortocircuito: null });
+    const porAmp = fin.criterios.filter(function (c) { return /Ampacidad/.test(c.criterio); })[0];
+    // Por conductor: 80 A × 1,25 = 100 A, 2 circuitos (factor 0,80) → 125 A corregidos → 50 mm² (B1 PVC 2c: 35 = 108 A, 50 = 131 A)
+    assertEqual(porAmp.valor, 50);
+});
+
+test('DC methods A2, B2, F use the INPACO 2-conductor columns; D applies soil temperature and resistivity', function() {
+    ['A2', 'B2', 'F'].forEach(function (m) {
+        const r = dimensionarPorAmpacidadDC(Object.assign({}, baseDC, { metodo: m }));
+        assertEqual(r.ampacidad, obtenerAmpacidadBase('PVC', m, r.seccion, 2), m);
+        assertTrue(validarParametrosAmpacidadDC(Object.assign({}, baseDC, { metodo: m })).valido, m + ' válido');
+    });
+    const d = Object.assign({}, baseDC, { metodo: 'D', temperatura: 25, tipoEnterrado: 'ducto', resistividadSuelo: 2.5 });
+    const r = dimensionarPorAmpacidadDC(d);
+    assertEqual(r.factorTemperatura, 1, '25 °C de suelo = referencia');
+    assertEqual(r.factorResistividad, obtenerFactorResistividadSuelo(2.5, 'ducto'));
+    assertTrue(r.factorResistividad < 1);
+    // Gemelo AC: mismo factor de temperatura de suelo a 40 °C
+    assertEqual(dimensionarPorAmpacidadDC(Object.assign({}, d, { temperatura: 40 })).factorTemperatura,
+        obtenerFactorTemperatura('PVC', 40, 'D', true));
+    assertTrue(!validarParametrosAmpacidadDC(Object.assign({}, d, { resistividadSuelo: NaN })).valido, 'D pide resistividad');
+});
+
+test('Control cables (Itaipu R1A 10.3.3): drop required only with solenoids and more than 400 m', function() {
+    assertTrue(verificacionCaidaExigida('potencia', 10).exigida);
+    assertTrue(!verificacionCaidaExigida('control_solenoide', 400).exigida, '400 m no supera');
+    assertTrue(verificacionCaidaExigida('control_solenoide', 401).exigida);
+    assertTrue(!verificacionCaidaExigida('control', 2000).exigida);
+    let lanzo = false; try { verificacionCaidaExigida('otro', 10); } catch (e) { lanzo = true; }
+    assertTrue(lanzo, 'tipo desconocido = error');
+});
+
+test('DC control cable without obligation does not drive the final section', function() {
+    const pc = { corriente: 5, tensionSelector: '125', longitud: 300, conductoresPorPolo: 1, seccion: 1.5,
+        material: 'cobre', aislamiento: 'PVC', aplicacionDC: 'bateria_carga', tipoCable: 'control_solenoide' };
+    const rc = verificarCaidaTensionDC(pc);
+    assertTrue(rc.exigida === false);
+    const fin = calcularSeccionFinalDCDesde({ ampacidad: null, caida: { parametros: pc, resultado: rc }, cortocircuito: null });
+    assertEqual(fin.criterios.length, 0, 'la caída no exigida no aporta sección');
+    const rc2 = verificarCaidaTensionDC(Object.assign({}, pc, { longitud: 500 }));
+    assertTrue(rc2.exigida === true);
+});
+
+test('Battery type without table value is an error, not 2.0 V', function() {
+    let lanzo = false; try { obtenerTensionElementoBateria('zinc'); } catch (e) { lanzo = true; }
+    assertTrue(lanzo);
+    assertEqual(obtenerTensionElementoBateria('litio'), 3.2);
 });
 
 test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {

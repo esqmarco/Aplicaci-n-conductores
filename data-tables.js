@@ -833,31 +833,6 @@ const tabelasDC = {
         aluminio: tabelasNBR.resistencias.aluminio
     },
 
-    // Parámetros técnicos de baterías
-    parametrosBaterias: {
-        plomo_acido: {
-            tensionElemento: 2.0,                    // V por elemento
-            resistenciaInternaPredeterminada: 1.0,   // mΩ por elemento
-            factorDescarga: 1.0,                     // Factor de descarga típico
-            descripcion: "Plomo Ácido (VRLA/Gel)"
-        },
-        litio: {
-            tensionElemento: 3.2,                    // V por elemento (LiFePO4)
-            resistenciaInternaPredeterminada: 0.5,   // mΩ por elemento
-            factorDescarga: 0.95,                    // Factor de descarga típico
-            descripcion: "Litio (LiFePO4)"
-        },
-        niquel_cadmio: {
-            tensionElemento: 1.2,                    // V por elemento
-            resistenciaInternaPredeterminada: 0.8,   // mΩ por elemento
-            factorDescarga: 0.9,                     // Factor de descarga típico
-            descripcion: "Níquel Cadmio (NiCd)"
-        }
-    },
-    
-    // Tensiones nominales DC estándar
-    tensionesNominalesDC: [12, 24, 48, 110, 125, 220, 250, 380, 500],
-    
     // Límites de caída de tensión DC por tramo (%). Fuente: Itaipu #ITA0&EEC010-01
     // "Projetos Elétricos – Critérios" R1A (GE, 2026) §10.3.2, pp. 35–37: cargador → batería ±3 %,
     // batería → carga ±5 %. Solo caída en cables, sobre la tensión de operación del circuito.
@@ -867,22 +842,20 @@ const tabelasDC = {
         cargador_bateria: 3.0
     },
 
+    // Alimentadores de motores DC: capacidad del conductor ≥ 125 % de la corriente del circuito.
+    // Fuente: Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A (GE, 2026) §10.3.2.
+    factorMotorDC: 1.25,
+
     // Constantes K de cortocircuito DC: las mismas que AC (obtenerConstanteK en calculations.js).
 
     // Los factores de temperatura DC usan INPACO Tabla 6 (ver obtenerFactorTemperatura),
     // igual que las ampacidades DC, que usan las tablas INPACO de 2 conductores cargados.
-
-    // Secciones nominales disponibles para DC (mm²)
-    seccionesNominalesDC: [
-        1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500, 630, 800
-    ],
 };
 
 // ===================================================================
 // RESISTENCIA INTERNA DE BATERÍAS POR ELEMENTO (mΩ·Ah)
 // Estimación: R_elemento (mΩ) = constante / capacidad (Ah).
-// Valores coherentes con parametrosBaterias.resistenciaInternaPredeterminada
-// (mΩ por elemento de 100 Ah). La resistencia del banco es N_serie × R_elemento.
+// La resistencia del banco es N_serie × R_elemento.
 // Son valores orientativos: usar siempre el dato del fabricante si está disponible.
 // ===================================================================
 const resistenciasInternasBateria = {
@@ -902,4 +875,11 @@ if (typeof window !== 'undefined') {
 
 // Exportar tablas DC
 window.tabelasDC = tabelasDC;
+
+// ===================================================================
+// CABLES DE CONTROL — Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A (GE, 2026) §10.3.3
+// La caída de tensión solo se verifica en cables que accionan solenoides (válvulas, bobinas de
+// interruptores) cuando el recorrido supera 400 m. Vale para AC y DC.
+// ===================================================================
+window.criteriosCablesControl = { longitudMinimaSolenoide: 400 };
 

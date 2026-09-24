@@ -8,7 +8,7 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
 - **Ampacidad:** catálogo INPACO 2021 (cobre, 40 °C aire / 25 °C suelo, 1,0 K·m/W), 2 y 3 conductores cargados, secciones de 1,5 a 300 mm². Corrientes mayores se resuelven con conductores en paralelo (hasta 6 por fase).
 - **Aluminio:** sección mínima 16 mm². Ampacidad = cobre INPACO × relación I_Al/I_Cu de NBR 5410 Tablas 36–39 (mismo método, aislación y conductores cargados). La app muestra un aviso para contrastar con el catálogo del fabricante.
 - **Aislaciones:** PVC (70 °C); EPR/XLPE y HEPR (90 °C, misma tabla INPACO).
-- **Métodos de instalación (INPACO Tabla 1 / NBR 5410):** en AC A1, A2, B1, B2, C, D, E, F, G (D es el único enterrado). En DC A1, B1, C, E.
+- **Métodos de instalación (INPACO Tabla 1 / NBR 5410):** en AC A1, A2, B1, B2, C, D, E, F, G (D es el único enterrado). En DC A1, A2, B1, B2, C, D, E, F (G no tiene columna NBR de 2 conductores para aluminio).
 - **Media tensión:** no se dimensiona. La pestaña de cortocircuito AC acepta tensiones de MT solo para calcular Icc.
 
 ## Pestañas AC
@@ -46,6 +46,7 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
   - 10 %: desde la fuente o el secundario de un trafo hasta el primario del siguiente trafo con TAPs (Itaipu R1A §10.3.1).
   - Según la R1A, los porcentajes cuentan solo la caída en cables, sobre la tensión de operación del circuito.
 - Si no cumple, la app indica la menor sección que cumple el límite.
+- **Tipo de cable** (Itaipu R1A §10.3.3): potencia, control que acciona solenoides o control sin solenoides. En cables de control la caída solo se exige si accionan solenoides y el recorrido supera 400 m. Si no se exige, el resultado se muestra como "NO EXIGIDA" y no define la sección final.
 - **Partida de motor** (opcional, Itaipu R1A §10.3.1.3 y Mamede §3.5.1.2): con "Sí, el circuito alimenta un motor", la corriente de la pestaña se toma como In del motor.
   - Suma la caída de tres tramos: el circuito del motor (Ip = k·In, cosφ de partida), el alimentador del tablero o CCM (opcional) y el transformador (opcional).
   - En el alimentador y el trafo la corriente es la suma vectorial de Ip y las otras cargas en marcha.
@@ -73,8 +74,12 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
 ### 5. Ampacidad DC
 - **Entradas:**
   - Corriente conocida, o potencia con tensión. La tensión puede ser estándar (12 a 500 V) o personalizada.
-  - Material, aislación (PVC o EPR), temperatura ambiente, método (A1, B1, C, E) y circuitos agrupados.
-- **Cálculo:** las mismas tablas INPACO que en AC, con 2 conductores cargados, y los mismos factores de temperatura y agrupamiento.
+  - Material, aislación (PVC o EPR), temperatura ambiente, método (A1, A2, B1, B2, C, D, E, F) y circuitos agrupados.
+  - En el método D: tipo de instalación enterrada y resistividad del suelo; la temperatura es la del suelo y arranca en 25 °C, igual que en AC.
+- **Tipo de carga:** "General" o "Motor DC". El motor se dimensiona al 125 % de la corriente (Itaipu R1A §10.3.2).
+  - En modo potencia pide el rendimiento del motor, porque la potencia de placa es mecánica: In = P / (V·η).
+  - La caída y el cortocircuito usan la corriente real; solo la ampacidad usa el 125 %.
+- **Cálculo:** las mismas tablas INPACO que en AC, con 2 conductores cargados, y los mismos factores de temperatura, agrupamiento y suelo.
 
 ### 6. Caída de tensión DC
 - **Fórmula:** ΔV = 2 · Rt · I · L / Np, con Rt a 70 °C (PVC) o 90 °C (EPR) y Np conductores en paralelo por polo.
@@ -82,6 +87,7 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
 - **Límite según el tramo** (Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A, GE 2026, §10.3.2):
   - Batería → carga: 5 %.
   - Cargador → batería: 3 %.
+- **Tipo de cable:** igual que en AC (cables de control, Itaipu R1A §10.3.3).
 
 ### 7. Cortocircuito DC
 - **Corriente de cortocircuito del banco:** Icc = V_banco / (N_serie · R_elemento).

@@ -1,94 +1,10 @@
 /**
- * VALIDATIONS.JS - SISTEMA DE VALIDACIÓN MEJORADO
- * ===============================================
- * 
- * Versión R2 Corregida con:
- * - Validaciones específicas para 7 pestañas
- * - Validación de tensión personalizable
- * - Validaciones cruzadas entre pestañas DC
- * - Manejo robusto de errores
+ * VALIDATIONS.JS - Validación de entradas por pestaña (AC y DC).
+ * Un campo vacío o fuera de rango es un error: nunca se reemplaza por un valor por defecto.
  */
 
 // ===================================================================
-// VALIDACIONES BÁSICAS AC (MANTENER EXISTENTES)
-// ===================================================================
-
-/**
- * Valida los parámetros básicos del proyecto AC
- */
-function validarParametrosBasicos(params) {
-    const errores = [];
-    const advertencias = [];
-
-    try {
-        // Validar potencia
-        if (!params.potencia || isNaN(params.potencia)) {
-            errores.push('Potencia es requerida y debe ser numérica');
-        } else {
-            const potencia = parseFloat(params.potencia);
-            if (potencia <= 0) {
-                errores.push('Potencia debe ser mayor que 0');
-            } else if (potencia > 10000000) { // 10 MW
-                errores.push('Potencia debe ser menor que 10MW');
-            } else if (potencia < 1) {
-                advertencias.push('Potencia muy baja, verificar unidades');
-            }
-        }
-
-        // Validar tensión
-        if (!params.tension || isNaN(params.tension)) {
-            errores.push('Tensión es requerida y debe ser numérica');
-        } else {
-            const tension = parseFloat(params.tension);
-            const tensionesValidas = [127, 220, 380, 440, 460, 480, 6600, 13800, 23000];
-            if (!tensionesValidas.includes(tension)) {
-                advertencias.push(`Tensión ${tension}V no es estándar. Valores recomendados: ${tensionesValidas.join(', ')}`);
-            }
-        }
-
-        // Validar factor de potencia
-        if (!params.factorPotencia || isNaN(params.factorPotencia)) {
-            errores.push('Factor de potencia es requerido y debe ser numérico');
-        } else {
-            const fp = parseFloat(params.factorPotencia);
-            if (fp < 0.1 || fp > 1.0) {
-                errores.push('Factor de potencia debe estar entre 0.1 y 1.0');
-            } else if (fp < 0.7) {
-                advertencias.push('Factor de potencia bajo, considerar corrección');
-            }
-        }
-
-        // Validar tipo de sistema
-        if (!params.tipoSistema) {
-            errores.push('Tipo de sistema es requerido');
-        } else if (!['monofasico', 'bifasico', 'trifasico'].includes(params.tipoSistema)) {
-            errores.push('Tipo de sistema debe ser monofásico, bifásico o trifásico');
-        }
-
-        // Validar rendimiento
-        if (params.rendimiento !== undefined) {
-            const rendimiento = parseFloat(params.rendimiento);
-            if (isNaN(rendimiento) || rendimiento < 0.5 || rendimiento > 1.0) {
-                errores.push('Rendimiento debe estar entre 0.5 y 1.0');
-            }
-        }
-
-        return {
-            valido: errores.length === 0,
-            errores: errores,
-            advertencias: advertencias
-        };
-    } catch (error) {
-        return {
-            valido: false,
-            errores: [`Error en validación: ${error.message}`],
-            advertencias: []
-        };
-    }
-}
-
-// ===================================================================
-// NUEVAS VALIDACIONES DC ESPECÍFICAS POR PESTAÑA
+// VALIDACIONES DC POR PESTAÑA
 // ===================================================================
 
 /**
@@ -149,8 +65,21 @@ function validarParametrosAmpacidadDC(params) {
         // Validar método de instalación
         if (!params.metodo) {
             errores.push('Método de instalación es requerido');
-        } else if (!['A1', 'B1', 'C', 'E'].includes(params.metodo)) {
+        } else if (!['A1', 'A2', 'B1', 'B2', 'C', 'D', 'E', 'F'].includes(params.metodo)) {
             errores.push('Método de instalación no válido para DC');
+        } else if (params.metodo === 'D') {
+            if (!['ducto', 'directo'].includes(params.tipoEnterrado)) errores.push('Método D: tipo de instalación enterrada es requerido');
+            if (!(typeof params.resistividadSuelo === 'number' && params.resistividadSuelo > 0)) errores.push('Método D: resistividad térmica del suelo es requerida');
+        }
+
+        // Tipo de carga: motor DC al 125 % (Itaipu R1A §10.3.2); en modo potencia pide el rendimiento
+        if (!['general', 'motor'].includes(params.tipoCarga)) {
+            errores.push('Tipo de carga DC es requerido');
+        } else if (params.tipoCarga === 'motor' && params.modoEntrada !== 'corriente') {
+            const eta = params.rendimiento;
+            if (!(typeof eta === 'number' && eta > 0 && eta <= 1)) {
+                errores.push('Motor DC: el rendimiento es requerido (mayor que 0 y hasta 1); la potencia de placa es mecánica');
+            }
         }
 
         validarCircuitosAgrupados(params.agrupamiento, errores);
@@ -243,6 +172,10 @@ function validarParametrosCaidaTensionDC(params) {
         const limites = (typeof window !== 'undefined' && window.tabelasDC && window.tabelasDC.limitesCaidaDC) || {};
         if (!Object.prototype.hasOwnProperty.call(limites, params.aplicacionDC)) {
             errores.push('Tramo DC es requerido: batería → carga o cargador → batería');
+        }
+
+        if (!['potencia', 'control_solenoide', 'control'].includes(params.tipoCable)) {
+            errores.push('Tipo de cable es requerido');
         }
 
         return {
@@ -429,259 +362,7 @@ function validarTensionDC(tensionSelector, tensionPersonalizada) {
 }
 
 // ===================================================================
-// VALIDACIONES CRUZADAS ENTRE PESTAÑAS DC
-// ===================================================================
-
-/**
- * Valida consistencia entre pestañas DC
- */
-function validarConsistenciaDC(datosAmpacidad, datosCaidaTension, datosCortocircuito) {
-    const errores = [];
-    const advertencias = [];
-
-    try {
-        // Verificar consistencia de potencia entre pestañas
-        const potencias = [];
-        if (datosAmpacidad?.potencia) potencias.push({ valor: datosAmpacidad.potencia, pestaña: 'ampacidad' });
-        if (datosCaidaTension?.potencia) potencias.push({ valor: datosCaidaTension.potencia, pestaña: 'caída de tensión' });
-
-        if (potencias.length > 1) {
-            const potenciaBase = potencias[0].valor;
-            for (let i = 1; i < potencias.length; i++) {
-                const diferencia = Math.abs(potencias[i].valor - potenciaBase) / potenciaBase * 100;
-                if (diferencia > 5) { // Más de 5% de diferencia
-                    advertencias.push(`Potencia en pestaña ${potencias[i].pestaña} (${potencias[i].valor}W) difiere significativamente de ${potencias[0].pestaña} (${potenciaBase}W)`);
-                }
-            }
-        }
-
-        // Verificar consistencia de tensión entre pestañas
-        const tensiones = [];
-        if (datosAmpacidad?.tension) tensiones.push({ valor: datosAmpacidad.tension, pestaña: 'ampacidad' });
-        if (datosCaidaTension?.tension) tensiones.push({ valor: datosCaidaTension.tension, pestaña: 'caída de tensión' });
-
-        if (tensiones.length > 1) {
-            const tensionBase = tensiones[0].valor;
-            for (let i = 1; i < tensiones.length; i++) {
-                if (tensiones[i].valor !== tensionBase) {
-                    advertencias.push(`Tensión en pestaña ${tensiones[i].pestaña} (${tensiones[i].valor}V) difiere de ${tensiones[0].pestaña} (${tensionBase}V)`);
-                }
-            }
-        }
-
-        // Verificar consistencia de material entre pestañas
-        const materiales = [];
-        if (datosAmpacidad?.material) materiales.push({ valor: datosAmpacidad.material, pestaña: 'ampacidad' });
-        if (datosCaidaTension?.material) materiales.push({ valor: datosCaidaTension.material, pestaña: 'caída de tensión' });
-        if (datosCortocircuito?.material) materiales.push({ valor: datosCortocircuito.material, pestaña: 'cortocircuito' });
-
-        if (materiales.length > 1) {
-            const materialBase = materiales[0].valor;
-            for (let i = 1; i < materiales.length; i++) {
-                if (materiales[i].valor !== materialBase) {
-                    advertencias.push(`Material en pestaña ${materiales[i].pestaña} (${materiales[i].valor}) difiere de ${materiales[0].pestaña} (${materialBase})`);
-                }
-            }
-        }
-
-        // Verificar consistencia de temperatura entre pestañas
-        const temperaturas = [];
-        if (datosAmpacidad?.temperatura !== undefined) temperaturas.push({ valor: datosAmpacidad.temperatura, pestaña: 'ampacidad' });
-        if (datosCaidaTension?.temperatura !== undefined) temperaturas.push({ valor: datosCaidaTension.temperatura, pestaña: 'caída de tensión' });
-
-        if (temperaturas.length > 1) {
-            const tempBase = temperaturas[0].valor;
-            for (let i = 1; i < temperaturas.length; i++) {
-                const diferencia = Math.abs(temperaturas[i].valor - tempBase);
-                if (diferencia > 5) { // Más de 5°C de diferencia
-                    advertencias.push(`Temperatura en pestaña ${temperaturas[i].pestaña} (${temperaturas[i].valor}°C) difiere de ${temperaturas[0].pestaña} (${tempBase}°C)`);
-                }
-            }
-        }
-
-        return {
-            valido: errores.length === 0,
-            errores: errores,
-            advertencias: advertencias
-        };
-    } catch (error) {
-        return {
-            valido: false,
-            errores: [`Error en validación de consistencia DC: ${error.message}`],
-            advertencias: []
-        };
-    }
-}
-
-// ===================================================================
-// VALIDACIONES DE RESULTADOS
-// ===================================================================
-
-/**
- * Valida resultados de cálculos DC
- */
-function validarResultadosDC(resultados) {
-    const errores = [];
-    const advertencias = [];
-
-    try {
-        // Validar resultado de ampacidad
-        if (resultados.ampacidad) {
-            const amp = resultados.ampacidad;
-            if (!amp.corriente || amp.corriente <= 0) {
-                errores.push('Corriente DC calculada inválida');
-            }
-            if (!amp.seccion || amp.seccion <= 0) {
-                errores.push('Sección por ampacidad inválida');
-            }
-            if (amp.corriente > 1000) {
-                advertencias.push('Corriente DC muy alta, verificar cálculos');
-            }
-        }
-
-        // Validar resultado de caída de tensión
-        if (resultados.caida_tension) {
-            const ct = resultados.caida_tension;
-            if (ct.caida_tension_pct < 0 || ct.caida_tension_pct > 50) {
-                errores.push('Porcentaje de caída de tensión fuera de rango válido');
-            }
-            if (!ct.cumple_criterio && ct.caida_tension_pct > 10) {
-                advertencias.push('Caída de tensión muy alta, considerar sección mayor');
-            }
-            if (ct.caida_tension_pct < 0.1) {
-                advertencias.push('Caída de tensión muy baja, verificar cálculos');
-            }
-        }
-
-        // Validar resultado de cortocircuito
-        if (resultados.cortocircuito) {
-            const cc = resultados.cortocircuito;
-            if (!cc.corriente_cortocircuito || cc.corriente_cortocircuito <= 0) {
-                errores.push('Corriente de cortocircuito inválida');
-            }
-            if (!cc.seccion_minima || cc.seccion_minima <= 0) {
-                errores.push('Sección mínima por cortocircuito inválida');
-            }
-            if (cc.corriente_cortocircuito > 100000) {
-                advertencias.push('Corriente de cortocircuito muy alta, verificar configuración');
-            }
-        }
-
-        // Validar sección final
-        if (resultados.seccion_final) {
-            const seccionesValidas = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300];
-            if (!seccionesValidas.includes(resultados.seccion_final)) {
-                errores.push('Sección final no es estándar');
-            }
-        }
-
-        return {
-            valido: errores.length === 0,
-            errores: errores,
-            advertencias: advertencias
-        };
-    } catch (error) {
-        return {
-            valido: false,
-            errores: [`Error en validación de resultados DC: ${error.message}`],
-            advertencias: []
-        };
-    }
-}
-
-// ===================================================================
-// FUNCIONES AUXILIARES DE VALIDACIÓN
-// ===================================================================
-
-/**
- * Valida que un valor esté en un rango específico
- */
-function validarRango(valor, min, max, nombre) {
-    if (valor < min || valor > max) {
-        throw new Error(`${nombre} debe estar entre ${min} y ${max}`);
-    }
-    return true;
-}
-
-/**
- * Valida que un valor esté en una lista de valores válidos
- */
-function validarLista(valor, lista, nombre) {
-    if (!lista.includes(valor)) {
-        throw new Error(`${nombre} debe ser uno de: ${lista.join(', ')}`);
-    }
-    return true;
-}
-
-/**
- * Valida formato numérico
- */
-function validarNumerico(valor, nombre) {
-    if (isNaN(valor) || valor === null || valor === undefined || valor === '') {
-        throw new Error(`${nombre} debe ser un valor numérico válido`);
-    }
-    return true;
-}
-
-/**
- * Valida que un campo sea requerido
- */
-function validarRequerido(valor, nombre) {
-    if (valor === null || valor === undefined || valor === '') {
-        throw new Error(`${nombre} es requerido`);
-    }
-    return true;
-}
-
-// ===================================================================
-// FUNCIÓN PRINCIPAL DE VALIDACIÓN POR PESTAÑA
-// ===================================================================
-
-/**
- * Valida parámetros según la pestaña activa
- */
-function validarPorPestaña(pestaña, parametros) {
-    try {
-        switch (pestaña) {
-            case 'proyecto':
-                return validarParametrosBasicos(parametros);
-            
-            case 'caida-tension':
-                return validarParametrosCaidaTensionAC(parametros);
-            
-            case 'cortocircuito':
-                return validarParametrosCortocircuitoAC(parametros);
-            
-            case 'ampacidad-dc':
-                return validarParametrosAmpacidadDC(parametros);
-            
-            case 'caida-tension-dc':
-                return validarParametrosCaidaTensionDC(parametros);
-            
-            case 'cortocircuito-dc':
-                return validarParametrosCortocircuitoDC(parametros);
-            
-            case 'resultados-dc':
-                return validarResultadosDC(parametros);
-            
-            default:
-                return {
-                    valido: false,
-                    errores: [`Pestaña ${pestaña} no reconocida`],
-                    advertencias: []
-                };
-        }
-    } catch (error) {
-        return {
-            valido: false,
-            errores: [`Error en validación de pestaña ${pestaña}: ${error.message}`],
-            advertencias: []
-        };
-    }
-}
-
-// ===================================================================
-// FUNCIONES DE VALIDACIÓN AC (MANTENER EXISTENTES)
+// VALIDACIONES AC POR PESTAÑA
 // ===================================================================
 
 /**
@@ -841,6 +522,10 @@ function validarParametrosCaidaTensionAC(params) {
 
         if (params.partida) validarParametrosPartida(params.partida, params.material, errores);
 
+        if (!['potencia', 'control_solenoide', 'control'].includes(params.tipoCable)) {
+            errores.push('Tipo de cable es requerido');
+        }
+
         return {
             valido: errores.length === 0,
             errores: errores,
@@ -942,14 +627,13 @@ function validarParametrosCortocircuitoAC(params) {
     }
 }
 
-console.log('✅ Validations.js R2 Corregido cargado - Validaciones específicas por pestaña y tensión personalizable');
+console.log('✅ Validations.js cargado');
 
 // ===================================================================
 // EXPORTACIONES AL OBJETO WINDOW
 // ===================================================================
 
 // Exportar todas las funciones de validación al objeto window
-window.validarParametrosBasicos = validarParametrosBasicos;
 window.validarParametrosAmpacidadAC = validarParametrosAmpacidadAC;
 window.validarCircuitosAgrupados = validarCircuitosAgrupados;
 window.validarParametrosPartida = validarParametrosPartida;
@@ -957,13 +641,6 @@ window.validarParametrosAmpacidadDC = validarParametrosAmpacidadDC;
 window.validarParametrosCaidaTensionDC = validarParametrosCaidaTensionDC;
 window.validarParametrosCortocircuitoDC = validarParametrosCortocircuitoDC;
 window.validarTensionDC = validarTensionDC;
-window.validarConsistenciaDC = validarConsistenciaDC;
-window.validarResultadosDC = validarResultadosDC;
-window.validarRango = validarRango;
-window.validarLista = validarLista;
-window.validarNumerico = validarNumerico;
-window.validarRequerido = validarRequerido;
-window.validarPorPestaña = validarPorPestaña;
 window.validarParametrosCaidaTensionAC = validarParametrosCaidaTensionAC;
 window.validarParametrosCortocircuitoAC = validarParametrosCortocircuitoAC;
 

@@ -2,6 +2,13 @@
 
 Formato desde el Metodo de trabajo v8: una sola pila, la mas nueva arriba. Cada leccion: que paso · por que · como aplicarlo · destino ejecutable.
 
+## Lote DC (2026-09-24)
+
+### El valor esperado de un test se lee de la tabla, no de memoria
+- **Que paso:** escribi los tests de motor DC con ampacidades de B1 recordadas (87 y 114 A). Los tests fallaron contra el codigo, que estaba bien: la tabla INPACO dice 88 A para 25 mm2 y 108 A para 35 mm2.
+- **Como aplicarlo:** antes de fijar un valor esperado, se imprime la fila de la tabla real y se cita en el comentario del test.
+- **Destino ejecutable:** regla del gate de archivos criticos ("test con valor verificado a mano contra la fuente"). No hace falta un chequeo nuevo: el test en rojo lo detecto.
+
 ## Partida de motores (2026-09-24)
 
 ### Una "cota superior" se comprueba en cada sistema, no en el caso tipico

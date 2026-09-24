@@ -4,6 +4,29 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.12.0] - 2026-09-24 — Lote: motor DC, cables de control, métodos DC, limpieza y CSS (backlog #15, #16, #10, #13, #7)
+
+- **Quién:** Marco + Claude
+- **Decisión de Marco (2026-09-24):** hacer las cinco filas de una vez con el diseño propuesto.
+- **#15 Motor DC al 125 %** (Itaipu R1A §10.3.2):
+  - En Ampacidad DC hay un selector "Tipo de carga". Con "Motor DC", la ampacidad usa 1,25 × In.
+  - En modo potencia pide el rendimiento, obligatorio: In = P / (V·η).
+  - La caída y el cortocircuito usan la In real, y la sección final por conductor mantiene el 125 %.
+  - El dato está en `tabelasDC.factorMotorDC`.
+- **#16 Cables de control** (Itaipu R1A §10.3.3):
+  - Hay un selector "Tipo de cable" en Caída AC y Caída DC. La caída solo se exige si el cable acciona solenoides y el recorrido supera 400 m.
+  - Si no se exige, se muestra "NO EXIGIDA" y no define la sección final.
+  - Se aplica también en DC, porque los circuitos de bobinas suelen ser de 125 Vcc.
+- **#10 Métodos DC:**
+  - Se suman A2, B2, D y F, con las columnas INPACO de 2 conductores cargados.
+  - En D: temperatura de suelo (arranca en 25 °C), agrupamiento enterrado y resistividad del suelo, con la misma regla que AC (`configurarMetodoEnterrado`, compartida).
+  - G queda afuera: NBR 5410 no trae la columna de 2 conductores para aluminio.
+- **#13 Limpieza:**
+  - Se quitaron las funciones de validación sin uso (`validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`), la sincronización DC que no hacía nada y los datos sin uso (`parametrosBaterias`, `tensionesNominalesDC`, `seccionesNominalesDC`).
+  - `obtenerTensionElementoBateria` caía en 2,0 V con un tipo desconocido; ahora da error.
+- **#7:** el CSS pasa de `index.html` a `styles.css`. `metodo.json` cuenta `.css` como código.
+- **Tests:** 134. Pasan todos en Chromium: estilos, motor DC con y sin rendimiento, método D en DC, cables de control en AC y DC, reporte e historial. A 360 px no hay scroll y no hay errores de consola.
+
 ## [5.11.0] - 2026-09-24 — Caída de tensión en la partida de motores (backlog #14)
 
 - **Quién:** Marco + Claude

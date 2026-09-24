@@ -1,21 +1,24 @@
 # Plan de mejoras — Calculadora de conductores eléctricos
 
 ## Estado actual
-- **Último avance:** 2026-09-24 — v5.11.0: verificación de caída en la partida de motores (Itaipu R1A §10.3.1.3), dentro de la pestaña Caída AC. Suma circuito del motor, alimentador y trafo; su sección mínima entra en la sección final. Antes, v5.10.0: límites de caída con los criterios de Itaipu R1A.
-- **Sin verificar:** qué revisión de los criterios de Itaipu está aprobada (la R1A 2026 cambia valores respecto de la versión 2023; si el informe es formal, confirmarlo con Ingeniería). La fórmula del trafo usa la Z completa: es una cota superior, sin fuente escrita en el repo (el capítulo de partida de motores de Mamede no está en el PDF). Tampoco se verificaron los hooks en la PC de Marco, la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión ni Safari/Firefox.
-- **Siguiente paso recomendado:** fila #15 (alimentadores de motores DC al 125 %), el otro criterio de la R1A que falta.
+- **Último avance:** 2026-09-24 — v5.12.0, lote de cinco filas en un PR:
+  - #15: motores DC al 125 %, Itaipu R1A §10.3.2.
+  - #16: cables de control, Itaipu R1A §10.3.3, en AC y DC.
+  - #10: métodos DC A2, B2, D y F, con suelo en D.
+  - #13: código y datos sin uso.
+  - #7: CSS en `styles.css`.
+- **Sin verificar:**
+  - Qué revisión de los criterios de Itaipu está aprobada: la R1A 2026 cambia valores respecto de la versión 2023. Si el informe es formal, confirmarlo con Ingeniería.
+  - La fuente escrita de la fórmula del trafo con la Z completa.
+  - Los hooks en la PC de Marco, la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión y Safari/Firefox.
+- **Siguiente paso recomendado:** que Marco decida la fila #11 (la fuente de los 6 mm², o bajar a 2,5 mm² según NBR 5410). Es lo único pendiente que afecta resultados.
 
 ## Backlog
 
 | # | Pendiente | Evidencia | Prioridad | Decide |
 |---|---|---|---|---|
 | 2 | Módulo de media tensión (NBR 14039, Mamede Tablas 3.28/3.29) si se necesita dimensionar cables de MT | Retirado en 5.0.0; el selector AC llega a 1000 V | Baja | Marco |
-| 7 | Separar el CSS inline de `index.html` a `styles.css` | `index.html` | Baja | Claude |
-| 10 | DC: ofrecer los métodos A2, B2 y F (INPACO tiene la columna de 2 conductores) y D. D necesita temperatura y resistividad del suelo; hoy `calcularFactorTemperaturaDC` fuerza aire | Auditoría 2026-09-23; selector `metodo-instalacao-dc` | Baja | Marco |
 | 11 | Fuente para la sección mínima de 6 mm² en alimentadores (`obtenerSeccionMinimaNBR`): no tiene cita, y la R1A de Itaipu no la trata. NBR 5410 Tabla 47 pide 2,5 mm² en fuerza | `calculations.js` | Media | Marco |
-| 13 | Quitar código y datos sin uso: `validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`; la sincronización DC (`rellenarSiVacio` sobre selects, no hace nada); `seccionesNominalesDC` (incluye 400–800 sin tabla), `tensionesNominalesDC`, `parametrosBaterias` | Auditoría 2026-09-23 | Baja | Claude |
-| 15 | Alimentadores de motores DC dimensionados al 125 % de la corriente (Itaipu R1A §10.3.2) | Criterios R1A | Baja | Marco |
-| 16 | Cables de control (Itaipu R1A §10.3.3): la caída solo se verifica en cables que accionan solenoides (válvulas, bobinas de interruptores) con recorrido mayor que 400 m. Hoy la app no distingue cables de control | Criterios R1A | Baja | Marco |
 | 8 | Ideas a futuro: exportar PDF, modo oscuro, cálculo de canalización, comparar 2–3 secciones, catálogo de cables comerciales | — | Baja | Marco |
 
 ## Decisiones vigentes
@@ -27,6 +30,7 @@
 - 2026-09-23 — Método de trabajo v8 adoptado en este proyecto.
 - 2026-09-23 — Reactancia AC desde INPACO Tabla 15 (antes valores sin fuente); frecuencia seleccionable 50/60 Hz.
 - 2026-09-23 — Aluminio: relación Al/Cu de NBR 5410 Tablas 36–39 aplicada sobre INPACO (mantiene las referencias de 40 °C / 25 °C / 1,0 K·m/W).
+- 2026-09-24 — Lote #15, #16, #10, #13 y #7 con el diseño propuesto (Marco: "arrancá con todo"). Cables de control: el criterio R1A §10.3.3 se aplica en AC y DC.
 - 2026-09-24 — Partida de motor: tres tramos (circuito, alimentador, trafo con Z completa), bloque dentro de Caída AC (Marco aprobó la propuesta y la fórmula del trafo).
 - 2026-09-24 — Límites de caída: se usa la R1A 2026 de los criterios de Itaipu (#ITA0&EEC010-01), no la versión 2023 (Marco).
 - 2026-09-24 — Temperatura ambiente inicial = referencia de las tablas: 40 °C aire; 25 °C suelo en el método D (Marco).
