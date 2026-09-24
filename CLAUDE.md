@@ -2,7 +2,7 @@
 
 ## Qué es y en qué fase está
 - Calculadora de sección de conductores AC y DC por ampacidad, caída de tensión y cortocircuito.
-- Fuentes: catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`), NBR 5410 (Tablas 36–39 en `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`), Mamede Filho (`documentos/Instalacoes_Eletricas_Industriais_Joa_Ma-154-270.pdf`).
+- Fuentes: catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`), NBR 5410 (Tablas 36–39 en `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`), Mamede Filho (`documentos/Instalacoes_Eletricas_Industriais_Joa_Ma-154-270.pdf`), criterios de Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A (GE, 2026, §10.3, pp. 35–37; aportado por Marco, no versionado) para los límites de caída.
 - Página única: HTML + JavaScript sin frameworks. Usuarios: ingenieros electricistas de Paraguay y Brasil.
 - Fase: en uso, mejora continua. Estado y pendientes: `documentos/PLAN_DE_MEJORAS.md`.
 

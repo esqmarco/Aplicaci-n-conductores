@@ -858,16 +858,15 @@ const tabelasDC = {
     // Tensiones nominales DC estándar
     tensionesNominalesDC: [12, 24, 48, 110, 125, 220, 250, 380, 500],
     
-    // Límites normativos para caída de tensión DC según aplicación
-    limitesNormativosDC: {
-        servicios_auxiliares: 2.0,      // % - Servicios auxiliares de subestaciones
-        alimentacion_critica: 1.0,      // % - Alimentación crítica (UPS, emergencia)
-        circuitos_control: 3.0,         // % - Circuitos de control y protección
-        iluminacion_emergencia: 5.0,    // % - Iluminación de emergencia
-        telecomunicaciones: 1.5,        // % - Equipos de telecomunicaciones
-        sistemas_fotovoltaicos: 3.0     // % - Sistemas fotovoltaicos
+    // Límites de caída de tensión DC por tramo (%). Fuente: Itaipu #ITA0&EEC010-01
+    // "Projetos Elétricos – Critérios" R1A (GE, 2026) §10.3.2, pp. 35–37: cargador → batería ±3 %,
+    // batería → carga ±5 %. Solo caída en cables, sobre la tensión de operación del circuito.
+    // (La versión 2023, §9.3.1.6, daba 5 % + 3 % = 8 %; quedó reemplazada por la R1A.)
+    limitesCaidaDC: {
+        bateria_carga: 5.0,
+        cargador_bateria: 3.0
     },
-    
+
     // Constantes K de cortocircuito DC: las mismas que AC (obtenerConstanteK en calculations.js).
 
     // Los factores de temperatura DC usan INPACO Tabla 6 (ver obtenerFactorTemperatura),
@@ -877,34 +876,6 @@ const tabelasDC = {
     seccionesNominalesDC: [
         1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500, 630, 800
     ],
-    
-    // Tipos de aplicación DC con sus características
-    aplicacionesDC: {
-        ups_datacenter: {
-            descripcion: "UPS y Data Centers",
-            caidaMaxima: 1.0,
-            factorSeguridad: 1.25,
-            tiempoDespeje: 0.1
-        },
-        servicios_auxiliares: {
-            descripcion: "Servicios Auxiliares de Subestación",
-            caidaMaxima: 2.0,
-            factorSeguridad: 1.20,
-            tiempoDespeje: 0.2
-        },
-        fotovoltaico: {
-            descripcion: "Sistemas Fotovoltaicos",
-            caidaMaxima: 3.0,
-            factorSeguridad: 1.25,
-            tiempoDespeje: 0.5
-        },
-        telecomunicaciones: {
-            descripcion: "Telecomunicaciones",
-            caidaMaxima: 1.5,
-            factorSeguridad: 1.30,
-            tiempoDespeje: 0.1
-        }
-    }
 };
 
 // ===================================================================

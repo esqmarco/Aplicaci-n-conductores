@@ -4,6 +4,18 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.10.0] - 2026-09-24 — Límites de caída con los criterios de Itaipu R1A (backlog #11, parte DC)
+
+- **Quién:** Marco + Claude
+- **Fuente:** Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A (GE, 2026, §10.3, pp. 35–37), aportada por Marco. Se prefiere a la versión 2023 ("Critérios de Projetos Elétricos e Eletrônicos", §9.3.1.6) por ser la más reciente.
+- **Qué se hizo:**
+  - **DC:** el selector "Tipo de aplicación" pasa a "Tramo", con dos opciones: batería → carga 5 % y cargador → batería 3 %. Se quitaron los seis límites por aplicación y el criterio por tensión, que no tenían fuente. También se quitó `aplicacionesDC`, que no se usaba. Un tramo desconocido, como el de un cálculo viejo del historial, da error: no hay límite por defecto.
+  - **AC:** nueva opción 10 % (fuente o secundario de trafo → primario del trafo siguiente con TAPs). La opción 5 % ahora menciona también el tramo del secundario de un trafo con TAPs a la carga.
+  - Tooltips con la fuente y con la temperatura de 50 °C para cables expuestos o externos.
+- **Efecto en resultados:** en DC, quien usaba "General" con más de 48 V pasa de 3 % o 2 % a 5 % (batería → carga), o a 3 % (cargador → batería). Quien usaba UPS 1 %, telecomunicaciones 1,5 % o servicios auxiliares 2 % ahora usa 3 % o 5 % según el tramo.
+- **Pendiente:** la partida de motores (10 %, Ip = 6·In, cosφ 0,3) y los alimentadores de motores DC al 125 % pasan al backlog (#14, #15). La sección mínima de 6 mm² sigue sin fuente (#11).
+- **Tests:** 119.
+
 ## [5.9.0] - 2026-09-24 — Temperatura ambiente inicial 40 °C (backlog #12)
 
 - **Quién:** Marco + Claude

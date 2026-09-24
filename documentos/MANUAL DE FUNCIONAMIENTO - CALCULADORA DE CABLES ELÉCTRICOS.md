@@ -40,9 +40,11 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
   - Incluye los efectos pelicular y de proximidad.
   - La reactancia sale de INPACO Tabla 15.
 - **Límites a elegir:**
-  - 4 %: iluminación / circuito terminal.
-  - 5 %: fuerza motriz / desde la red de BT.
-  - 7 %: total desde transformador propio.
+  - 4 %: iluminación / circuito terminal (NBR 5410).
+  - 5 %: fuerza motriz / desde la red de BT (NBR 5410). También el tramo del secundario de un trafo con TAPs hasta la carga (Itaipu R1A §10.3.1).
+  - 7 %: total desde transformador propio (NBR 5410).
+  - 10 %: desde la fuente o el secundario de un trafo hasta el primario del siguiente trafo con TAPs (Itaipu R1A §10.3.1).
+  - Según la R1A, los porcentajes cuentan solo la caída en cables, sobre la tensión de operación del circuito.
 - Si no cumple, la app indica la menor sección que cumple el límite.
 
 ### 3. Cortocircuito AC
@@ -72,7 +74,9 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
 ### 6. Caída de tensión DC
 - **Fórmula:** ΔV = 2 · Rt · I · L / Np, con Rt a 70 °C (PVC) o 90 °C (EPR) y Np conductores en paralelo por polo.
 - **Clase del conductor:** igual que en AC.
-- **Límite:** por aplicación (servicios auxiliares, UPS, control, iluminación de emergencia, telecomunicaciones, fotovoltaico) o, en "General", según la tensión. Estos límites son orientativos: no tienen fuente normativa citada en el repo.
+- **Límite según el tramo** (Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A, GE 2026, §10.3.2):
+  - Batería → carga: 5 %.
+  - Cargador → batería: 3 %.
 
 ### 7. Cortocircuito DC
 - **Corriente de cortocircuito del banco:** Icc = V_banco / (N_serie · R_elemento).

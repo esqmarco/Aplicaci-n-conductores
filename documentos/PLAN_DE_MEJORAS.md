@@ -1,9 +1,9 @@
 # Plan de mejoras — Calculadora de conductores eléctricos
 
 ## Estado actual
-- **Último avance:** 2026-09-24 — v5.9.0: la temperatura ambiente arranca en 40 °C (referencia INPACO de aire) en AC y DC; en el método D pasa a 25 °C (referencia de suelo) si el usuario no la escribió. Antes arrancaba en 30 °C, con factor 1,15 en PVC. Auditoría del 2026-09-23 en `documentos/auditorias/`.
-- **Sin verificar:** los hooks en la PC de Marco (Windows, `$CLAUDE_PROJECT_DIR` con espacios en la ruta). La columna de aluminio de NBR no tiene segunda fuente en el repo. El PDF real del diálogo de impresión, y Safari/Firefox.
-- **Siguiente paso recomendado:** que Marco decida la fila #11 (fuente de los límites de caída DC y de los 6 mm² de alimentadores): afecta resultados.
+- **Último avance:** 2026-09-24 — v5.10.0: los límites de caída DC salen de los criterios de Itaipu #ITA0&EEC010-01 R1A (GE, 2026) §10.3.2: batería → carga 5 %, cargador → batería 3 %. Reemplazan los seis valores por aplicación y el criterio por tensión, que no tenían fuente. En AC se sumó la opción 10 % (fuente → primario de trafo con TAPs, R1A §10.3.1).
+- **Sin verificar:** qué revisión de los criterios de Itaipu está aprobada. La R1A 2026 cambia valores respecto de la versión 2023; si el informe es formal, confirmarlo con Ingeniería. También quedan sin verificar los hooks en la PC de Marco (Windows), la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión y Safari/Firefox.
+- **Siguiente paso recomendado:** que Marco decida la fila #14 (caída en la partida de motores): es el criterio de la R1A que la app todavía no verifica.
 
 ## Backlog
 
@@ -12,8 +12,10 @@
 | 2 | Módulo de media tensión (NBR 14039, Mamede Tablas 3.28/3.29) si se necesita dimensionar cables de MT | Retirado en 5.0.0; el selector AC llega a 1000 V | Baja | Marco |
 | 7 | Separar el CSS inline de `index.html` a `styles.css` | `index.html` | Baja | Claude |
 | 10 | DC: ofrecer los métodos A2, B2 y F (INPACO tiene la columna de 2 conductores) y D. D necesita temperatura y resistividad del suelo; hoy `calcularFactorTemperaturaDC` fuerza aire | Auditoría 2026-09-23; selector `metodo-instalacao-dc` | Baja | Marco |
-| 11 | Fuente para los límites de caída DC (`limitesNormativosDC`, `determinarLimiteCaidaDC`) y para la sección mínima de 6 mm² en alimentadores: no tienen cita | `data-tables.js`, `calculations.js` | Media | Marco |
-| 13 | Quitar código y datos sin uso: `validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`; la sincronización DC (`rellenarSiVacio` sobre selects, no hace nada); `aplicacionesDC`, `seccionesNominalesDC` (incluye 400–800 sin tabla), `tensionesNominalesDC`, `parametrosBaterias` | Auditoría 2026-09-23 | Baja | Claude |
+| 11 | Fuente para la sección mínima de 6 mm² en alimentadores (`obtenerSeccionMinimaNBR`): no tiene cita, y la R1A de Itaipu no la trata. NBR 5410 Tabla 47 pide 2,5 mm² en fuerza | `calculations.js` | Media | Marco |
+| 13 | Quitar código y datos sin uso: `validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`; la sincronización DC (`rellenarSiVacio` sobre selects, no hace nada); `seccionesNominalesDC` (incluye 400–800 sin tabla), `tensionesNominalesDC`, `parametrosBaterias` | Auditoría 2026-09-23 | Baja | Claude |
+| 14 | Caída de tensión en la partida de motores (Itaipu R1A §10.3.1.3): 10 % en bornes del motor. Considera todo el sistema de BT, desde el motor hasta el primario del trafo reductor. Sin datos del fabricante: Ip = 6·In, cosφ = 0,3. Es interfaz nueva: se propone antes de hacerla | Criterios R1A, pp. 35–37 | Media | Marco |
+| 15 | Alimentadores de motores DC dimensionados al 125 % de la corriente (Itaipu R1A §10.3.2) | Criterios R1A | Baja | Marco |
 | 8 | Ideas a futuro: exportar PDF, modo oscuro, cálculo de canalización, comparar 2–3 secciones, catálogo de cables comerciales | — | Baja | Marco |
 
 ## Decisiones vigentes
@@ -25,6 +27,7 @@
 - 2026-09-23 — Método de trabajo v8 adoptado en este proyecto.
 - 2026-09-23 — Reactancia AC desde INPACO Tabla 15 (antes valores sin fuente); frecuencia seleccionable 50/60 Hz.
 - 2026-09-23 — Aluminio: relación Al/Cu de NBR 5410 Tablas 36–39 aplicada sobre INPACO (mantiene las referencias de 40 °C / 25 °C / 1,0 K·m/W).
+- 2026-09-24 — Límites de caída: se usa la R1A 2026 de los criterios de Itaipu (#ITA0&EEC010-01), no la versión 2023 (Marco).
 - 2026-09-24 — Temperatura ambiente inicial = referencia de las tablas: 40 °C aire; 25 °C suelo en el método D (Marco).
 - 2026-09-23 — Historial en una pestaña propia (elegido por Marco entre pestaña y lista por pestaña).
 - 2026-09-23 — Clase del conductor por defecto: flexible (clase 5) en cobre, coherente con los cables de INPACO Tabla 15 y del lado seguro; aluminio solo rígido.
