@@ -1054,6 +1054,80 @@ test('Initial ambient temperature is the INPACO air reference, 40 C (AC and DC)'
     assertTrue(/m === 'D' \? '25' : '40'/.test(appJs), 'método D pasa a 25 °C (suelo)');
 });
 
+// Partida de motor (Itaipu #ITA0&EEC010-01 R1A §10.3.1.3; Mamede §3.5.1.2) — backlog #14
+const circPartida = { corriente: 71.45, tension: 380, tipoSistema: 'trifasico', longitud: 80, seccion: 25,
+    materialCondutor: 'cobre', aislamiento: 'PVC', clase: 'rigido', conductoresPorFase: 1, disposicion: 'trebol', frecuencia: 50 };
+const alimPartida = { longitud: 30, seccion: 150, materialCondutor: 'cobre', aislamiento: 'PVC', clase: 'rigido',
+    conductoresPorFase: 1, disposicion: 'trebol' };
+const partidaCompleta = { circuito: circPartida, relacionIp: 6, fpPartida: 0.3, limite: 10,
+    otrasCargas: { corriente: 200, factorPotencia: 0.85 }, alimentador: alimPartida, trafo: { potenciaKVA: 500, impedanciaPct: 5 } };
+
+test('Motor start: three sections add up (hand check, 50 CV motor, 80 m 25 mm2 + 30 m 150 mm2 + 500 kVA 5 %)', function() {
+    const r = calcularCaidaPartidaMotor(partidaCompleta);
+    // Ip = 6 × 71,45 = 428,7 A. Circuito (R 0,8704 / X 0,090 Ω/km a 70 °C, INPACO Tabla 15 trébol):
+    //   √3·428,7·0,08·(0,8704·0,3 + 0,090·0,954)/380 = 5,42 %
+    // Alimentador: P = 428,7·0,3 + 200·0,85 = 298,6; Q = 428,7·0,954 + 200·0,527 = 514,4 → I = 594,7 A, cosφ 0,502;
+    //   R 0,1515 / X 0,078 → √3·594,7·0,03·(0,1515·0,502 + 0,078·0,865)/380 = 1,17 %
+    // Trafo: In = 500000/(√3·380) = 759,7 A → 594,7/759,7 × 5 = 3,91 %
+    assertClose(r.corrientePartida, 428.7, 0.01);
+    assertClose(r.tramos[0].caidaPct, 5.42, 0.01);
+    assertClose(r.tramos[1].corriente, 594.71, 0.01);
+    assertClose(r.tramos[1].caidaPct, 1.17, 0.01);
+    assertClose(r.tramos[2].corrienteNominalTrafo, 759.7, 0.05);
+    assertClose(r.tramos[2].caidaPct, 3.91, 0.01);
+    assertClose(r.caidaTotalPct, 10.51, 0.01);
+    assertTrue(!r.cumple, '10,51 % no cumple el 10 %');
+    const m = calcularSeccionMinimaPartida(partidaCompleta);
+    assertEqual(m.seccion, 35);
+    assertTrue(m.caidaTotalPct <= 10);
+});
+
+test('Motor start with only the motor circuit flags soloCircuito and equals the AC drop formula', function() {
+    const r = calcularCaidaPartidaMotor({ circuito: circPartida, relacionIp: 6, fpPartida: 0.3, limite: 10,
+        otrasCargas: { corriente: 0, factorPotencia: 0.85 }, alimentador: null, trafo: null });
+    assertTrue(r.soloCircuito);
+    assertEqual(r.tramos.length, 1);
+    const directo = calcularCaidaTensionAC(Object.assign({}, circPartida, { corriente: 428.7, factorPotencia: 0.3 }));
+    assertClose(r.caidaTotalPct, directo.caidaTensionPct, 0.005);
+});
+
+test('Motor start transformer current: three-phase trafo, single-phase circuit uses S/(3·Vfn)', function() {
+    const c = Object.assign({}, circPartida, { tipoSistema: 'monofasico', tension: 220 });
+    const r = calcularCaidaPartidaMotor({ circuito: c, relacionIp: 6, fpPartida: 0.3, limite: 10,
+        otrasCargas: null, alimentador: null, trafo: { potenciaKVA: 150, impedanciaPct: 4 } });
+    const tr = r.tramos[1];
+    assertClose(tr.corrienteNominalTrafo, 150000 / (3 * 220), 0.05);   // 227,3 A por fase
+    assertClose(tr.caidaPct, 428.7 / (150000 / 660) * 4, 0.01);
+});
+
+test('parametrosPartidaDesdeCaida maps the AC drop tab and applies the parallel count', function() {
+    const pc = Object.assign({}, circPartida, { partida: { relacionIp: 6, fpPartida: 0.3, limite: 10,
+        otrasCargas: { corriente: 200, factorPotencia: 0.85 }, alimentador: { longitud: 30, seccion: 150, conductoresPorFase: 1 },
+        trafo: { potenciaKVA: 500, impedanciaPct: 5 } } });
+    const pp = parametrosPartidaDesdeCaida(pc);
+    assertEqual(pp.alimentador.clase, 'rigido', 'el alimentador hereda la clase del circuito');
+    assertClose(calcularCaidaPartidaMotor(pp).caidaTotalPct, 10.51, 0.01);
+    assertEqual(parametrosPartidaDesdeCaida(pc, 2).circuito.conductoresPorFase, 2);
+    assertEqual(parametrosPartidaDesdeCaida(Object.assign({}, pc, { partida: null })), null);
+});
+
+test('Motor start validation: every field of an active block is required', function() {
+    const ok = { relacionIp: 6, fpPartida: 0.3, limite: 10, otrasCargas: { corriente: 0, factorPotencia: NaN },
+        alimentador: null, trafo: null };
+    let e = []; validarParametrosPartida(ok, 'cobre', e); assertEqual(e.length, 0, e.join('; '));
+    e = []; validarParametrosPartida(Object.assign({}, ok, { relacionIp: NaN }), 'cobre', e); assertEqual(e.length, 1);
+    e = []; validarParametrosPartida(Object.assign({}, ok, { otrasCargas: { corriente: NaN, factorPotencia: 0.85 } }), 'cobre', e); assertEqual(e.length, 1);
+    e = []; validarParametrosPartida(Object.assign({}, ok, { alimentador: { longitud: 30, seccion: NaN, conductoresPorFase: 1 } }), 'cobre', e); assertEqual(e.length, 1);
+    e = []; validarParametrosPartida(Object.assign({}, ok, { trafo: { potenciaKVA: 500, impedanciaPct: NaN } }), 'cobre', e); assertEqual(e.length, 1);
+    e = []; validarParametrosPartida(Object.assign({}, ok, { alimentador: { longitud: 30, seccion: 10, conductoresPorFase: 1 } }), 'aluminio', e); assertEqual(e.length, 1);
+});
+
+test('Motor start switches are selects (history stores el.value; a checkbox would always be "on")', function() {
+    ['partida-ct', 'alim-partida-ct', 'trafo-partida-ct'].forEach(function (id) {
+        assertTrue(new RegExp('<select id="' + id + '"').test(indexHtml), id + ' debe ser select');
+    });
+});
+
 test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {
     const r = dimensionarPorAmpacidadAC({ modoEntrada: 'potencia', potencia: 50, unidadPotencia: 'CV', tension: 380,
         factorPotencia: 0.85, rendimiento: 0.92, factorDemanda: 1, tipoSistema: 'trifasico', materialAislamento: 'PVC',

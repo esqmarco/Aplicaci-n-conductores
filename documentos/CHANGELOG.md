@@ -4,6 +4,32 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.11.0] - 2026-09-24 — Caída de tensión en la partida de motores (backlog #14)
+
+- **Quién:** Marco + Claude
+- **Decisión de Marco (2026-09-24):**
+  - Aprobó la propuesta: un bloque dentro de la pestaña Caída AC, con tres tramos.
+  - Aprobó la fórmula del trafo con la Z completa.
+- **Qué se hizo:**
+  - **Bloque "Partida de motor":** Ip/In (6), cosφ de partida (0,30), límite 10 %, otras cargas en marcha y alimentador y trafo opcionales. Fuentes: Itaipu R1A §10.3.1.3 y Mamede §3.5.1.2.
+  - **Cálculo por tramo:**
+    - Circuito del motor con la fórmula de caída AC de la app, con Ip y el cosφ de partida.
+    - Alimentador con la suma vectorial de Ip y las otras cargas.
+    - Trafo trifásico: ΔV = I/In × Z %.
+  - **Resultados:** el cumplimiento se decide con la suma sin redondear. La pantalla muestra el aporte de cada tramo y la menor sección del circuito del motor que cumple.
+  - **Otras piezas:**
+    - La sección final AC suma el criterio "Partida de motor" y se recalcula con el paralelo de la ampacidad.
+    - Hay filas nuevas en el resumen, la memoria de cálculo y el historial.
+    - La fuente de límites del reporte ahora cita NBR 5410 e Itaipu R1A; antes decía "ANDE/INPACO".
+  - `calcularCaidaTensionAC` devuelve además `caidaTensionPctExacta`.
+- **Verificado:**
+  - Caso a mano: 50 CV, 80 m de 25 mm², 30 m de 150 mm², 200 A de otras cargas y trafo de 500 kVA / 5 %. Los tramos dan 5,42 % + 1,17 % + 3,91 % = 10,51 %, así que no cumple; la sección mínima del circuito es 35 mm².
+  - En Chromium, con 150 m de circuito, la partida gobierna la sección final: 95 mm².
+- **Pendiente:**
+  - El calentamiento del cable en partidas de más de 5 s: fuera de alcance.
+  - La revisión aprobada de los criterios de Itaipu.
+- **Tests:** 125.
+
 ## [5.10.0] - 2026-09-24 — Límites de caída con los criterios de Itaipu R1A (backlog #11, parte DC)
 
 - **Quién:** Marco + Claude

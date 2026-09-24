@@ -43,6 +43,7 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Caída DC: ΔV = 2 × Rt × I × L / Np
 - Cortocircuito de baterías: Icc = V_banco / (N_serie × R_elemento)
 - Cortocircuito: S_min = Icc × √t / K (t ≤ 5 s)
+- Partida de motor [Itaipu R1A §10.3.1.3, Mamede §3.5.1.2]: ΔV% = circuito (Ip = k·In, cosφ partida) + alimentador (suma vectorial de Ip y otras cargas) + trafo (I / In_trafo × Z%, Z completa); límite 10 %; sin datos k = 6, cosφ = 0,3. In_trafo = S/(√3·V), o S/(3·V) con V fase-neutro
 
 ## Reglas del dominio
 - Datos normativos: se toman de las fuentes de `documentos/` y se citan en el comentario. Nunca se inventan ni se copian de los documentos marcados SUPERADO.
