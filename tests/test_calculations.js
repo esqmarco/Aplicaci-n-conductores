@@ -543,16 +543,20 @@ test('calcularCorrenteProyecto throws on zero potencia', function() {
     assertTrue(threw, 'Should throw on zero potencia');
 });
 
-test('determinarLimiteCaidaDC returns correct limits', function() {
-    assertEqual(determinarLimiteCaidaDC(48), 5.0, '48V limit');
-    assertEqual(determinarLimiteCaidaDC(125), 3.0, '125V limit');
-    assertEqual(determinarLimiteCaidaDC(250), 2.0, '250V limit');
+test('DC drop limits by section of the circuit (Itaipu #ITA0&EEC010-01 R1A 10.3.2)', function() {
+    assertEqual(determinarLimiteCaidaDC('bateria_carga'), 5.0, 'batería → carga 5 %');
+    assertEqual(determinarLimiteCaidaDC('cargador_bateria'), 3.0, 'cargador → batería 3 %');
 });
 
-test('determinarLimiteCaidaDC uses application limit when given', function() {
-    assertEqual(determinarLimiteCaidaDC(48, 'sistemas_fotovoltaicos'), 3.0, 'FV 3%');
-    assertEqual(determinarLimiteCaidaDC(48, 'alimentacion_critica'), 1.0, 'UPS 1%');
-    assertEqual(determinarLimiteCaidaDC(48, 'general'), 5.0, 'General by voltage');
+test('Unknown or old DC application has no default limit (error)', function() {
+    ['general', 'alimentacion_critica', undefined, ''].forEach(function (a) {
+        let lanzo = false;
+        try { determinarLimiteCaidaDC(a); } catch (e) { lanzo = true; }
+        assertTrue(lanzo, 'debía lanzar para ' + a);
+    });
+    const v = validarParametrosCaidaTensionDC({ corriente: 10, tensionSelector: '48', longitud: 20, conductoresPorPolo: 1,
+        seccion: 16, material: 'cobre', aplicacionDC: 'general' });
+    assertTrue(!v.valido, 'la validación rechaza un tramo desconocido');
 });
 
 test('calcularFactorTemperaturaDC PVC returns 1.0 at 40C (INPACO reference)', function() {
@@ -930,7 +934,7 @@ test('DC resistance is taken at service temperature (PVC 70 C)', function() {
 });
 
 test('DC voltage drop validation works with current (no power field)', function() {
-    const v = validarParametrosCaidaTensionDC({ corriente: 80, tensionSelector: '48', longitud: 20,
+    const v = validarParametrosCaidaTensionDC({ corriente: 80, aplicacionDC: 'bateria_carga', tensionSelector: '48', longitud: 20,
         conductoresPorPolo: 1, seccion: 25, material: 'cobre', aislamiento: 'PVC' });
     assertTrue(v.valido, 'Should be valid: ' + v.errores.join('; '));
 });
@@ -975,7 +979,7 @@ test('DC short-circuit commercial section uses its own K above 300 mm2 (twin of 
 test('DC voltage drop "cumple" uses the unrounded percentage (twin of AC)', function() {
     // 48 V, 10 A, 82,95 m, Cu flexible PVC 16 mm²: 5,0038 % se muestra 5,00 % pero NO cumple el 5 %
     const p = { corriente: 10, tensionSelector: '48', longitud: 82.95, conductoresPorPolo: 1, seccion: 16,
-        material: 'cobre', aislamiento: 'PVC', clase: 'flexible', aplicacionDC: 'iluminacion_emergencia' };
+        material: 'cobre', aislamiento: 'PVC', clase: 'flexible', aplicacionDC: 'bateria_carga' };
     const r = verificarCaidaTensionDC(p);
     assertEqual(r.limite_pct, 5.0);
     assertTrue(!r.cumple_criterio, 'no cumple con 5,0038 %');
@@ -1081,7 +1085,7 @@ test('Manual example 2: shower 7500 W 220 V -> 6 mm2, 3.67 % at 30 m', function(
 
 test('verificarCaidaTensionDC applies application limit', function() {
     const r = verificarCaidaTensionDC({ corriente: 80, tensionSelector: '48', longitud: 20, conductoresPorPolo: 1,
-        seccion: 25, material: 'cobre', aislamiento: 'PVC', aplicacionDC: 'sistemas_fotovoltaicos' });
+        seccion: 25, material: 'cobre', aislamiento: 'PVC', aplicacionDC: 'cargador_bateria' });
     // R70 = 0.9333; dV = 2*0.9333*80*0.02 = 2.99 V = 6.22%
     assertEqual(r.limite_pct, 3.0);
     assertClose(r.caida_tension_pct, 6.22, 0.01);
@@ -1092,7 +1096,7 @@ test('DC final section with 2 conductors per pole: ampacity recalculated per con
     const pAmp = { modoEntrada: 'corriente', corrienteDirecta: 80, material: 'cobre', temperatura: 30,
         metodo: 'A1', aislamiento: 'PVC', agrupamiento: 1 };
     const amp = { parametros: pAmp, resultado: dimensionarPorAmpacidadDC(pAmp) };
-    const pCaida = { corriente: 80, tensionSelector: '48', longitud: 20, conductoresPorPolo: 2, seccion: 16,
+    const pCaida = { corriente: 80, aplicacionDC: 'bateria_carga', tensionSelector: '48', longitud: 20, conductoresPorPolo: 2, seccion: 16,
         material: 'cobre', aislamiento: 'PVC' };
     const caida = { parametros: pCaida, resultado: verificarCaidaTensionDC(pCaida) };
     // Un conductor: 80 A / 1.15 = 69.6 A -> PVC A1 2c: 25 mm2 (70 A)
@@ -1115,7 +1119,7 @@ test('DC final section with 1 conductor per pole keeps the ampacity section', fu
 });
 
 test('calcularSeccionParaCaidaDC returns null when 300mm2 is not enough', function() {
-    const s = calcularSeccionParaCaidaDC({ corriente: 500, tensionSelector: '12', longitud: 200, conductoresPorPolo: 1,
+    const s = calcularSeccionParaCaidaDC({ corriente: 500, aplicacionDC: 'bateria_carga', tensionSelector: '12', longitud: 200, conductoresPorPolo: 1,
         material: 'cobre', aislamiento: 'PVC' });
     assertEqual(s, null);
 });

@@ -239,6 +239,12 @@ function validarParametrosCaidaTensionDC(params) {
             errores.push('No existe conductor de aluminio flexible: elegir rígido (clase 2)');
         }
 
+        // Tramo DC (define el límite de caída, Itaipu R1A §10.3.2)
+        const limites = (typeof window !== 'undefined' && window.tabelasDC && window.tabelasDC.limitesCaidaDC) || {};
+        if (!Object.prototype.hasOwnProperty.call(limites, params.aplicacionDC)) {
+            errores.push('Tramo DC es requerido: batería → carga o cargador → batería');
+        }
+
         return {
             valido: errores.length === 0,
             errores: errores,

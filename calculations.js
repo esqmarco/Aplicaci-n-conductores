@@ -639,7 +639,7 @@ function verificarCaidaTensionDC(parametros) {
     const corriente = obtenerCorrienteDC(parametros, tension);
     const resistenciaInfo = calcularResistenciaCorregida({ material, seccion, aislamiento, clase: parametros.clase });
     const caidaInfo = calcularCaidaTensionDC({ corriente, longitud, resistencia: resistenciaInfo.R_temp, Np: conductoresPorPolo, tension });
-    const limite = determinarLimiteCaidaDC(tension, parametros.aplicacionDC);
+    const limite = determinarLimiteCaidaDC(parametros.aplicacionDC);
 
     return {
         criterio: 'caida_tension',
@@ -736,17 +736,15 @@ function obtenerAmpacidadBaseDC(material, metodo, seccion, aislamiento) {
 }
 
 /**
- * Límite de caída DC: por aplicación si se indica (tabelasDC.limitesNormativosDC),
- * si no, criterio general por nivel de tensión.
+ * Límite de caída DC (%) según el tramo (tabelasDC.limitesCaidaDC, Itaipu R1A §10.3.2).
+ * Un tramo desconocido es un error: no hay límite por defecto.
  */
-function determinarLimiteCaidaDC(tension, aplicacion) {
-    const limites = window.tabelasDC && window.tabelasDC.limitesNormativosDC;
-    if (aplicacion && aplicacion !== 'general' && limites && limites[aplicacion] !== undefined) {
-        return limites[aplicacion];
+function determinarLimiteCaidaDC(tramo) {
+    const limites = window.tabelasDC.limitesCaidaDC;
+    if (!Object.prototype.hasOwnProperty.call(limites, tramo)) {
+        throw new Error(`Tramo DC "${tramo}" no reconocido: elegir batería → carga o cargador → batería`);
     }
-    if (tension <= 48) return 5.0;
-    else if (tension <= 125) return 3.0;
-    else return 2.0;
+    return limites[tramo];
 }
 
 function obtenerTensionElementoBateria(tipo) {
@@ -765,7 +763,7 @@ function calcularSeccionParaCaidaDC(parametros) {
     const { tensionSelector, tensionPersonalizada, longitud, conductoresPorPolo, material, aislamiento } = parametros;
     const tension = obtenerTensionEfectiva(tensionSelector, tensionPersonalizada);
     const corriente = obtenerCorrienteDC(parametros, tension);
-    const limite = determinarLimiteCaidaDC(tension, parametros.aplicacionDC);
+    const limite = determinarLimiteCaidaDC(parametros.aplicacionDC);
     const caidaMaxima = (limite / 100) * tension;
     const longitud_km = longitud / 1000;
     const resistenciaMaxima = (caidaMaxima * conductoresPorPolo) / (2 * corriente * longitud_km);

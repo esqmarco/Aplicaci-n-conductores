@@ -404,7 +404,7 @@ function obtenerParametrosCaidaTensionDC() {
         material: document.getElementById('material-conductor-ct-dc') ? document.getElementById('material-conductor-ct-dc').value : 'cobre',
         aislamiento: document.getElementById('aislamiento-ct-dc') ? document.getElementById('aislamiento-ct-dc').value : 'PVC',
         clase: document.getElementById('clase-ct-dc')?.value || undefined,
-        aplicacionDC: document.getElementById('aplicacion-dc')?.value || 'general',
+        aplicacionDC: document.getElementById('aplicacion-dc').value,
     };
 }
 
@@ -1508,7 +1508,7 @@ function construirReporteDC() {
             ['Sección / conductores por polo', pc.seccion + ' mm² / ' + pc.conductoresPorPolo],
             ['Material / clase', textoOpcion('material-conductor-ct-dc', pc.material) + ' / ' + textoOpcion('clase-ct-dc', pc.clase)],
             ['Aislación', textoOpcion('aislamiento-ct-dc', pc.aislamiento)],
-            ['Aplicación', textoOpcion('aplicacion-dc', pc.aplicacionDC)]
+            ['Tramo (límite de caída)', textoOpcion('aplicacion-dc', pc.aplicacionDC)]
         ];
         res = [
             ['Resistencia a ' + rc.temperatura_conductor + ' °C', fmt(rc.resistencia_mostrada, 4, 'Ω/km')],

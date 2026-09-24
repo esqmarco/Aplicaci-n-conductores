@@ -799,7 +799,7 @@ body {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="temperatura-ambiente">Temperatura Ambiente (°C):<span class="tooltip-icon" data-tooltip="Aire para métodos A1 a G. Para el método D es la temperatura del suelo. Referencia de las tablas: 40 °C aire / 25 °C suelo. Al elegir D, si no lo modificaste, pasa a 25 °C.">?</span></label>
+                            <label for="temperatura-ambiente">Temperatura Ambiente (°C):<span class="tooltip-icon" data-tooltip="Aire para métodos A1 a G. Para el método D es la temperatura del suelo. Referencia de las tablas: 40 °C aire / 25 °C suelo. Al elegir D, si no lo modificaste, pasa a 25 °C. Itaipu R1A §10.3: 40 °C, o 50 °C para cables expuestos o externos.">?</span></label>
                             <input type="number" id="temperatura-ambiente" value="40" step="1" min="-20" max="80">
                         </div>
                         <div class="form-group">
@@ -1023,11 +1023,12 @@ body {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="limite-ct">L&iacute;mite de Ca&iacute;da (%):<span class="tooltip-icon" data-tooltip="ANDE / INPACO: 4% iluminación, 5% fuerza motriz. NBR 5410: 4% circuitos terminales, 5% desde red de BT de la distribuidora, 7% desde transformador propio.">?</span></label>
+                    <label for="limite-ct">L&iacute;mite de Ca&iacute;da (%):<span class="tooltip-icon" data-tooltip="NBR 5410: 4% circuitos terminales, 5% desde red de BT de la distribuidora, 7% desde transformador propio. Itaipu #ITA0&amp;EEC010-01 Critérios R1A (2026) §10.3.1: 10% desde la fuente o el secundario de un trafo hasta el primario del siguiente trafo con TAPs; 5% desde el secundario de un trafo con TAPs hasta la carga. Solo caída en cables, sobre la tensión de operación.">?</span></label>
                     <select id="limite-ct">
                         <option value="4" selected>4% - Iluminaci&oacute;n / circuito terminal</option>
-                        <option value="5">5% - Fuerza motriz / desde red BT</option>
+                        <option value="5">5% - Fuerza motriz / desde red BT / trafo con TAPs &rarr; carga (Itaipu R1A)</option>
                         <option value="7">7% - Total desde transformador propio</option>
+                        <option value="10">10% - Fuente &rarr; primario de trafo con TAPs (Itaipu R1A)</option>
                     </select>
                 </div>
             </div>
@@ -1292,7 +1293,7 @@ body {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="temperatura-ambiente-dc">Temperatura Ambiente (°C):<span class="tooltip-icon" data-tooltip="Aire. Referencia de las tablas INPACO: 40 °C.">?</span></label>
+                            <label for="temperatura-ambiente-dc">Temperatura Ambiente (°C):<span class="tooltip-icon" data-tooltip="Aire. Referencia de las tablas INPACO: 40 °C. Itaipu R1A §10.3: 40 °C, o 50 °C para cables expuestos o externos.">?</span></label>
                             <input type="number" id="temperatura-ambiente-dc" value="40" min="-20" max="80">
                         </div>
                     </div>
@@ -1462,15 +1463,10 @@ body {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="aplicacion-dc">Tipo de Aplicaci&oacute;n DC:</label>
+                            <label for="aplicacion-dc">Tramo (l&iacute;mite de ca&iacute;da):<span class="tooltip-icon" data-tooltip="Itaipu #ITA0&amp;EEC010-01 Critérios R1A (2026) §10.3.2: cargador → batería 3 %, batería → carga 5 %. Solo caída en cables, sobre la tensión de operación.">?</span></label>
                             <select id="aplicacion-dc">
-                                <option value="general">General (seg&uacute;n tensi&oacute;n)</option>
-                                <option value="servicios_auxiliares">Servicios Auxiliares (2%)</option>
-                                <option value="alimentacion_critica">Alimentaci&oacute;n Cr&iacute;tica / UPS (1%)</option>
-                                <option value="circuitos_control">Circuitos de Control (3%)</option>
-                                <option value="iluminacion_emergencia">Iluminaci&oacute;n Emergencia (5%)</option>
-                                <option value="telecomunicaciones">Telecomunicaciones (1.5%)</option>
-                                <option value="sistemas_fotovoltaicos">Sistemas Fotovoltaicos (3%)</option>
+                                <option value="bateria_carga" selected>Bater&iacute;a &rarr; carga (5%)</option>
+                                <option value="cargador_bateria">Cargador &rarr; bater&iacute;a (3%)</option>
                             </select>
                         </div>
                     </div>
