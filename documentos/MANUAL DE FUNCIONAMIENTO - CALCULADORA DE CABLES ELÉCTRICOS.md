@@ -27,7 +27,7 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
   - Agrupamiento: INPACO Tablas 7, 9 y 10. Cada terna en paralelo cuenta como un circuito.
   - Resistividad del suelo, solo en el método D: INPACO Tabla 11. Se elige si es en ducto o directamente enterrado.
   - Un valor fuera de tabla da error. Nunca se usa 1,0 en silencio.
-- **Sección:** la menor sección de tabla cuya ampacidad cubre la corriente corregida por conductor. Se respeta la sección mínima por tipo de circuito: 1,5 mm² en iluminación y 2,5 mm² en tomas y fuerza (NBR 5410); 6 mm² en alimentadores (criterio de la app, sin tabla citada).
+- **Sección:** la menor sección de tabla cuya ampacidad cubre la corriente corregida por conductor. Se respeta la sección mínima de cobre por tipo de circuito (NBR 5410 §6.2.6.1.1, Tabla 47): 1,5 mm² en iluminación y 2,5 mm² en tomas, fuerza y alimentadores (un alimentador es un circuito de fuerza; ninguna fuente fija un mínimo propio). En un alimentador la sección real la suelen definir el cortocircuito o la caída.
 - Al calcular, la corriente, la sección y los datos del sistema se copian a Caída de Tensión y Cortocircuito AC.
 
 ### 2. Caída de tensión AC
