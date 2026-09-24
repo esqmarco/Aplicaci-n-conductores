@@ -409,6 +409,7 @@ function calcularCaidaTensionAC(parametros) {
     return {
         caidaTensionV: Math.round(caidaV * 100) / 100,
         caidaTensionPct: Math.round(caidaPct * 100) / 100,
+        caidaTensionPctExacta: caidaPct,
         limite,
         cumple: caidaPct <= limite,
         resistencia: Math.round(rac.rac * 10000) / 10000,
@@ -431,6 +432,141 @@ function calcularSeccionMinimaCaidaAC(parametros) {
         if (material === 'aluminio' && seccion < 16) continue;
         const r = calcularCaidaTensionAC(Object.assign({}, parametros, { seccion }));
         if (r.cumple) return { seccion, caidaTensionPct: r.caidaTensionPct };
+    }
+    return null;
+}
+
+// ===================================================================
+// CAÍDA DE TENSIÓN EN LA PARTIDA DE MOTORES
+// ===================================================================
+
+/**
+ * Caída de tensión en bornes del motor durante la partida.
+ * Fuentes: Itaipu #ITA0&EEC010-01 R1A (GE, 2026) §10.3.1.3 — límite 10 % de la tensión
+ * nominal del motor, todo el sistema de BT desde el motor hasta el primario del trafo
+ * reductor; sin datos del fabricante Ip = 6·In y cosφ = 0,3. Mamede §3.5.1.2: 10 % en
+ * bornes del dispositivo de partida, cosφ de partida 0,30.
+ *
+ * Suma de tramos (cada uno con la fórmula de caída AC de la app):
+ *   - circuito del motor: I = Ip, cosφ de partida
+ *   - alimentador (opcional): suma vectorial de Ip y las otras cargas en marcha
+ *   - transformador (opcional): ΔV% = (I / In_trafo) × Z%  (Z completa: cota superior,
+ *     sin separar R y X; fórmula aprobada por Marco el 2026-09-24)
+ *
+ * parametros:
+ *   circuito: { corriente (In del motor), tension, tipoSistema, longitud, seccion,
+ *               materialCondutor, aislamiento, clase, conductoresPorFase, disposicion, frecuencia }
+ *   relacionIp (Ip/In), fpPartida, limite (%)
+ *   otrasCargas: { corriente, factorPotencia } | null  (pasan por alimentador y trafo)
+ *   alimentador: { longitud, seccion, materialCondutor, aislamiento, clase,
+ *                  conductoresPorFase, disposicion } | null
+ *   trafo: { potenciaKVA, impedanciaPct } | null
+ */
+function calcularCaidaPartidaMotor(parametros) {
+    const c = parametros.circuito;
+    const In = parseFloat(c.corriente);
+    const k = parseFloat(parametros.relacionIp);
+    const fpP = parseFloat(parametros.fpPartida);
+    const limite = parseFloat(parametros.limite);
+    if (!(In > 0)) throw new Error('Corriente nominal del motor debe ser mayor que 0');
+    if (!(k >= 1)) throw new Error('Relación Ip/In debe ser mayor o igual a 1');
+    if (!(fpP > 0 && fpP <= 1)) throw new Error('Factor de potencia de partida debe estar entre 0 y 1');
+    if (!(limite > 0)) throw new Error('Límite de caída en la partida debe ser mayor que 0');
+
+    const Ip = In * k;
+    const tramos = [];
+    const comunes = { tension: c.tension, tipoSistema: c.tipoSistema, frecuencia: c.frecuencia, limite };
+
+    // 1. Circuito del motor: solo la corriente de partida
+    const rCirc = calcularCaidaTensionAC(Object.assign({}, c, { corriente: Ip, factorPotencia: fpP, limite }));
+    tramos.push({ tramo: 'Circuito del motor', corriente: Ip, factorPotencia: fpP, caidaPct: rCirc.caidaTensionPctExacta });
+
+    // Corriente aguas arriba: Ip + otras cargas en marcha (suma vectorial de P y Q)
+    let Iarriba = Ip, fpArriba = fpP;
+    const otras = parametros.otrasCargas;
+    if (otras && parseFloat(otras.corriente) > 0) {
+        const Io = parseFloat(otras.corriente), fpo = parseFloat(otras.factorPotencia);
+        if (!(fpo > 0 && fpo <= 1)) throw new Error('Factor de potencia de las otras cargas debe estar entre 0 y 1');
+        const P = Ip * fpP + Io * fpo;
+        const Q = Ip * Math.sqrt(1 - fpP * fpP) + Io * Math.sqrt(1 - fpo * fpo);
+        Iarriba = Math.hypot(P, Q);
+        fpArriba = P / Iarriba;
+    }
+
+    // 2. Alimentador del tablero / CCM
+    if (parametros.alimentador) {
+        const rAl = calcularCaidaTensionAC(Object.assign({}, comunes, parametros.alimentador,
+            { corriente: Iarriba, factorPotencia: fpArriba }));
+        tramos.push({ tramo: 'Alimentador', corriente: Iarriba, factorPotencia: fpArriba, caidaPct: rAl.caidaTensionPctExacta });
+    }
+
+    // 3. Transformador (trifásico): ΔV% = f × (I / In_trafo) × Z%
+    //    In_trafo = S / (√3·V) con V entre fases (tri y bifásico); en monofásico V es
+    //    fase-neutro de un trafo trifásico: In_trafo = S / (3·V).
+    //    f = 1 en tri y monofásico. En bifásico (carga F-F) la corriente pasa por dos
+    //    impedancias de fase: ΔV = 2·I·Zfase / Vff → f = 2/√3.
+    if (parametros.trafo) {
+        const S = parseFloat(parametros.trafo.potenciaKVA), Z = parseFloat(parametros.trafo.impedanciaPct);
+        if (!(S > 0)) throw new Error('Potencia del transformador debe ser mayor que 0');
+        if (!(Z > 0 && Z < 30)) throw new Error('Impedancia del transformador debe estar entre 0 y 30 %');
+        const V = parseFloat(c.tension);
+        const InT = c.tipoSistema === 'monofasico' ? S * 1000 / (3 * V) : S * 1000 / (Math.sqrt(3) * V);
+        const f = c.tipoSistema === 'bifasico' ? 2 / Math.sqrt(3) : 1;
+        tramos.push({ tramo: 'Transformador', corriente: Iarriba, factorPotencia: fpArriba,
+            caidaPct: f * Iarriba / InT * Z, corrienteNominalTrafo: Math.round(InT * 10) / 10 });
+    }
+
+    // Se decide con la suma exacta; se muestran valores redondeados
+    const total = tramos.reduce((s, t) => s + t.caidaPct, 0);
+    tramos.forEach(t => {
+        t.caidaPct = Math.round(t.caidaPct * 100) / 100;
+        t.corriente = Math.round(t.corriente * 100) / 100;
+        t.factorPotencia = Math.round(t.factorPotencia * 1000) / 1000;
+    });
+    return {
+        corrientePartida: Math.round(Ip * 100) / 100,
+        tramos,
+        caidaTotalPct: Math.round(total * 100) / 100,
+        limite,
+        cumple: total <= limite,
+        soloCircuito: !parametros.alimentador && !parametros.trafo
+    };
+}
+
+/**
+ * Arma los parámetros de la partida a partir de los de la pestaña Caída AC:
+ * el circuito del motor es el cable de la pestaña (su corriente = In del motor) y el
+ * alimentador usa el mismo material, clase, aislación y disposición.
+ * nParalelo (opcional) reemplaza los conductores por fase del circuito del motor.
+ */
+function parametrosPartidaDesdeCaida(pc, nParalelo) {
+    const p = pc.partida;
+    if (!p) return null;
+    const circuito = {
+        corriente: pc.corriente, tension: pc.tension, tipoSistema: pc.tipoSistema, longitud: pc.longitud,
+        seccion: pc.seccion, materialCondutor: pc.materialCondutor, aislamiento: pc.aislamiento, clase: pc.clase,
+        conductoresPorFase: nParalelo || pc.conductoresPorFase, disposicion: pc.disposicion, frecuencia: pc.frecuencia
+    };
+    const alimentador = p.alimentador ? Object.assign({
+        materialCondutor: pc.materialCondutor, aislamiento: pc.aislamiento, clase: pc.clase, disposicion: pc.disposicion
+    }, p.alimentador) : null;
+    return {
+        circuito, relacionIp: p.relacionIp, fpPartida: p.fpPartida, limite: p.limite,
+        otrasCargas: p.otrasCargas, alimentador, trafo: p.trafo
+    };
+}
+
+/**
+ * Menor sección del circuito del motor con la que la partida cumple el límite
+ * (alimentador y trafo quedan como están). null si ni 300 mm² alcanza.
+ */
+function calcularSeccionMinimaPartida(parametros) {
+    const material = normalizarMaterial(parametros.circuito.materialCondutor);
+    for (const seccion of SECCIONES_TABLA) {
+        if (material === 'aluminio' && seccion < 16) continue;
+        const circuito = Object.assign({}, parametros.circuito, { seccion });
+        const r = calcularCaidaPartidaMotor(Object.assign({}, parametros, { circuito }));
+        if (r.cumple) return { seccion, caidaTotalPct: r.caidaTotalPct };
     }
     return null;
 }
@@ -881,6 +1017,9 @@ window.SECCIONES_TABLA = SECCIONES_TABLA;
 window.redondearSeccionComercial = redondearSeccionComercial;
 window.seccionComercialCortocircuito = seccionComercialCortocircuito;
 window.seccionMinimaCortocircuito = seccionMinimaCortocircuito;
+window.calcularCaidaPartidaMotor = calcularCaidaPartidaMotor;
+window.calcularSeccionMinimaPartida = calcularSeccionMinimaPartida;
+window.parametrosPartidaDesdeCaida = parametrosPartidaDesdeCaida;
 window.temperaturaServicioConductor = temperaturaServicioConductor;
 window.convertirAWatts = convertirAWatts;
 window.calcularCorrenteProyecto = calcularCorrenteProyecto;

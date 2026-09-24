@@ -1,9 +1,9 @@
 # Plan de mejoras — Calculadora de conductores eléctricos
 
 ## Estado actual
-- **Último avance:** 2026-09-24 — v5.10.0: los límites de caída DC salen de los criterios de Itaipu #ITA0&EEC010-01 R1A (GE, 2026) §10.3.2: batería → carga 5 %, cargador → batería 3 %. Reemplazan los seis valores por aplicación y el criterio por tensión, que no tenían fuente. En AC se sumó la opción 10 % (fuente → primario de trafo con TAPs, R1A §10.3.1).
-- **Sin verificar:** qué revisión de los criterios de Itaipu está aprobada. La R1A 2026 cambia valores respecto de la versión 2023; si el informe es formal, confirmarlo con Ingeniería. También quedan sin verificar los hooks en la PC de Marco (Windows), la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión y Safari/Firefox.
-- **Siguiente paso recomendado:** que Marco decida la fila #14 (caída en la partida de motores): es el criterio de la R1A que la app todavía no verifica.
+- **Último avance:** 2026-09-24 — v5.11.0: verificación de caída en la partida de motores (Itaipu R1A §10.3.1.3), dentro de la pestaña Caída AC. Suma circuito del motor, alimentador y trafo; su sección mínima entra en la sección final. Antes, v5.10.0: límites de caída con los criterios de Itaipu R1A.
+- **Sin verificar:** qué revisión de los criterios de Itaipu está aprobada (la R1A 2026 cambia valores respecto de la versión 2023; si el informe es formal, confirmarlo con Ingeniería). La fórmula del trafo usa la Z completa: es una cota superior, sin fuente escrita en el repo (el capítulo de partida de motores de Mamede no está en el PDF). Tampoco se verificaron los hooks en la PC de Marco, la columna de aluminio de NBR contra una segunda fuente, el PDF real de impresión ni Safari/Firefox.
+- **Siguiente paso recomendado:** fila #15 (alimentadores de motores DC al 125 %), el otro criterio de la R1A que falta.
 
 ## Backlog
 
@@ -14,7 +14,6 @@
 | 10 | DC: ofrecer los métodos A2, B2 y F (INPACO tiene la columna de 2 conductores) y D. D necesita temperatura y resistividad del suelo; hoy `calcularFactorTemperaturaDC` fuerza aire | Auditoría 2026-09-23; selector `metodo-instalacao-dc` | Baja | Marco |
 | 11 | Fuente para la sección mínima de 6 mm² en alimentadores (`obtenerSeccionMinimaNBR`): no tiene cita, y la R1A de Itaipu no la trata. NBR 5410 Tabla 47 pide 2,5 mm² en fuerza | `calculations.js` | Media | Marco |
 | 13 | Quitar código y datos sin uso: `validarParametrosBasicos`, `validarPorPestaña`, `validarConsistenciaDC`, `validarResultadosDC`, `validarRango/Lista/Numerico/Requerido`; la sincronización DC (`rellenarSiVacio` sobre selects, no hace nada); `seccionesNominalesDC` (incluye 400–800 sin tabla), `tensionesNominalesDC`, `parametrosBaterias` | Auditoría 2026-09-23 | Baja | Claude |
-| 14 | Caída de tensión en la partida de motores (Itaipu R1A §10.3.1.3): 10 % en bornes del motor. Considera todo el sistema de BT, desde el motor hasta el primario del trafo reductor. Sin datos del fabricante: Ip = 6·In, cosφ = 0,3. Es interfaz nueva: se propone antes de hacerla | Criterios R1A, pp. 35–37 | Media | Marco |
 | 15 | Alimentadores de motores DC dimensionados al 125 % de la corriente (Itaipu R1A §10.3.2) | Criterios R1A | Baja | Marco |
 | 16 | Cables de control (Itaipu R1A §10.3.3): la caída solo se verifica en cables que accionan solenoides (válvulas, bobinas de interruptores) con recorrido mayor que 400 m. Hoy la app no distingue cables de control | Criterios R1A | Baja | Marco |
 | 8 | Ideas a futuro: exportar PDF, modo oscuro, cálculo de canalización, comparar 2–3 secciones, catálogo de cables comerciales | — | Baja | Marco |
@@ -28,6 +27,7 @@
 - 2026-09-23 — Método de trabajo v8 adoptado en este proyecto.
 - 2026-09-23 — Reactancia AC desde INPACO Tabla 15 (antes valores sin fuente); frecuencia seleccionable 50/60 Hz.
 - 2026-09-23 — Aluminio: relación Al/Cu de NBR 5410 Tablas 36–39 aplicada sobre INPACO (mantiene las referencias de 40 °C / 25 °C / 1,0 K·m/W).
+- 2026-09-24 — Partida de motor: tres tramos (circuito, alimentador, trafo con Z completa), bloque dentro de Caída AC (Marco aprobó la propuesta y la fórmula del trafo).
 - 2026-09-24 — Límites de caída: se usa la R1A 2026 de los criterios de Itaipu (#ITA0&EEC010-01), no la versión 2023 (Marco).
 - 2026-09-24 — Temperatura ambiente inicial = referencia de las tablas: 40 °C aire; 25 °C suelo en el método D (Marco).
 - 2026-09-23 — Historial en una pestaña propia (elegido por Marco entre pestaña y lista por pestaña).

@@ -728,6 +728,32 @@ function validarParametrosAmpacidadAC(params) {
 /**
  * Valida parámetros de caída de tensión AC
  */
+/**
+ * Partida de motor (pestaña Caída AC). Todo campo del bloque activo es requerido.
+ */
+function validarParametrosPartida(p, material, errores) {
+    const num = (v) => typeof v === 'number' && !isNaN(v);
+    if (!(num(p.relacionIp) && p.relacionIp >= 1 && p.relacionIp <= 12)) errores.push('Partida: Ip/In es requerido, entre 1 y 12');
+    if (!(num(p.fpPartida) && p.fpPartida > 0 && p.fpPartida <= 1)) errores.push('Partida: cosφ de partida es requerido, mayor que 0 y hasta 1');
+    if (!(num(p.limite) && p.limite > 0)) errores.push('Partida: límite es requerido');
+    const o = p.otrasCargas || {};
+    if (!(num(o.corriente) && o.corriente >= 0)) errores.push('Partida: corriente de otras cargas es requerida (0 si no hay)');
+    else if (o.corriente > 0 && !(num(o.factorPotencia) && o.factorPotencia > 0 && o.factorPotencia <= 1)) {
+        errores.push('Partida: cosφ de las otras cargas es requerido, mayor que 0 y hasta 1');
+    }
+    if (p.alimentador) {
+        const a = p.alimentador;
+        if (!(num(a.longitud) && a.longitud > 0)) errores.push('Partida: longitud del alimentador es requerida');
+        if (!(num(a.seccion) && a.seccion > 0)) errores.push('Partida: sección del alimentador es requerida');
+        else if (material && material.toLowerCase() === 'aluminio' && a.seccion < 16) errores.push('Partida: alimentador de aluminio, sección mínima 16 mm²');
+        if (!(num(a.conductoresPorFase) && a.conductoresPorFase >= 1)) errores.push('Partida: conductores en paralelo del alimentador es requerido');
+    }
+    if (p.trafo) {
+        if (!(num(p.trafo.potenciaKVA) && p.trafo.potenciaKVA > 0)) errores.push('Partida: potencia del transformador es requerida');
+        if (!(num(p.trafo.impedanciaPct) && p.trafo.impedanciaPct > 0 && p.trafo.impedanciaPct < 30)) errores.push('Partida: impedancia del transformador es requerida, entre 0 y 30 %');
+    }
+}
+
 function validarParametrosCaidaTensionAC(params) {
     const errores = [];
     const advertencias = [];
@@ -812,6 +838,8 @@ function validarParametrosCaidaTensionAC(params) {
         } else if (params.clase === 'flexible' && params.material && params.material.toLowerCase() === 'aluminio') {
             errores.push('No existe conductor de aluminio flexible: elegir rígido (clase 2)');
         }
+
+        if (params.partida) validarParametrosPartida(params.partida, params.material, errores);
 
         return {
             valido: errores.length === 0,
@@ -924,6 +952,7 @@ console.log('✅ Validations.js R2 Corregido cargado - Validaciones específicas
 window.validarParametrosBasicos = validarParametrosBasicos;
 window.validarParametrosAmpacidadAC = validarParametrosAmpacidadAC;
 window.validarCircuitosAgrupados = validarCircuitosAgrupados;
+window.validarParametrosPartida = validarParametrosPartida;
 window.validarParametrosAmpacidadDC = validarParametrosAmpacidadDC;
 window.validarParametrosCaidaTensionDC = validarParametrosCaidaTensionDC;
 window.validarParametrosCortocircuitoDC = validarParametrosCortocircuitoDC;

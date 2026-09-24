@@ -46,6 +46,11 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
   - 10 %: desde la fuente o el secundario de un trafo hasta el primario del siguiente trafo con TAPs (Itaipu R1A §10.3.1).
   - Según la R1A, los porcentajes cuentan solo la caída en cables, sobre la tensión de operación del circuito.
 - Si no cumple, la app indica la menor sección que cumple el límite.
+- **Partida de motor** (opcional, Itaipu R1A §10.3.1.3 y Mamede §3.5.1.2): con "Sí, el circuito alimenta un motor", la corriente de la pestaña se toma como In del motor.
+  - Suma la caída de tres tramos: el circuito del motor (Ip = k·In, cosφ de partida), el alimentador del tablero o CCM (opcional) y el transformador (opcional).
+  - En el alimentador y el trafo la corriente es la suma vectorial de Ip y las otras cargas en marcha.
+  - El trafo se toma trifásico: ΔV = (I / In del trafo) × Z %, con la Z completa (cota superior). Con circuito bifásico (carga F-F) se multiplica por 2/√3, porque la corriente pasa por dos devanados.
+  - Límite 10 %. Sin datos del fabricante: Ip/In = 6 y cosφ 0,30. Muestra el aporte de cada tramo y la menor sección del circuito del motor que cumple; esa sección entra en la sección final como criterio "Partida de motor".
 
 ### 3. Cortocircuito AC
 - **Corriente de cortocircuito:** Icc = Scc / (√3 · V). Scc se ingresa en MVA y V es la tensión entre fases.

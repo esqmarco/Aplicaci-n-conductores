@@ -1051,6 +1051,113 @@ body {
                 </div>
             </div>
         </div>
+        <div class="form-section">
+            <h3>Partida de Motor</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="partida-ct">Verificar Ca&iacute;da en la Partida:<span class="tooltip-icon" data-tooltip="Itaipu #ITA0&amp;EEC010-01 R1A §10.3.1.3 y Mamede §3.5.1.2: caída máxima 10 % en bornes del motor durante la partida, considerando todo el sistema de BT hasta el primario del trafo. La corriente de arriba se toma como corriente nominal del motor.">?</span></label>
+                    <select id="partida-ct">
+                        <option value="no" selected>No</option>
+                        <option value="si">S&iacute;, el circuito alimenta un motor</option>
+                    </select>
+                </div>
+            </div>
+            <div id="partida-campos" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="relacion-ip-ct">Ip / In:<span class="tooltip-icon" data-tooltip="Sin datos del fabricante, la R1A indica 6. Para arrancador suave o estrella-triángulo, usar la relación que corresponda.">?</span></label>
+                        <input type="number" id="relacion-ip-ct" step="0.1" min="1" max="12" value="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="fp-partida-ct">cos&phi; de Partida:<span class="tooltip-icon" data-tooltip="Sin datos del fabricante: 0,30 (Itaipu R1A §10.3.1.3; Mamede §3.5.1.2).">?</span></label>
+                        <input type="number" id="fp-partida-ct" step="0.01" min="0.05" max="1" value="0.3">
+                    </div>
+                    <div class="form-group">
+                        <label for="limite-partida-ct">L&iacute;mite en la Partida:</label>
+                        <select id="limite-partida-ct">
+                            <option value="10" selected>10% - Itaipu R1A / Mamede</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="otras-cargas-ct">Otras Cargas en Marcha (A):<span class="tooltip-icon" data-tooltip="Corriente de las demás cargas que siguen funcionando mientras arranca el motor. Pasa por el alimentador y el trafo; se suma en forma vectorial con la corriente de partida. 0 si no hay.">?</span></label>
+                        <input type="number" id="otras-cargas-ct" step="0.1" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="fp-otras-ct">cos&phi; de las Otras Cargas:</label>
+                        <input type="number" id="fp-otras-ct" step="0.01" min="0.1" max="1" value="0.85">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="alim-partida-ct">Incluir Alimentador del Tablero / CCM:<span class="tooltip-icon" data-tooltip="Cable desde el trafo (o tablero general) hasta el tablero del motor. Se asume el mismo material, clase, aislación y disposición que el circuito del motor.">?</span></label>
+                        <select id="alim-partida-ct">
+                            <option value="no" selected>No</option>
+                            <option value="si">S&iacute;</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="alim-partida-campos" class="form-row" style="display: none;">
+                    <div class="form-group">
+                        <label for="alim-longitud-ct">Longitud del Alimentador (m):</label>
+                        <input type="number" id="alim-longitud-ct" step="0.1" placeholder="Ej: 30">
+                    </div>
+                    <div class="form-group">
+                        <label for="alim-seccion-ct">Secci&oacute;n del Alimentador:</label>
+                        <select id="alim-seccion-ct">
+                            <option value="">Seleccionar...</option>
+                            <option value="1.5">1.5 mm2</option>
+                            <option value="2.5">2.5 mm2</option>
+                            <option value="4">4 mm2</option>
+                            <option value="6">6 mm2</option>
+                            <option value="10">10 mm2</option>
+                            <option value="16">16 mm2</option>
+                            <option value="25">25 mm2</option>
+                            <option value="35">35 mm2</option>
+                            <option value="50">50 mm2</option>
+                            <option value="70">70 mm2</option>
+                            <option value="95">95 mm2</option>
+                            <option value="120">120 mm2</option>
+                            <option value="150">150 mm2</option>
+                            <option value="185">185 mm2</option>
+                            <option value="240">240 mm2</option>
+                            <option value="300">300 mm2</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="alim-paralelo-ct">Conductores en Paralelo:</label>
+                        <select id="alim-paralelo-ct">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="trafo-partida-ct">Incluir Transformador:<span class="tooltip-icon" data-tooltip="Trafo trifásico reductor que alimenta el sistema. Caída = (I / In del trafo) × Z %, con la Z completa (cota superior, sin separar R y X).">?</span></label>
+                        <select id="trafo-partida-ct">
+                            <option value="no" selected>No</option>
+                            <option value="si">S&iacute;</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="trafo-partida-campos" class="form-row" style="display: none;">
+                    <div class="form-group">
+                        <label for="trafo-kva-ct">Potencia del Trafo (kVA):</label>
+                        <input type="number" id="trafo-kva-ct" step="1" placeholder="Ej: 500">
+                    </div>
+                    <div class="form-group">
+                        <label for="trafo-z-ct">Impedancia Z (%):</label>
+                        <input type="number" id="trafo-z-ct" step="0.1" placeholder="Ej: 5">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="calculate-section">
         <div class="btn-group">
@@ -1081,6 +1188,29 @@ body {
                 <div class="result-value" id="seccion-minima-ct">--</div>
                 <div class="result-label">Secci&oacute;n M&iacute;nima por Ca&iacute;da (mm&sup2;)</div>
             </div>
+        </div>
+        <div id="resultados-partida-ct" style="display: none;">
+            <h3>Partida de Motor</h3>
+            <div class="results-grid">
+                <div class="result-card">
+                    <div class="result-value" id="partida-caida-valor">--</div>
+                    <div class="result-label">Ca&iacute;da en la Partida (%)</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value" id="partida-status">--</div>
+                    <div class="result-label">Estado</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value" id="partida-corriente">--</div>
+                    <div class="result-label">Corriente de Partida (A)</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value" id="partida-seccion-minima">--</div>
+                    <div class="result-label">Secci&oacute;n M&iacute;nima del Circuito del Motor</div>
+                </div>
+            </div>
+            <div id="partida-tramos"></div>
+            <p id="partida-aviso" class="nota-partida"></p>
         </div>
     </div>
 </div>
@@ -1206,6 +1336,7 @@ body {
                 <h4>Criterio de Caida de Tension</h4>
                 <div class="reporte-item"><span class="reporte-label">Caida de Tension:</span><span class="reporte-valor" id="resumen-caida-ac">-- %</span></div>
                 <div class="reporte-item"><span class="reporte-label">Estado:</span><span class="reporte-valor" id="resumen-estado-caida-ac">--</span></div>
+                <div class="reporte-item"><span class="reporte-label">Partida de motor:</span><span class="reporte-valor" id="resumen-partida-ac">--</span></div>
             </div>
             <div class="reporte-seccion">
                 <h4>Criterio de Cortocircuito</h4>
