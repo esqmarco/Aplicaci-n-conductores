@@ -42,7 +42,7 @@ El detalle de cada pestana esta en `documentos/MANUAL DE FUNCIONAMIENTO - CALCUL
   - Caida de tension con R a temperatura de servicio, efecto pelicular y de proximidad y reactancia INPACO Tabla 15, a 50 o 60 Hz.
   - Cortocircuito por el criterio adiabatico.
   - Resultados con el conductor de proteccion.
-- **DC (4 pestanas):** ampacidad (metodos A1, B1, C, E), caida de tension con Np conductores por polo, cortocircuito de bancos de baterias y resultados.
+- **DC (4 pestanas):** ampacidad (metodos A1, A2, B1, B2, C, D, E, F; motores DC al 125 %), caida de tension con Np conductores por polo, cortocircuito de bancos de baterias y resultados.
 - **Memoria de calculo imprimible** (AC y DC) e **Historial** de los ultimos 50 calculos.
 - **Solo baja tension (hasta 1000 V)**: las tablas de media tension (NBR 14039) se retiraron en 5.0.0.
 
@@ -83,7 +83,7 @@ Viven en `documentos/PLAN_DE_MEJORAS.md` (backlog y decisiones vigentes). No se 
 | Componente | Tecnologia | Justificacion |
 |-----------|-----------|---------------|
 | Estructura | HTML5 | Semantico, accesible |
-| Estilos | CSS3 (inline en index.html) | Sin archivo CSS separado (pendiente refactorizacion) |
+| Estilos | CSS3 (`styles.css`) | Pantalla e impresion |
 | Logica | JavaScript vanilla (ES6+) | Sin dependencias, maximo rendimiento |
 | Framework | Ninguno | Simplicidad, sin overhead, funciona offline |
 | Backend | Ninguno (100% client-side) | Sin servidor, despliegue como archivos estaticos |
@@ -92,7 +92,8 @@ Viven en `documentos/PLAN_DE_MEJORAS.md` (backlog y decisiones vigentes). No se 
 ### Estructura de Archivos
 
 ```
-index.html          - Interfaz de usuario (HTML + CSS inline)
+index.html          - Interfaz de usuario (HTML)
+styles.css          - Estilos (pantalla e impresion)
 data-tables.js      - Datos tecnicos (tablas INPACO, NBR 5410, Mamede Filho)
 calculations.js     - Funciones de calculo AC y DC
 validations.js      - Validaciones de entrada de datos

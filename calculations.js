@@ -436,6 +436,24 @@ function calcularSeccionMinimaCaidaAC(parametros) {
     return null;
 }
 
+/**
+ * ¿La caída de tensión es exigible para este cable? (Itaipu R1A §10.3.3, AC y DC)
+ * tipoCable: 'potencia' (fuerza / iluminación, siempre), 'control_solenoide' (solo si el
+ * recorrido supera 400 m) o 'control' (sin solenoides: no se exige).
+ */
+function verificacionCaidaExigida(tipoCable, longitud) {
+    const Lmin = window.criteriosCablesControl.longitudMinimaSolenoide;
+    if (tipoCable === 'potencia') return { exigida: true, motivo: null };
+    if (tipoCable === 'control_solenoide' && parseFloat(longitud) > Lmin) return { exigida: true, motivo: null };
+    if (tipoCable === 'control_solenoide' || tipoCable === 'control') {
+        return {
+            exigida: false,
+            motivo: 'Itaipu R1A §10.3.3: en cables de control la caída solo se exige si accionan solenoides y el recorrido supera ' + Lmin + ' m'
+        };
+    }
+    throw new Error(`Tipo de cable "${tipoCable}" no reconocido`);
+}
+
 // ===================================================================
 // CAÍDA DE TENSIÓN EN LA PARTIDA DE MOTORES
 // ===================================================================
@@ -741,24 +759,54 @@ function obtenerCorrienteDC(parametros, tension) {
     return calcularCorrenteDC({ potencia: parseFloat(parametros.potencia), tension });
 }
 
+/**
+ * Ampacidad DC. tipoCarga 'motor': el conductor se dimensiona al 125 % de la corriente
+ * (Itaipu R1A §10.3.2, tabelasDC.factorMotorDC); en modo potencia la potencia de placa es
+ * mecánica, In = P / (V·η). `corriente` es siempre la corriente real (la que usan caída y
+ * cortocircuito); `corrienteDimensionamiento` es la que entra a la ampacidad.
+ * Método D (enterrado): temperatura del suelo, agrupamiento enterrado y resistividad del
+ * suelo (INPACO Tablas 6, 10 y 11), igual que en AC.
+ */
 function dimensionarPorAmpacidadDC(parametros) {
     const { tensionSelector, tensionPersonalizada, material, temperatura, metodo, aislamiento } = parametros;
+    const tipoCarga = parametros.tipoCarga === undefined ? 'general' : parametros.tipoCarga;
+    if (!['general', 'motor'].includes(tipoCarga)) throw new Error(`Tipo de carga DC "${tipoCarga}" no reconocido`);
+    const advertencias = [];
     // En modo corriente la tensión no interviene en la ampacidad
     const tension = parametros.modoEntrada === 'corriente' ? null : obtenerTensionEfectiva(tensionSelector, tensionPersonalizada);
-    const corriente = obtenerCorrienteDC(parametros, tension);
+    let corriente = obtenerCorrienteDC(parametros, tension);
+    if (tipoCarga === 'motor' && parametros.modoEntrada !== 'corriente') {
+        const eta = parseFloat(parametros.rendimiento);
+        if (!(eta > 0 && eta <= 1)) throw new Error('Motor DC: el rendimiento es requerido (mayor que 0 y hasta 1)');
+        corriente = Math.round(corriente / eta * 100) / 100;
+    }
+    const factorCarga = tipoCarga === 'motor' ? window.tabelasDC.factorMotorDC : 1;
+    const corrienteDimensionamiento = corriente * factorCarga;
+
+    const esEnterrado = !!(window.metodosInstalacion[metodo] && window.metodosInstalacion[metodo].enterrado);
+    const tipoEnt = parametros.tipoEnterrado === 'directo' ? 'directo' : 'ducto';
     const factorTemperatura = calcularFactorTemperaturaDC({ material, temperatura, aislamiento, metodo });
     const circuitos = Math.max(1, parseInt(parametros.agrupamiento, 10) || 1);
-    const factorAgrupamiento = window.obtenerFactorAgrupamento(metodo, circuitos);
-    const corrienteCorregida = corriente / (factorTemperatura * factorAgrupamiento);
+    const factorAgrupamiento = window.obtenerFactorAgrupamento(metodo, circuitos, tipoEnt);
+    if (esEnterrado && circuitos > 6) {
+        advertencias.push('INPACO da factores de agrupamiento enterrado hasta 6 circuitos; para más se usó un valor conservador. Verificar según IEC 60287.');
+    }
+    const factorResistividad = esEnterrado ? window.obtenerFactorResistividadSuelo(parametros.resistividadSuelo, tipoEnt) : 1;
+    const corrienteCorregida = corrienteDimensionamiento / (factorTemperatura * factorAgrupamiento * factorResistividad);
     const seccionInfo = seleccionarSeccionMinimaDC({ corrienteCorregida, material, metodo, aislamiento });
     const resistenciaInfo = calcularResistenciaCorregida({ material, seccion: seccionInfo.seccion, aislamiento, clase: parametros.clase });
 
     return {
         criterio: 'ampacidad',
         corriente,
+        tipoCarga,
+        factorCarga,
+        corrienteDimensionamiento: Math.round(corrienteDimensionamiento * 100) / 100,
         corrienteCorregida: Math.round(corrienteCorregida * 100) / 100,
         factorTemperatura,
         factorAgrupamiento,
+        factorResistividad,
+        advertencias,
         seccion: seccionInfo.seccion,
         ampacidad: seccionInfo.ampacidad,
         resistencia_mostrada: resistenciaInfo.R_temp,
@@ -777,8 +825,13 @@ function verificarCaidaTensionDC(parametros) {
     const caidaInfo = calcularCaidaTensionDC({ corriente, longitud, resistencia: resistenciaInfo.R_temp, Np: conductoresPorPolo, tension });
     const limite = determinarLimiteCaidaDC(parametros.aplicacionDC);
 
+    // Cables de control (Itaipu R1A §10.3.3); sin tipo se trata como potencia (se verifica)
+    const exigencia = verificacionCaidaExigida(parametros.tipoCable || 'potencia', longitud);
+
     return {
         criterio: 'caida_tension',
+        exigida: exigencia.exigida,
+        motivoNoExigida: exigencia.motivo,
         corriente,
         caida_tension_V: caidaInfo.caidaTension,
         caida_tension_pct: caidaInfo.porcentajeCaida,
@@ -831,12 +884,14 @@ function analizarCortocircuitoDC(parametros) {
 // ===================================================================
 
 /**
- * Factor de temperatura DC: mismas tablas que AC (INPACO Tabla 6, referencia 40 °C aire),
- * coherente con las ampacidades INPACO usadas en DC.
+ * Factor de temperatura DC: mismas tablas que AC (INPACO Tabla 6, referencia 40 °C aire /
+ * 25 °C suelo en el método D), coherente con las ampacidades INPACO usadas en DC.
  */
 function calcularFactorTemperaturaDC(parametros) {
     const { temperatura, aislamiento, metodo } = parametros;
-    return window.obtenerFactorTemperatura(aislamiento || 'PVC', parseFloat(temperatura), metodo || 'B1', false);
+    // Método D: la temperatura es la del suelo (referencia INPACO 25 °C), igual que en AC
+    const esEnterrado = !!(window.metodosInstalacion[metodo] && window.metodosInstalacion[metodo].enterrado);
+    return window.obtenerFactorTemperatura(aislamiento || 'PVC', parseFloat(temperatura), metodo, esEnterrado);
 }
 
 function seleccionarSeccionMinimaDC(parametros) {
@@ -883,8 +938,11 @@ function determinarLimiteCaidaDC(tramo) {
     return limites[tramo];
 }
 
+/** Tensión nominal por elemento (V): plomo-ácido 2,0; litio LiFePO4 3,2; níquel-cadmio 1,2. */
 function obtenerTensionElementoBateria(tipo) {
-    return { 'plomo-acido': 2.0, 'litio': 3.2, 'niquel-cadmio': 1.2 }[tipo] || 2.0;
+    const v = { 'plomo-acido': 2.0, 'litio': 3.2, 'niquel-cadmio': 1.2 }[tipo];
+    if (v === undefined) throw new Error(`Tipo de batería "${tipo}" no reconocido`);
+    return v;
 }
 
 function obtenerConstanteKDC(material, aislamiento, seccion) {
@@ -943,7 +1001,7 @@ function calcularSeccionFinalDCDesde(calc) {
         secciones.push({ valor: s, criterio: np > 1 ? 'Ampacidad (por conductor)' : 'Ampacidad' });
     }
 
-    if (caida) {
+    if (caida && caida.resultado.exigida !== false) {
         try {
             const s = calcularSeccionParaCaidaDC(caida.parametros);
             if (s === null) sinSolucion = 'Caída de tensión: ninguna sección hasta 300 mm² cumple; aumentar conductores por polo';
@@ -1010,7 +1068,7 @@ function calcularConductorProteccion(seccionFase, parametrosCC) {
 // EXPORTACIONES
 // ===================================================================
 
-console.log('✅ Calculations.js R5 cargado - AC + DC con tablas INPACO');
+console.log('✅ Calculations.js cargado');
 
 window.SECCIONES_COMERCIALES = SECCIONES_COMERCIALES;
 window.SECCIONES_TABLA = SECCIONES_TABLA;
@@ -1020,6 +1078,7 @@ window.seccionMinimaCortocircuito = seccionMinimaCortocircuito;
 window.calcularCaidaPartidaMotor = calcularCaidaPartidaMotor;
 window.calcularSeccionMinimaPartida = calcularSeccionMinimaPartida;
 window.parametrosPartidaDesdeCaida = parametrosPartidaDesdeCaida;
+window.verificacionCaidaExigida = verificacionCaidaExigida;
 window.temperaturaServicioConductor = temperaturaServicioConductor;
 window.convertirAWatts = convertirAWatts;
 window.calcularCorrenteProyecto = calcularCorrenteProyecto;

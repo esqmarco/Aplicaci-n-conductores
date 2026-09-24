@@ -2,13 +2,14 @@
 
 ## Qué es y en qué fase está
 - Calculadora de sección de conductores AC y DC por ampacidad, caída de tensión y cortocircuito.
-- Fuentes: catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`), NBR 5410 (Tablas 36–39 en `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`), Mamede Filho (`documentos/Instalacoes_Eletricas_Industriais_Joa_Ma-154-270.pdf`), criterios de Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A (GE, 2026, §10.3, pp. 35–37; aportado por Marco, no versionado) para los límites de caída.
+- Fuentes: catálogo INPACO 2021 (`documentos/Catalogo INPACO 2021-49-80.pdf`), NBR 5410 (Tablas 36–39 en `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`), Mamede Filho (`documentos/Instalacoes_Eletricas_Industriais_Joa_Ma-154-270.pdf`), criterios de Itaipu #ITA0&EEC010-01 "Projetos Elétricos – Critérios" R1A (GE, 2026, §10.3, pp. 35–37; aportado por Marco, no versionado) para los límites de caída, la partida de motores, los motores DC y los cables de control.
 - Página única: HTML + JavaScript sin frameworks. Usuarios: ingenieros electricistas de Paraguay y Brasil.
 - Fase: en uso, mejora continua. Estado y pendientes: `documentos/PLAN_DE_MEJORAS.md`.
 
 ## Arquitectura
 ```
-index.html        UI (HTML + CSS inline, 9 pestañas: 4 AC, 4 DC e Historial)
+index.html        UI (HTML, 9 pestañas: 4 AC, 4 DC e Historial)
+styles.css        estilos (pantalla e impresión)
 data-tables.js    tablas técnicas (ampacidades, factores de temperatura, agrupamiento, suelo, resistencias)
 calculations.js   cálculos AC + DC
 validations.js    validación de entradas
@@ -22,7 +23,7 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Aislaciones AC: PVC (70 °C); EPR_90 y HEPR (90 °C, misma tabla INPACO XLPE/HEPR). DC: PVC, EPR.
 - Conductores: cobre, aluminio (mínimo 16 mm²). Ampacidad de aluminio = cobre INPACO × (I_Al/I_Cu) de NBR 5410 Tablas 36–39, mismo método, aislación y conductores cargados (fuente: `documentos/NBR5410_T36-39_ampacidad_Cu_Al.csv`).
 - Clase del conductor (IEC 60228) para resistencias: cobre flexible clase 5 (por defecto) o rígido clase 2; aluminio solo rígido. Una sola tabla de resistencias (`tabelasNBR.resistencias`) para AC y DC.
-- Métodos de instalación: A1, A2, B1, B2, C, D, E, F, G en AC (INPACO Tabla 1 / NBR 5410); D es el único enterrado. DC ofrece A1, B1, C, E.
+- Métodos de instalación: A1, A2, B1, B2, C, D, E, F, G en AC (INPACO Tabla 1 / NBR 5410); D es el único enterrado. DC ofrece A1, A2, B1, B2, C, D, E, F (G no tiene columna NBR Al de 2 conductores).
 - Tablas de ampacidad: INPACO 2021, cobre, 40 °C aire / 25 °C suelo, 1,0 K·m/W, 2 y 3 conductores cargados, hasta 300 mm². Corrientes mayores: conductores en paralelo.
 - Ampacidad AC solo para baja tensión (≤ 1000 V). Las tablas de media tensión (NBR 14039) no están en la app.
 - Los factores de corrección nunca caen en silencio a 1,0: un valor fuera de tabla lanza error. Un campo vacío es error de validación, no un valor por defecto.
@@ -41,6 +42,8 @@ tests/test_calculations.js   tests con las tablas reales (node, sin dependencias
 - Rca = Rt × (1 + Ys + Yp), efecto pelicular y de proximidad [INPACO 4.3.1 / IEC 60287]; en contacto dc/S = 1 (cota superior)
 - X: INPACO Tabla 15 a 50 Hz según disposición (trébol, tripolar, plano 2D, plano 20 cm) × f/50
 - Caída DC: ΔV = 2 × Rt × I × L / Np
+- Motor DC [Itaipu R1A §10.3.2]: ampacidad con 1,25 × In; In = P / (V × η) si se da la potencia de placa. Caída y cortocircuito con la In real
+- Cables de control [Itaipu R1A §10.3.3]: la caída solo se exige si accionan solenoides y el recorrido supera 400 m
 - Cortocircuito de baterías: Icc = V_banco / (N_serie × R_elemento)
 - Cortocircuito: S_min = Icc × √t / K (t ≤ 5 s)
 - Partida de motor [Itaipu R1A §10.3.1.3, Mamede §3.5.1.2]: ΔV% = circuito (Ip = k·In, cosφ partida) + alimentador (suma vectorial de Ip y otras cargas) + trafo (I / In_trafo × Z%, Z completa); límite 10 %; sin datos k = 6, cosφ = 0,3. In_trafo = S/(√3·V), o S/(3·V) con V fase-neutro; en bifásico (carga F-F) × 2/√3

@@ -39,14 +39,13 @@ document.addEventListener('DOMContentLoaded', function () {
         tipoEl.addEventListener('change', actualizarResistenciaInterna);
     }
 
-    // Sincronizacion silenciosa de pestanas DC
-    configurarSincronizacionDC();
-
     // Validacion en tiempo real
     configurarValidacionEnTiempoReal();
 
     // Mostrar datos del suelo solo para el método enterrado (D)
-    configurarFilaResistividad();
+    configurarMetodoEnterrado('metodo-instalacao', 'fila-resistividad', 'temperatura-ambiente');
+    configurarMetodoEnterrado('metodo-instalacao-dc', 'fila-resistividad-dc', 'temperatura-ambiente-dc');
+    configurarRendimientoMotorDC();
     configurarPartidaMotor();
 
     // Aluminio solo existe rígido: la clase acompaña al material
@@ -87,9 +86,14 @@ function configurarPartidaMotor() {
         });
 }
 
-function configurarFilaResistividad() {
-    var metodo = document.getElementById('metodo-instalacao');
-    var fila = document.getElementById('fila-resistividad');
+/**
+ * Método D (enterrado), AC y DC: muestra la fila de suelo y ajusta la temperatura inicial a la
+ * referencia de las tablas INPACO (40 °C aire, 25 °C suelo). La temperatura solo se cambia si
+ * el campo tiene la referencia del método anterior y el usuario no la escribió.
+ */
+function configurarMetodoEnterrado(idMetodo, idFila, idTemp) {
+    var metodo = document.getElementById(idMetodo);
+    var fila = document.getElementById(idFila);
     if (!metodo || !fila) return;
     var actualizar = function () {
         fila.style.display = metodo.value === 'D' ? '' : 'none';
@@ -97,9 +101,7 @@ function configurarFilaResistividad() {
     metodo.addEventListener('change', actualizar);
     actualizar();
 
-    // Valor inicial de temperatura = referencia de las tablas INPACO: 40 °C aire, 25 °C suelo (método D).
-    // Solo se cambia si el campo tiene la referencia del método anterior y el usuario no lo escribió.
-    var temp = document.getElementById('temperatura-ambiente');
+    var temp = document.getElementById(idTemp);
     if (!temp) return;
     var referencia = function (m) { return m === 'D' ? '25' : '40'; };
     var anterior = metodo.value;
@@ -108,6 +110,17 @@ function configurarFilaResistividad() {
         if (!temp.dataset.editado && temp.value === referencia(anterior)) temp.value = referencia(metodo.value);
         anterior = metodo.value;
     });
+}
+
+/** Motor DC en modo potencia: pide el rendimiento (la potencia de placa es mecánica). */
+function configurarRendimientoMotorDC() {
+    var tipo = document.getElementById('tipo-carga-dc'), modo = document.getElementById('modo-entrada-dc');
+    var fila = document.getElementById('fila-rendimiento-dc');
+    if (!tipo || !modo || !fila) return;
+    var actualizar = function () { fila.style.display = tipo.value === 'motor' && modo.value === 'potencia' ? '' : 'none'; };
+    tipo.addEventListener('change', actualizar);
+    modo.addEventListener('change', actualizar);
+    actualizar();
 }
 
 // ===================================================================
@@ -146,11 +159,6 @@ function switchTab(tabName) {
 
 function onTabSwitch(tabName) {
     switch (tabName) {
-        case 'ampacidad-dc':
-        case 'caida-tension-dc':
-        case 'cortocircuito-dc':
-            sincronizarDatosCompartidosDC();
-            break;
         case 'resultados-dc':
             actualizarResumenDC();
             break;
@@ -248,55 +256,6 @@ function aplicarModoEntrada(modo) {
 }
 
 // ===================================================================
-// SINCRONIZACION SILENCIOSA DC
-// ===================================================================
-
-function configurarSincronizacionDC() {
-    var camposComunes = [
-        { id: 'material-condutor-dc', campo: 'material' }
-    ];
-
-    camposComunes.forEach(function (item) {
-        var elemento = document.getElementById(item.id);
-        if (elemento) {
-            elemento.addEventListener('change', function () {
-                sincronizarCampoEnOtrasPestanasDC(item.campo, this.value);
-            });
-        }
-    });
-}
-
-function sincronizarDatosCompartidosDC() {
-    // Solo rellenar campos vacios silenciosamente, sin confirm()
-    var calc = appState.calculos;
-
-    if (calc.ampacidadDC && calc.ampacidadDC.parametros) {
-        var params = calc.ampacidadDC.parametros;
-        rellenarSiVacio('material-conductor-ct-dc', params.material);
-    }
-}
-
-function sincronizarCampoEnOtrasPestanasDC(campo, valor) {
-    var selectores = {
-        'material': ['material-conductor-ct-dc', 'material-cc-dc']
-    };
-
-    var ids = selectores[campo];
-    if (ids) {
-        ids.forEach(function (id) {
-            rellenarSiVacio(id, valor);
-        });
-    }
-}
-
-function rellenarSiVacio(id, valor) {
-    var el = document.getElementById(id);
-    if (el && !el.value && valor !== undefined && valor !== null) {
-        el.value = valor;
-    }
-}
-
-// ===================================================================
 // OBTENCION DE PARAMETROS - AC
 // ===================================================================
 
@@ -355,6 +314,7 @@ function obtenerParametrosCaidaTensionAC() {
         disposicion: document.getElementById('disposicion-ct')?.value || 'trebol',
         clase: document.getElementById('clase-ct')?.value || undefined,
         frecuencia: parseFloat(document.getElementById('frecuencia-ct')?.value) || 50,
+        tipoCable: document.getElementById('tipo-cable-ct').value,
         partida: obtenerParametrosPartida()
     };
 }
@@ -414,10 +374,14 @@ function obtenerParametrosAmpacidadDC() {
         metodo: document.getElementById('metodo-instalacao-dc').value,
         aislamiento: document.getElementById('aislamiento-dc') ? document.getElementById('aislamiento-dc').value : 'PVC',
         agrupamiento: parseFloat(document.getElementById('agrupamiento-dc')?.value),
+        tipoCarga: document.getElementById('tipo-carga-dc').value,
+        tipoEnterrado: document.getElementById('tipo-enterrado-dc').value,
+        resistividadSuelo: parseFloat(document.getElementById('resistividad-suelo-dc').value),
     };
 
     if (modo === 'potencia') {
         params.potencia = parseFloat(document.getElementById('potencia-dc').value);
+        if (params.tipoCarga === 'motor') params.rendimiento = parseFloat(document.getElementById('rendimiento-dc').value);
     } else {
         params.corrienteDirecta = parseFloat(document.getElementById('corriente-directa-dc').value);
     }
@@ -440,6 +404,7 @@ function obtenerParametrosCaidaTensionDC() {
         aislamiento: document.getElementById('aislamiento-ct-dc') ? document.getElementById('aislamiento-ct-dc').value : 'PVC',
         clase: document.getElementById('clase-ct-dc')?.value || undefined,
         aplicacionDC: document.getElementById('aplicacion-dc').value,
+        tipoCable: document.getElementById('tipo-cable-ct-dc').value,
     };
 }
 
@@ -741,6 +706,10 @@ function calcularCaidaTension() {
         // Usar corriente directamente (ya viene del cálculo de ampacidad o ingresada manualmente)
         var resultado = calcularCaidaTensionAC(parametros);
         resultado.seccionMinimaCaida = calcularSeccionMinimaCaidaAC(parametros);
+        var exigencia = verificacionCaidaExigida(parametros.tipoCable, parametros.longitud);
+        resultado.exigida = exigencia.exigida;
+        resultado.motivoNoExigida = exigencia.motivo;
+        if (!exigencia.exigida) mostrarMensaje(exigencia.motivo + '. El resultado es informativo y no define la sección final.', 'info');
         if (parametros.partida) {
             var pp = parametrosPartidaDesdeCaida(parametros);
             resultado.partida = calcularCaidaPartidaMotor(pp);
@@ -799,8 +768,8 @@ function mostrarResultadosCaidaTensionAC(resultado) {
 
     var elStatus = document.getElementById('caida-tension-status');
     if (elStatus) {
-        elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
-        elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
+        elStatus.textContent = textoEstadoCaida(resultado.cumple, resultado.exigida);
+        ponerEstado(elStatus, resultado.exigida === false ? null : !!resultado.cumple);
     }
     mostrarResultadosPartida(resultado.partida);
 }
@@ -809,6 +778,12 @@ function mostrarResultadosCaidaTensionAC(resultado) {
  * Porcentaje para mostrar junto a CUMPLE / NO CUMPLE. El veredicto se decide con el valor
  * exacto: si el redondeo lo deja en el límite pero no cumple, se muestra "> límite".
  */
+/** CUMPLE / NO CUMPLE, o NO EXIGIDA en cables de control sin obligación (Itaipu R1A §10.3.3). */
+function textoEstadoCaida(cumple, exigida) {
+    if (exigida === false) return 'NO EXIGIDA (' + (cumple ? 'cumple' : 'no cumple') + ')';
+    return cumple ? 'CUMPLE' : 'NO CUMPLE';
+}
+
 function textoPct(pct, limite, cumple) {
     return (!cumple && pct <= limite ? '> ' + Number(limite).toFixed(2) : Number(pct).toFixed(2)) + '%';
 }
@@ -821,7 +796,7 @@ function mostrarResultadosPartida(rp) {
     setTexto('partida-caida-valor', textoPct(rp.caidaTotalPct, rp.limite, rp.cumple) + ' (l\u00EDmite ' + rp.limite + '%)');
     var st = document.getElementById('partida-status');
     st.textContent = rp.cumple ? 'CUMPLE' : 'NO CUMPLE';
-    st.className = rp.cumple ? 'resultado-ok' : 'resultado-error';
+    ponerEstado(st, !!rp.cumple);
     setTexto('partida-corriente', rp.corrientePartida.toFixed(1) + ' A');
     setTexto('partida-seccion-minima', rp.seccionMinima ? rp.seccionMinima.seccion + ' mm\u00B2'
         : 'Ninguna \u2264 300 mm\u00B2 (revisar alimentador / trafo)');
@@ -907,13 +882,30 @@ function mostrarResultadosCortocircuitoAC(resultado) {
     var elStatus = document.getElementById('cortocircuito-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
-        elStatus.className = resultado.cumple ? 'resultado-ok' : 'resultado-error';
+        ponerEstado(elStatus, !!resultado.cumple);
     }
 }
 
 // ===================================================================
 // RESUMEN CONSOLIDADO AC
 // ===================================================================
+
+/**
+ * Color de un estado sin tocar la clase base del elemento (result-value / reporte-valor).
+ * ok: true → verde, false → rojo, null → neutro.
+ */
+function ponerEstado(el, ok) {
+    if (!el) return;
+    el.classList.remove('resultado-ok', 'resultado-error');
+    if (ok === true) el.classList.add('resultado-ok');
+    else if (ok === false) el.classList.add('resultado-error');
+}
+
+/** Estado de un criterio sin cálculo vigente: texto y color neutros (AC y DC). */
+function limpiarEstadoResumen(id) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = '--'; ponerEstado(el, null); }
+}
 
 function actualizarResumenAC() {
     var proyecto = appState.calculos.proyecto;
@@ -936,18 +928,18 @@ function actualizarResumenAC() {
         setTexto('resumen-caida-ac', textoPct(caida.resultado.caidaTensionPct, caida.resultado.limite, caida.resultado.cumple));
         var elEstadoCaida = document.getElementById('resumen-estado-caida-ac');
         if (elEstadoCaida) {
-            elEstadoCaida.textContent = caida.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
-            elEstadoCaida.className = caida.resultado.cumple ? 'resultado-ok' : 'resultado-error';
+            elEstadoCaida.textContent = textoEstadoCaida(caida.resultado.cumple, caida.resultado.exigida);
+            ponerEstado(elEstadoCaida, caida.resultado.exigida === false ? null : !!caida.resultado.cumple);
         }
     } else {
         setTexto('resumen-caida-ac', 'No calculado');
-        setTexto('resumen-estado-caida-ac', '--');
+        limpiarEstadoResumen('resumen-estado-caida-ac');
     }
     var rpart = caida && caida.resultado && caida.resultado.partida;
     var elPart = document.getElementById('resumen-partida-ac');
     if (elPart) {
         elPart.textContent = rpart ? textoPct(rpart.caidaTotalPct, rpart.limite, rpart.cumple) + ' \u2014 ' + (rpart.cumple ? 'CUMPLE' : 'NO CUMPLE') : 'No verificada';
-        elPart.className = rpart ? (rpart.cumple ? 'resultado-ok' : 'resultado-error') : '';
+        ponerEstado(elPart, rpart ? !!rpart.cumple : null);
     }
 
     // Cortocircuito
@@ -956,11 +948,11 @@ function actualizarResumenAC() {
         var elEstadoCC = document.getElementById('resumen-estado-cc-ac');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE';
-            elEstadoCC.className = cc.resultado.cumple ? 'resultado-ok' : 'resultado-error';
+            ponerEstado(elEstadoCC, !!cc.resultado.cumple);
         }
     } else {
         setTexto('resumen-cc-ac', 'No calculado');
-        setTexto('resumen-estado-cc-ac', '--');
+        limpiarEstadoResumen('resumen-estado-cc-ac');
     }
 
     // Determinar seccion final (criterio mas restrictivo)
@@ -998,14 +990,17 @@ function calcularSeccionFinalAC() {
     // Menor sección que cumple la caída de tensión, con el mismo número de
     // conductores en paralelo que el dimensionamiento por ampacidad
     if (caida && caida.resultado) {
-        var minCaida = caida.resultado.seccionMinimaCaida;
-        if (proyecto && proyecto.resultado && caida.parametros.conductoresPorFase !== nParalelo) {
-            minCaida = calcularSeccionMinimaCaidaAC(Object.assign({}, caida.parametros, { conductoresPorFase: nParalelo }));
-        }
-        if (minCaida) {
-            secciones.push({ valor: minCaida.seccion, criterio: 'Ca\u00EDda de Tensi\u00F3n' });
-        } else {
-            sinSolucion = 'Ca\u00EDda de tensi\u00F3n: ninguna secci\u00F3n hasta 300 mm\u00B2 cumple; aumentar conductores en paralelo';
+        // Cable de control sin obligación (Itaipu R1A §10.3.3): la caída no define la sección
+        if (caida.resultado.exigida !== false) {
+            var minCaida = caida.resultado.seccionMinimaCaida;
+            if (proyecto && proyecto.resultado && caida.parametros.conductoresPorFase !== nParalelo) {
+                minCaida = calcularSeccionMinimaCaidaAC(Object.assign({}, caida.parametros, { conductoresPorFase: nParalelo }));
+            }
+            if (minCaida) {
+                secciones.push({ valor: minCaida.seccion, criterio: 'Ca\u00EDda de Tensi\u00F3n' });
+            } else {
+                sinSolucion = 'Ca\u00EDda de tensi\u00F3n: ninguna secci\u00F3n hasta 300 mm\u00B2 cumple; aumentar conductores en paralelo';
+            }
         }
         // Partida de motor: menor sección del circuito del motor que cumple (mismo paralelo)
         if (caida.resultado.partida) {
@@ -1073,6 +1068,9 @@ function calcularAmpacidadDC() {
         appState.calculos.ampacidadDC = { parametros: parametros, resultado: resultado };
 
         mostrarMensaje('Ampacidad DC calculada correctamente', 'exito');
+        (resultado.advertencias || []).forEach(function (adv) {
+            mostrarMensaje(adv, 'advertencia');
+        });
 
         // Propagar datos a pestañas de Caída de Tensión DC y Cortocircuito DC
         invalidarDependientes([['caidaTensionDC', 'resultados-caida-tension-dc'], ['cortocircuitoDC', 'resultados-cortocircuito-dc']]);
@@ -1099,6 +1097,10 @@ function mostrarResultadosAmpacidadDC(resultado) {
     if (seccion) {
         seccion.style.display = 'block';
     }
+
+    var cardDim = document.getElementById('card-corriente-dim-dc');
+    if (cardDim) cardDim.style.display = resultado.factorCarga > 1 ? '' : 'none';
+    setTexto('corriente-dim-dc', resultado.corrienteDimensionamiento + ' A');
 
     var campos = {
         'corriente-dc': resultado.corriente + ' A',
@@ -1133,6 +1135,7 @@ function calcularCaidaTensionDC_UI() {
         });
 
         var resultado = verificarCaidaTensionDC(parametros);
+        if (!resultado.exigida) mostrarMensaje(resultado.motivoNoExigida + '. El resultado es informativo y no define la sección final.', 'info');
 
         mostrarResultadosCaidaTensionDC(resultado);
 
@@ -1167,8 +1170,8 @@ function mostrarResultadosCaidaTensionDC(resultado) {
 
     var elStatus = document.getElementById('caida-tension-dc-status');
     if (elStatus) {
-        elStatus.textContent = resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
-        elStatus.className = resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
+        elStatus.textContent = textoEstadoCaida(resultado.cumple_criterio, resultado.exigida);
+        ponerEstado(elStatus, resultado.exigida === false ? null : !!resultado.cumple_criterio);
     }
 
     var elRes = document.getElementById('resistencia-real-dc');
@@ -1237,7 +1240,7 @@ function mostrarResultadosCortocircuitoDC(resultado) {
     var elStatus = document.getElementById('cortocircuito-dc-status');
     if (elStatus) {
         elStatus.textContent = resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
-        elStatus.className = resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
+        ponerEstado(elStatus, !!resultado.cumple_criterio);
     }
 }
 
@@ -1266,12 +1269,12 @@ function actualizarResumenDC() {
     if (caida && caida.resultado) {
         setTexto('resumen-caida-tension', textoPct(caida.resultado.caida_tension_pct, caida.resultado.limite_pct, caida.resultado.cumple_criterio));
         if (elEstado) {
-            elEstado.textContent = caida.resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
-            elEstado.className = caida.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
+            elEstado.textContent = textoEstadoCaida(caida.resultado.cumple_criterio, caida.resultado.exigida);
+            ponerEstado(elEstado, caida.resultado.exigida === false ? null : !!caida.resultado.cumple_criterio);
         }
     } else {
         setTexto('resumen-caida-tension', 'No calculado');
-        if (elEstado) { elEstado.textContent = '--'; elEstado.className = ''; }
+        limpiarEstadoResumen('resumen-estado-caida');
     }
 
     var elEstadoCC = document.getElementById('resumen-estado-cc');
@@ -1279,11 +1282,11 @@ function actualizarResumenDC() {
         setTexto('resumen-corriente-cc', cc.resultado.corriente_cortocircuito + ' A');
         if (elEstadoCC) {
             elEstadoCC.textContent = cc.resultado.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE';
-            elEstadoCC.className = cc.resultado.cumple_criterio ? 'resultado-ok' : 'resultado-error';
+            ponerEstado(elEstadoCC, !!cc.resultado.cumple_criterio);
         }
     } else {
         setTexto('resumen-corriente-cc', 'No calculado');
-        if (elEstadoCC) { elEstadoCC.textContent = '--'; elEstadoCC.className = ''; }
+        limpiarEstadoResumen('resumen-estado-cc');
     }
 
     determinarSeccionFinalDC();
@@ -1347,7 +1350,7 @@ function resetearFormulario(pestana) {
         'proyecto': ['potencia', 'corriente-directa', 'potencia-transformador-kva', 'tension', 'factor-potencia'],
         'caida-tension': ['corriente-ct', 'tension-ct', 'longitud-ct', 'seccion-ct', 'fp-ct'],
         'cortocircuito': ['potencia-cc', 'tension-cc', 'tiempo-despeje', 'seccion-cc'],
-        'ampacidad-dc': ['potencia-dc', 'tension-dc', 'tension-personalizada'],
+        'ampacidad-dc': ['potencia-dc', 'corriente-directa-dc', 'rendimiento-dc', 'tension-dc', 'tension-personalizada'],
         'caida-tension-dc': ['corriente-ct-dc', 'tension-ct-dc', 'longitud-ct-dc'],
         'cortocircuito-dc': ['elementos-serie', 'capacidad-bateria', 'resistencia-interna']
     };
@@ -1510,13 +1513,14 @@ function construirReporteAC() {
             ['Material / clase', textoOpcion('material-ct', pc.materialCondutor) + ' / ' + textoOpcion('clase-ct', rc.clase)],
             ['Aislación', textoOpcion('aislamiento-ct', pc.aislamiento)],
             ['Disposición / frecuencia', textoOpcion('disposicion-ct', rc.disposicion) + ' / ' + rc.frecuencia + ' Hz'],
-            ['Límite admitido', fmt(rc.limite, null, '%')]
+            ['Límite admitido', fmt(rc.limite, null, '%')],
+            ['Tipo de cable', textoOpcion('tipo-cable-ct', pc.tipoCable)]
         ];
         res = [
             ['Resistencia AC a ' + rc.temperaturaConductor + ' °C', fmt(rc.resistencia, 4, 'Ω/km')],
             ['Reactancia', fmt(rc.reactancia, 4, 'Ω/km')],
             ['Caída de tensión', fmt(rc.caidaTensionV, 2, 'V') + ' (' + textoPct(rc.caidaTensionPct, rc.limite, rc.cumple) + ')'],
-            ['Estado', rc.cumple ? 'CUMPLE' : 'NO CUMPLE'],
+            ['Estado', textoEstadoCaida(rc.cumple, rc.exigida)],
             ['Sección mínima por caída (' + pc.conductoresPorFase + ' por fase)', rc.seccionMinimaCaida ? rc.seccionMinimaCaida.seccion + ' mm²' : 'ninguna hasta 300 mm²']
         ];
         var rpa = rc.partida, ppa = pc.partida;
@@ -1575,8 +1579,11 @@ function construirReporteAC() {
                 fin.valor ? ['Conductor de protección (sobre la sección adoptada)',
                     textoConductorProteccion({ seccion: fin.valor, conductoresPorFase: fin.nParalelo })] : null])));
     // Caída y partida se recalculan con el paralelo de la ampacidad si la pestaña usó otro
-    if (pr && ct && pr.resultado && (pr.resultado.conductoresPorFase || 1) !== ct.parametros.conductoresPorFase) {
-        secFin.appendChild(nodo('p', 'reporte-alerta', 'La caída de tensión' + (ct.resultado.partida ? ' y la partida' : '') +
+    var caidaCuenta = ct && ct.resultado && ct.resultado.exigida !== false;
+    if (pr && ct && pr.resultado && (caidaCuenta || ct.resultado.partida) &&
+        (pr.resultado.conductoresPorFase || 1) !== ct.parametros.conductoresPorFase) {
+        var recalculadas = [caidaCuenta ? 'la caída de tensión' : null, ct.resultado.partida ? 'la partida' : null].filter(Boolean);
+        secFin.appendChild(nodo('p', 'reporte-alerta', recalculadas.join(' y ').replace(/^./, function (c) { return c.toUpperCase(); }) +
             ' se recalcularon con ' + (pr.resultado.conductoresPorFase || 1) + ' conductor(es) por fase (los de la ampacidad); ' +
             'la pestaña Caída usó ' + ct.parametros.conductoresPorFase + '.'));
     }
@@ -1604,20 +1611,26 @@ function construirReporteDC() {
             p.modoEntrada === 'corriente' ? ['Corriente', fmt(p.corrienteDirecta, 2, 'A')] : ['Potencia', fmt(p.potencia, null, 'W')],
             p.modoEntrada === 'corriente' ? null : ['Tensión', p.tensionSelector === 'personalizado' ? fmt(p.tensionPersonalizada, null, 'V') : fmt(p.tensionSelector, null, 'V')],
             ['Material / aislación', textoOpcion('material-condutor-dc', p.material) + ' / ' + textoOpcion('aislamiento-dc', p.aislamiento)],
+            ['Tipo de carga', textoOpcion('tipo-carga-dc', r.tipoCarga)],
+            p.tipoCarga === 'motor' && p.modoEntrada !== 'corriente' ? ['Rendimiento del motor', fmt(p.rendimiento, 2)] : null,
             ['Método de instalación', textoOpcion('metodo-instalacao-dc', p.metodo)],
-            ['Temperatura ambiente', fmt(p.temperatura, null, '°C')],
+            p.metodo === 'D' ? ['Instalación enterrada / resistividad del suelo', textoOpcion('tipo-enterrado-dc', p.tipoEnterrado) + ' / ' + fmt(p.resistividadSuelo, null, 'K·m/W')] : null,
+            [p.metodo === 'D' ? 'Temperatura del suelo' : 'Temperatura ambiente', fmt(p.temperatura, null, '°C')],
             ['Circuitos agrupados', fmt(p.agrupamiento)]
         ];
         res = [
             ['Corriente', fmt(r.corriente, 2, 'A')],
+            r.factorCarga > 1 ? ['Corriente de dimensionamiento (motor, × ' + r.factorCarga + ')', fmt(r.corrienteDimensionamiento, 2, 'A')] : null,
             ['Factor de temperatura / agrupamiento', fmt(r.factorTemperatura, 3) + ' / ' + fmt(r.factorAgrupamiento, 3)],
+            p.metodo === 'D' ? ['Factor de resistividad del suelo', fmt(r.factorResistividad, 3)] : null,
             ['Corriente corregida', fmt(r.corrienteCorregida, 2, 'A')],
             ['Sección por ampacidad', r.seccion + ' mm²'],
             ['Ampacidad de tabla', fmt(r.ampacidad, null, 'A')]
         ];
     }
     cont.appendChild(bloqueReporte('1. Capacidad de conducción (ampacidad)', ent, res,
-        'catálogo INPACO 2021, columnas de 2 conductores cargados; temperatura Tabla 6; agrupamiento Tabla 7.'));
+        'catálogo INPACO 2021, columnas de 2 conductores cargados; temperatura Tabla 6; agrupamiento Tablas 7, 9 y 10; ' +
+        'resistividad del suelo Tabla 11. Motores DC al 125 %: Itaipu #ITA0&EEC010-01 R1A §10.3.2.'));
 
     var ct = appState.calculos.caidaTensionDC;
     ent = null; res = null;
@@ -1630,13 +1643,14 @@ function construirReporteDC() {
             ['Sección / conductores por polo', pc.seccion + ' mm² / ' + pc.conductoresPorPolo],
             ['Material / clase', textoOpcion('material-conductor-ct-dc', pc.material) + ' / ' + textoOpcion('clase-ct-dc', pc.clase)],
             ['Aislación', textoOpcion('aislamiento-ct-dc', pc.aislamiento)],
-            ['Tramo (límite de caída)', textoOpcion('aplicacion-dc', pc.aplicacionDC)]
+            ['Tramo (límite de caída)', textoOpcion('aplicacion-dc', pc.aplicacionDC)],
+            ['Tipo de cable', textoOpcion('tipo-cable-ct-dc', pc.tipoCable)]
         ];
         res = [
             ['Resistencia a ' + rc.temperatura_conductor + ' °C', fmt(rc.resistencia_mostrada, 4, 'Ω/km')],
             ['Caída de tensión', fmt(rc.caida_tension_V, 2, 'V') + ' (' + textoPct(rc.caida_tension_pct, rc.limite_pct, rc.cumple_criterio) + ')'],
             ['Límite', fmt(rc.limite_pct, null, '%')],
-            ['Estado', rc.cumple_criterio ? 'CUMPLE' : 'NO CUMPLE']
+            ['Estado', textoEstadoCaida(rc.cumple_criterio, rc.exigida)]
         ];
     }
     cont.appendChild(bloqueReporte('2. Caída de tensión', ent, res,
@@ -1880,17 +1894,17 @@ function resumenCalculo(tipo, p, r) {
                     (r.conductoresPorFase > 1 ? r.conductoresPorFase + ' × ' : '') + r.seccion + ' mm²';
             case 'caida-tension':
                 return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
-                    textoPct(r.caidaTensionPct, r.limite, r.cumple) + ' (' + (r.cumple ? 'cumple' : 'no cumple') + ')' +
+                    textoPct(r.caidaTensionPct, r.limite, r.cumple) + ' (' + textoEstadoCaida(r.cumple, r.exigida).toLowerCase() + ')' +
                     (r.partida ? ' · partida ' + textoPct(r.partida.caidaTotalPct, r.partida.limite, r.partida.cumple) +
                         ' (' + (r.partida.cumple ? 'cumple' : 'no cumple') + ')' : '');
             case 'cortocircuito':
                 return p.potenciaCortocircuito + ' MVA · ' + Math.round(p.tensionSistema * 1000) + ' V · ' + p.tiempoDespeje +
                     ' s → mín. ' + (r.seccionComercial ? r.seccionComercial + ' mm²' : '> 1000 mm²');
             case 'ampacidad-dc':
-                return n(r.corriente) + ' A · ' + p.metodo + ' → ' + r.seccion + ' mm²';
+                return n(r.corriente) + ' A' + (r.factorCarga > 1 ? ' (motor, ×' + r.factorCarga + ')' : '') + ' · ' + p.metodo + ' → ' + r.seccion + ' mm²';
             case 'caida-tension-dc':
                 return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
-                    textoPct(r.caida_tension_pct, r.limite_pct, r.cumple_criterio) + ' (' + (r.cumple_criterio ? 'cumple' : 'no cumple') + ')';
+                    textoPct(r.caida_tension_pct, r.limite_pct, r.cumple_criterio) + ' (' + textoEstadoCaida(r.cumple_criterio, r.exigida).toLowerCase() + ')';
             case 'cortocircuito-dc':
                 return p.elementosSerie + ' elementos · ' + r.corriente_cortocircuito + ' A → mín. ' +
                     (r.seccion_comercial ? r.seccion_comercial + ' mm²' : '> 1000 mm²');
