@@ -4,6 +4,16 @@ All notable changes to the Calculadora de Cables Electricos will be documented i
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [5.9.0] - 2026-09-24 — Temperatura ambiente inicial 40 °C (backlog #12)
+
+- **Quién:** Marco + Claude
+- **Qué se hizo:**
+  - El campo de temperatura ambiente arranca en 40 °C (antes 30 °C) en AC y DC: la referencia de las tablas INPACO de aire.
+  - En el método D, el campo es la temperatura del suelo: pasa a 25 °C (referencia INPACO de suelo) si el usuario no lo escribió, y vuelve a 40 °C al elegir un método aéreo. Un valor escrito a mano o restaurado del historial no se toca.
+  - Se sumaron tooltips.
+- **Efecto en resultados:** solo si no se cambia la temperatura. A 30 °C el factor era 1,15 en PVC y 1,10 en EPR/XLPE, así que la ampacidad quedaba por encima de la tabla sin que nadie lo eligiera. Ejemplo: 80 A, PVC, B1 daba 25 mm² y ahora da 35 mm². En el método D el valor inicial pasa de 30 °C (factor 0,94 en PVC) a 25 °C (1,00).
+- **Tests:** 119.
+
 ## [5.8.0] - 2026-09-23 — Auditoría general
 
 - **Quién:** Marco + Claude

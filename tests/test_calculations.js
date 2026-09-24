@@ -1043,6 +1043,13 @@ test('No user-typed field gets a silent numeric default in app.js (only selects 
     assertTrue(encontrados > 0, 'el patrón no encontró nada: revisar la expresión');
 });
 
+test('Initial ambient temperature is the INPACO air reference, 40 C (AC and DC)', function() {
+    // Con 30 °C el factor era 1,15 (PVC) sin que el usuario lo eligiera: 80 A B1 daba 25 mm² en vez de 35 mm²
+    assertTrue(/id="temperatura-ambiente" value="40"/.test(indexHtml), 'AC');
+    assertTrue(/id="temperatura-ambiente-dc" value="40"/.test(indexHtml), 'DC');
+    assertTrue(/m === 'D' \? '25' : '40'/.test(appJs), 'método D pasa a 25 °C (suelo)');
+});
+
 test('Manual example 1: motor 50 CV 380 V B1 -> 25 mm2, 2.19 % at 80 m, 50 mm2 by short circuit', function() {
     const r = dimensionarPorAmpacidadAC({ modoEntrada: 'potencia', potencia: 50, unidadPotencia: 'CV', tension: 380,
         factorPotencia: 0.85, rendimiento: 0.92, factorDemanda: 1, tipoSistema: 'trifasico', materialAislamento: 'PVC',

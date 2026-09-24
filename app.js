@@ -83,6 +83,18 @@ function configurarFilaResistividad() {
     };
     metodo.addEventListener('change', actualizar);
     actualizar();
+
+    // Valor inicial de temperatura = referencia de las tablas INPACO: 40 °C aire, 25 °C suelo (método D).
+    // Solo se cambia si el campo tiene la referencia del método anterior y el usuario no lo escribió.
+    var temp = document.getElementById('temperatura-ambiente');
+    if (!temp) return;
+    var referencia = function (m) { return m === 'D' ? '25' : '40'; };
+    var anterior = metodo.value;
+    temp.addEventListener('input', function () { temp.dataset.editado = '1'; });
+    metodo.addEventListener('change', function () {
+        if (!temp.dataset.editado && temp.value === referencia(anterior)) temp.value = referencia(metodo.value);
+        anterior = metodo.value;
+    });
 }
 
 // ===================================================================

@@ -23,7 +23,7 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
   - Bifásico: 3 (criterio del lado seguro).
   - Trifásico: 3; con el neutro cargado, 4 (0,86 × columna de 3).
 - **Factores de corrección:**
-  - Temperatura: INPACO Tabla 6, interpolada.
+  - Temperatura: INPACO Tabla 6, interpolada. El campo arranca en 40 °C (referencia de aire); en el método D pasa a 25 °C (referencia de suelo) si no se escribió otro valor.
   - Agrupamiento: INPACO Tablas 7, 9 y 10. Cada terna en paralelo cuenta como un circuito.
   - Resistividad del suelo, solo en el método D: INPACO Tabla 11. Se elige si es en ducto o directamente enterrado.
   - Un valor fuera de tabla da error. Nunca se usa 1,0 en silencio.
