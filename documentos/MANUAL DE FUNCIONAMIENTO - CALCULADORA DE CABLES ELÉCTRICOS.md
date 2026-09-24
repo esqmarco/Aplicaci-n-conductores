@@ -109,16 +109,20 @@ Describe lo que la app hace hoy. Las fórmulas vigentes, con su fuente, están e
 - Cada pestaña valida sus entradas antes de calcular. Un campo vacío o fuera de rango se informa como error; no se reemplaza por un valor por defecto.
 - **Rangos principales:**
   - Factor de potencia de 0,1 a 1,0.
-  - Rendimiento y factor de demanda mayores que 0 y hasta 1,0.
+  - Rendimiento (AC y motor DC en modo potencia) y factor de demanda mayores que 0 y hasta 1,0.
   - Circuitos agrupados: entero ≥ 1.
   - Temperatura ambiente: la que cubre INPACO Tabla 6 para la aislación elegida.
-  - Tiempo de despeje hasta 5 s.
+  - Tiempo de despeje entre 0,01 y 5 s.
   - Tensión AC hasta 1000 V para ampacidad.
+  - Partida de motor: Ip/In entre 1 y 12; todo campo del alimentador o del trafo incluido es requerido.
+  - Tramo DC, tipo de cable y tipo de carga son requeridos; un valor desconocido (p. ej. de un cálculo viejo del historial) da error.
 - **Avisos que no bloquean el cálculo:**
   - Ampacidad de aluminio.
   - Más de 6 circuitos enterrados, fuera de la tabla INPACO.
   - Icc poco usual para el nivel de tensión.
   - Ternas en paralelo que suben el número de circuitos agrupados.
+  - Caída "NO EXIGIDA" en cables de control (Itaipu R1A §10.3.3).
+  - Partida de motor calculada solo con el circuito, o con una corriente que trae factor de demanda < 1.
 
 ## Casos de ejemplo (verificados con la app; son tests en `tests/test_calculations.js`)
 

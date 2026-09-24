@@ -1876,7 +1876,7 @@ function resumenCalculo(tipo, p, r) {
                     (r.conductoresPorFase > 1 ? r.conductoresPorFase + ' × ' : '') + r.seccion + ' mm²';
             case 'caida-tension':
                 return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
-                    textoPct(r.caidaTensionPct, r.limite, r.cumple) + ' (' + (r.cumple ? 'cumple' : 'no cumple') + ')' +
+                    textoPct(r.caidaTensionPct, r.limite, r.cumple) + ' (' + textoEstadoCaida(r.cumple, r.exigida).toLowerCase() + ')' +
                     (r.partida ? ' · partida ' + textoPct(r.partida.caidaTotalPct, r.partida.limite, r.partida.cumple) +
                         ' (' + (r.partida.cumple ? 'cumple' : 'no cumple') + ')' : '');
             case 'cortocircuito':
@@ -1886,7 +1886,7 @@ function resumenCalculo(tipo, p, r) {
                 return n(r.corriente) + ' A' + (r.factorCarga > 1 ? ' (motor, ×' + r.factorCarga + ')' : '') + ' · ' + p.metodo + ' → ' + r.seccion + ' mm²';
             case 'caida-tension-dc':
                 return n(p.corriente) + ' A · ' + p.longitud + ' m · ' + p.seccion + ' mm² → ' +
-                    textoPct(r.caida_tension_pct, r.limite_pct, r.cumple_criterio) + ' (' + (r.cumple_criterio ? 'cumple' : 'no cumple') + ')';
+                    textoPct(r.caida_tension_pct, r.limite_pct, r.cumple_criterio) + ' (' + textoEstadoCaida(r.cumple_criterio, r.exigida).toLowerCase() + ')';
             case 'cortocircuito-dc':
                 return p.elementosSerie + ' elementos · ' + r.corriente_cortocircuito + ' A → mín. ' +
                     (r.seccion_comercial ? r.seccion_comercial + ' mm²' : '> 1000 mm²');
